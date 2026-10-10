@@ -1,5 +1,11 @@
 # Diagnostic logging
 
+The ledge-recovery test branch adds sampled `movement blocked` records with `solid-volume`,
+`uphill-terrain`, `invalid-terrain`, `native-pathing`, `native-relocation` or `world-boundary` reasons.
+They include the original position, rejected sample, reachable height, sampled terrain/object height
+and original/sample native cliff levels. All rejection paths share one `IntervalMs` clock and obey
+`Detailed`; standing still produces no rejection record.
+
 Test-branch rendering settings log the validated MaxFPS/DrawDistance snapshot, verified frame-rate
 adapter setup, applied native/custom mode and failures to change the guarded operand. `render frames`
 reports presentations within the configured Logging.IntervalMs, so use that interval when estimating

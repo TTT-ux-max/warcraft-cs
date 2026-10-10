@@ -2,6 +2,9 @@
 
 ## Unreleased — test branches
 
+- Recognize the full native cliff rim, including diagonal corners, so landing below a ledge does not trap the player in its walkability mask.
+- Permit retreat from an existing solid overlap and its native footprint while still rejecting deeper penetration, new solids and unknown flat blockers.
+- Log sampled movement rejection reasons and terrain/cliff coordinates for diagnosing stuck positions.
 - Raise the client FPS target to 144 and FPS world-camera far clip to 10000 Warcraft units; add Rendering.MaxFPS (0/native or 30–360) and DrawDistance (3000–20000), F8 reload and upgrade preservation.
 - Use high-resolution elapsed time for player movement and guarded native render-demand changes with paced presentation, without changing Warcraft's simulation timers.
 - Use decoded standing tree trunks for movement collision instead of canopy-sized model extents; reuse the shooting geometry and retain native pathing for unreadable models.

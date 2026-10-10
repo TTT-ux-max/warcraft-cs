@@ -1,4 +1,5 @@
 #include "../src/platform/WarcraftCollision.hpp"
+#include "../src/platform/DiagnosticLog.hpp"
 #include "MovementStrafeInput.hpp"
 #include <cmath>
 #include <cstdio>
@@ -11,6 +12,7 @@ float unitX=0,unitY=0;
 bool bridgeAlive=true,edge=false,nativeBlocked=false,cliff=false,invalidDeck=false;
 bool drop=false, prop=false, wall=false, slope=false, water=false;
 bool tree=false,canopyBounds=false;
+bool wideCliff=false;
 wc3::Bits Bits(float value) { wc3::Bits bits;std::memcpy(&bits,&value,4);return bits; }
 wc3::Bits __cdecl X(wc3::Handle) {return Bits(unitX);}
 wc3::Bits __cdecl Y(wc3::Handle) {return Bits(unitY);}
@@ -18,7 +20,7 @@ BOOL __cdecl Blocked(float* x,float* y,int) {
     // Stock tree pathing retains its trunk footprint while the canopy above remains empty space.
     if(tree) return *x>=88 && *x<=152 && std::abs(*y)<=32;
     if(slope) return FALSE;
-    if (drop) return *x >= 8 && *x <= 56;
+    if (drop) return *x >= 8 && *x <= (wideCliff ? 144 : 56);
     if (prop || wall) return *x >= 60 && *x <= 80;
     return *x>=32;
 }
@@ -31,7 +33,7 @@ void __cdecl Remove(wc3::Handle) {}
 int __cdecl Level(float* x,float*) { return (drop || cliff) && *x>=32 ? (drop ? 1 : 3) : 2; }
 void __cdecl Position(wc3::Handle,float* x,float* y) {
     // Native Warcraft may relocate a blocked unit; collision must discard that search result.
-    unitX=*x+(nativeBlocked && *x>0 ? 80 : 0);unitY=*y;
+    unitX=*x+(nativeBlocked && *x>0 && (!tree || *x>=64) ? 80 : 0);unitY=*y;
 }
 void Require(bool ok,const char* message) {if(!ok){std::fprintf(stderr,"FAIL: %s\n",message);std::exit(1);}}
 float Walk(bool alive,bool atEdge=false,bool obstruction=false,bool highCliff=false,bool invalid=false) {
@@ -43,6 +45,7 @@ float Walk(bool alive,bool atEdge=false,bool obstruction=false,bool highCliff=fa
 }
 }
 namespace wc3 {
+void Trace(const char*,...) {}
 int (__cdecl* GetTerrainCliffLevel)(float*,float*)=Level;
 Bits (__cdecl* GetUnitX)(Handle)=X;
 Bits (__cdecl* GetUnitY)(Handle)=Y;
@@ -64,6 +67,7 @@ bool WalkableSurface(float,float y,float& height){
     height=invalidDeck ? std::numeric_limits<float>::quiet_NaN() : 100.f;return !invalidDeck;
 }
 }
+bool DiagnosticLog::Due(DWORD&,bool) { return false; }
 // The synthetic world replaces only native discovery; actual swept collision/physics runs unchanged.
 std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float) {
     if (tree) return canopyBounds ? std::vector<Bounds3>{{{-93,-231,100},{334,193,413}}} :
@@ -86,6 +90,11 @@ int main(){
         if (!falling.Grounded() && falling.FeetZ()>0) fell=true;
     }
     Require(unitX>300 && fell && falling.Grounded() && falling.FeetZ()==0,"walking off a native blocked cliff must fall and land");
+    // A Warcraft cliff's blocked rim can extend a full terrain cell onto the lower bank.
+    wideCliff=true;unitX=unitY=0;falling.Reset(100);
+    for(int frame=0;frame<100;++frame){falling.Step(forward,1.f/60,250);collision.Move(1,falling,1.f/60);}
+    Require(unitX>300 && falling.Grounded() && falling.FeetZ()==0,"full-cell cliff pathing must not trap a player after landing");
+    wideCliff=false;
     drop=false;prop=true;unitX=-50;unitY=0;
     MovementPhysics jumper;jumper.Reset(100);MoveInput jumping=forward;jumping.jump=true;
     // Approach at running speed so the jump has enough range to clear the prop's full footprint.
@@ -130,6 +139,14 @@ int main(){
     Require(std::abs(treeWalk(true,96))<.01f,"canopy-sized bounds must reproduce the false tree blocker");
     Require(treeWalk(false,96)>300,"decoded trunk bounds permit a corridor beside the tree canopy");
     Require(treeWalk(false,0)<80,"walking directly into the tree must remain blocked");
+    // Native spawning/RTS relocation can leave the player inside a trunk: retreat must work.
+    nativeBlocked=true;unitX=90;unitY=0;jumper.Reset(100);MoveInput retreat=forward;retreat.forward=-1;
+    for(int frame=0;frame<60;++frame){jumper.Step(retreat,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX<0,"existing trunk overlap permits movement toward the nearest exit");
+    nativeBlocked=false;
+    unitX=90;unitY=0;jumper.Reset(100);
+    for(int frame=0;frame<20;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+    Require(unitX==90,"existing overlap must not permit entering deeper into a trunk");
     tree=false;
     std::puts("Warcraft bridge/collision regressions passed.");
 }

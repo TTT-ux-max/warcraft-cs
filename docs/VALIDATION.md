@@ -1,5 +1,21 @@
 # Validation of the 0.1.0 source baseline
 
+## Ledge and stuck-position recovery (test branch, 2026-10-10)
+
+The production collision regression reproduces a blocked lower rim extending beyond the old
+64-unit cliff probe; the old implementation stops after landing, while the full-cell probe crosses
+the rim, falls and lands. A separate existing-trunk-overlap trial retreats through its native
+footprint even when native placement would relocate it, and rejects movement deeper into the trunk.
+Existing uphill-cliff, bridge, shallow-water, unknown-flat-blocker and swept thin-wall checks pass.
+The complete independent native wrapper passes; the final retreat change passes the targeted
+production collision suite. Runtime rejection telemetry uses the existing bounded detailed logger.
+
+A read-only capture of the user's running game shows the actor at a shoreline cliff; the old
+module does not log rejection reasons, so this alone cannot identify its exact blocking sample.
+A separate owned cliff map is prepared for native verification. Live gameplay verification is
+pending user permission to save/close the campaign and temporarily hand over input; no campaign
+state, save or installed DLL was changed during diagnosis.
+
 ## 0.7.0 release consolidation (2026-10-10)
 
 All completed feature tips are ancestors of the consolidated release; the old crosshair patch is
