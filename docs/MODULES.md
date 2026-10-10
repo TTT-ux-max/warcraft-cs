@@ -51,6 +51,11 @@ sweeps the player footprint against terrain, native bridge decks and solid model
 `MovementObstacles`. The obstacle adapter owns model/type caches and clears them on map changes.
 `GameplaySettings` loads movement tuning; the controller applies that snapshot on startup and F8.
 
+Tree movement bounds reuse `TreeTrunkMesh`'s standing ground-connected components, the same decoded
+geometry used for destructable shots. Canopy cards and death-only stumps do not expand the player
+blocker. The platform adapter applies the existing native sprite transform and visual scale to those
+local trunk bounds; unreadable tree geometry supplies no broad box and retains native pathing checks.
+
 The optional speed counter uses the same boundaries: `InputDispatcher` queues a V press,
 `ShooterController` owns session visibility and exposes horizontal speed in CS units, and `Overlay`
 draws the counter above status notices. `GameplaySettings` supplies the startup/F8 preference;

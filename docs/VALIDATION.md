@@ -319,3 +319,17 @@ the current vertical velocity. Migration preserves older custom bonuses and adds
 The opt-in native scene includes separate `strafe` and straight `hop` trials. This revision's
 real-game verification remains pending because the user's Warcraft process is active; no campaign
 or running module is replaced. Measurements above are independent physics results only.
+
+## Tree movement bounds (test branch)
+
+The active client's log identifies AshenCanopyTree0 with standing visual extents approximately
+427 by 425 Warcraft units. Privately decoding the owner's model yields 24 trunk triangles and
+local trunk extents approximately 37 by 43 units. No extracted model is committed or packaged.
+
+Tree-mesh regressions check exclusion of canopy cards and death stumps, invalid geometry,
+and the narrower bounds of that owned model. The production swept-collision test reproduces
+immobility inside the old canopy box, verifies passage beside the decoded trunk, and retains
+blocking on a direct approach. Adapter checks cover separate unit/destructable model caches
+and map reset, preventing tree animation names on units from changing their movement bounds.
+All independent native suites pass. Interactive verification in a disposable Warcraft map
+is pending while the user's campaign remains open; the active game and its saves are untouched.

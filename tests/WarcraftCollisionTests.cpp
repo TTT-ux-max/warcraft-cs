@@ -10,10 +10,13 @@ namespace {
 float unitX=0,unitY=0;
 bool bridgeAlive=true,edge=false,nativeBlocked=false,cliff=false,invalidDeck=false;
 bool drop=false, prop=false, wall=false, slope=false, water=false;
+bool tree=false,canopyBounds=false;
 wc3::Bits Bits(float value) { wc3::Bits bits;std::memcpy(&bits,&value,4);return bits; }
 wc3::Bits __cdecl X(wc3::Handle) {return Bits(unitX);}
 wc3::Bits __cdecl Y(wc3::Handle) {return Bits(unitY);}
-BOOL __cdecl Blocked(float* x,float*,int) {
+BOOL __cdecl Blocked(float* x,float* y,int) {
+    // Stock tree pathing retains its trunk footprint while the canopy above remains empty space.
+    if(tree) return *x>=88 && *x<=152 && std::abs(*y)<=32;
     if(slope) return FALSE;
     if (drop) return *x >= 8 && *x <= 56;
     if (prop || wall) return *x >= 60 && *x <= 80;
@@ -63,6 +66,8 @@ bool WalkableSurface(float,float y,float& height){
 }
 // The synthetic world replaces only native discovery; actual swept collision/physics runs unchanged.
 std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle,float,float,float) {
+    if (tree) return canopyBounds ? std::vector<Bounds3>{{{-93,-231,100},{334,193,413}}} :
+        std::vector<Bounds3>{{{101,-21,100},{138,22,384}}};
     if (prop || wall) return {{{60,-50,100},{80,50,wall ? 300.f : 140.f}}};
     return {};
 }
@@ -115,5 +120,16 @@ int main(){
     water=true;unitX=unitY=0;jumper.Reset(122);jumping.jump=false;
     for(int frame=0;frame<60;++frame){jumper.Step(jumping,1.f/60,250);collision.Move(1,jumper,1.f/60);}
     Require(jumper.Grounded() && std::abs(jumper.FeetZ()-wc3::Ground(unitX,unitY))<.01f,"native shallow-water support must not become a false cliff drop");
+    water=slope=false;tree=true;
+    auto treeWalk=[&](bool broad,float y) {
+        canopyBounds=broad;unitX=0;unitY=y;jumper.Reset(100);
+        for(int frame=0;frame<60;++frame){jumper.Step(forward,1.f/60,250);collision.Move(1,jumper,1.f/60);}
+        return unitX;
+    };
+    // Reproduce a player already inside the old visual box: even retreat was blocked by the canopy.
+    Require(std::abs(treeWalk(true,96))<.01f,"canopy-sized bounds must reproduce the false tree blocker");
+    Require(treeWalk(false,96)>300,"decoded trunk bounds permit a corridor beside the tree canopy");
+    Require(treeWalk(false,0)<80,"walking directly into the tree must remain blocked");
+    tree=false;
     std::puts("Warcraft bridge/collision regressions passed.");
 }

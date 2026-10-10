@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — test branches
+
+- Use decoded standing tree trunks for movement collision instead of canopy-sized model extents; reuse the shooting geometry and retain native pathing for unreadable models.
+- Log tree/trunk classification and add regressions for a clear canopy corridor, trapped starting positions and solid trunk contact.
+
 ## 0.7.0 — 2026-10-10
 
 - Restore F6 and other mod controls after native campaign movies replace Warcraft's window; also recover a known native input-procedure reset and log attachment/destruction/recovery.
