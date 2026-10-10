@@ -193,7 +193,7 @@ Edit it and press F8 in FPS.
 
 - `[Rendering] MaxFPS=144` raises the client frame cap above Warcraft's original ~64 FPS.
   Positive targets are clamped to 30–360; `0` restores the native limiter. Actual FPS depends on
-  hardware, scene load and graphics-driver limits. `DrawDistance=10000` doubles the FPS world-camera
+  hardware, scene load and graphics-driver limits. `DrawDistance=15000` triples the FPS world-camera
   far clip from 5000 Warcraft units; valid distances are 3000–20000. Both apply at startup/on F8.
   Updates preserve existing values. Draw distance does not reveal unexplored units or remove the
   map's atmospheric fog; N controls fog of war separately. Greater distances increase render work.

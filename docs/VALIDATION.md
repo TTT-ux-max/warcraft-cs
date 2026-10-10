@@ -1,5 +1,14 @@
 # Validation of the 0.1.0 source baseline
 
+## Draw-distance default 15000 (test branch, 2026-10-10)
+
+The default settings snapshot, missing/malformed INI fallback and fresh-install template now use
+15000 Warcraft units. Existing settings-loader and real camera/projection tests pass, including
+explicit 15000 far clip and F8 snapshot reload. Configuration migration preserves custom distances
+and uses the new default for missing keys. The owner's installed INI was backed up privately and
+changed only from DrawDistance=10000 to 15000; F8 or restart is required to apply that file change.
+No input was sent to the running campaign for this parameter adjustment.
+
 ## Ledge and stuck-position recovery (test branch, 2026-10-10)
 
 The production collision regression reproduces a blocked lower rim extending beyond the old

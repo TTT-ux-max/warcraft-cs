@@ -9,7 +9,7 @@ $config=Join-Path $folder 'legacy.ini'
 # Updates append missing keys inside existing sections while retaining all custom values.
 Update-GameplayConfig $template $config
 $text=Get-Content -LiteralPath $config -Raw
-foreach ($required in @('AmmoPercent=37','Price=0','Damage=81','FriendlyFirePercent=25','AWPOneShot=false','BombCount=20','Access=anywhere','AmmoPrice=80','CSVolumePercent=100','Detailed=true','IntervalMs=1000','MaxFileMB=8','ArchiveCount=3','JumpBoostPercent=0','AutoJump=true','MaxFPS=144','DrawDistance=10000')) {
+foreach ($required in @('AmmoPercent=37','Price=0','Damage=81','FriendlyFirePercent=25','AWPOneShot=false','BombCount=20','Access=anywhere','AmmoPrice=80','CSVolumePercent=100','Detailed=true','IntervalMs=1000','MaxFileMB=8','ArchiveCount=3','JumpBoostPercent=0','AutoJump=true','MaxFPS=144','DrawDistance=15000')) {
     if (!$text.Contains($required)) { throw "Missing/patched preference: $required" }
 }
 if ([regex]::Matches($text,'(?m)^\[AK47\]').Count -ne 1) { throw 'Duplicate section can hide new INI keys.' }

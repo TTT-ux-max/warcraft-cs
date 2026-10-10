@@ -28,7 +28,8 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // Zero opts back into Warcraft's original limiter; positive targets stay within a bounded range.
     float maxFPS=number("Rendering","MaxFPS",144,360);
     result.render.maxFPS=maxFPS==0 ? 0 : int(std::max(30.f,maxFPS));
-    result.render.drawDistance=std::max(3000.f,number("Rendering","DrawDistance",10000,20000));
+    // Missing or malformed distances use the same default as a fresh settings snapshot.
+    result.render.drawDistance=std::max(3000.f,number("Rendering","DrawDistance",result.render.drawDistance,20000));
     result.runeAmmoPercent=number("Runes","AmmoPercent",20,100);
     // Missing settings enable the requested hopping; malformed switches preserve documented defaults.
     auto boolean = [&](const char* key, bool fallback) {

@@ -14,7 +14,8 @@ void Tick(uintptr_t base, const char* root) {
     static FirstPersonCamera camera;
     static std::string mode;
     static float startX=0, startY=0, startZ=0, yaw=0, peakSpeed=0;
-    static float drawDistance=10000;
+    // Match the ordinary player's default until the explicit private trial loads its INI snapshot.
+    static float drawDistance=RenderSettings{}.drawDistance;
     static int frame=0, duration=600, hops=0;
     static bool fell=false;
     std::string request=std::string(root)+"\\test-movement.request";

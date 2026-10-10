@@ -20,7 +20,7 @@ int main() {
     assert(!settings.showSpeed);
     assert(!settings.disableFogOfWar);
     assert(settings.csVolumePercent==100);
-    assert(settings.render.maxFPS==144 && settings.render.drawDistance==10000);
+    assert(settings.render.maxFPS==144 && settings.render.drawDistance==15000);
     assert(!settings.startAllWeapons && settings.startBombs==20 && settings.maxBombs==100 );
     assert(settings.buyAccess==GameplaySettings::BuyAccess::Anywhere && !settings.csSky);
     assert(settings.weaponPrice[0]==625 && settings.weaponPrice[1]==775 && settings.weaponPrice[2]==125);
@@ -47,9 +47,9 @@ int main() {
     std::string path=std::string(directory)+"\\settings-test.ini";
     // Real INI loading covers explicit legacy mode, bounded targets, bad input and live reload.
     const struct {const char* fps;const char* distance;int expectedFPS;float expectedDistance;} renderCases[]={
-        {"","",144,10000},{"0","5000",0,5000},{"240","15000",240,15000},
+        {"","",144,15000},{"0","5000",0,5000},{"240","15000",240,15000},
         {"1","1",30,3000},{"999","99999",360,20000},{"-2","-3",0,3000},
-        {"nan","inf",144,10000},{"broken","wrong",144,10000},{"120.5","12000.5",120,12000.5f}
+        {"nan","inf",144,15000},{"broken","wrong",144,15000},{"120.5","12000.5",120,12000.5f}
     };
     int renderIndex=0;
     for (const auto& test:renderCases) {
@@ -64,9 +64,9 @@ int main() {
     WritePrivateProfileStringA("Rendering","DrawDistance","7000",renderReload.c_str());
     assert(GameplaySettings::Load(renderReload).render.maxFPS==72);
     WritePrivateProfileStringA("Rendering","MaxFPS","144",renderReload.c_str());
-    WritePrivateProfileStringA("Rendering","DrawDistance","10000",renderReload.c_str());
+    WritePrivateProfileStringA("Rendering","DrawDistance","15000",renderReload.c_str());
     auto reloaded=GameplaySettings::Load(renderReload);
-    assert(reloaded.render.maxFPS==144 && reloaded.render.drawDistance==10000);
+    assert(reloaded.render.maxFPS==144 && reloaded.render.drawDistance==15000);
     DeleteFileA(renderReload.c_str());
     // Exercise the real optional HUD/fog preference boundary and live snapshot reloads.
     const struct { const char* value; bool enabled; } speedCases[] = {
