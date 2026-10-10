@@ -2,6 +2,8 @@
 
 ## Unreleased — test branches
 
+- Raise the client FPS target to 144 and FPS world-camera far clip to 10000 Warcraft units; add Rendering.MaxFPS (0/native or 30–360) and DrawDistance (3000–20000), F8 reload and upgrade preservation.
+- Use high-resolution elapsed time for player movement and guarded native render-demand changes with paced presentation, without changing Warcraft's simulation timers.
 - Use decoded standing tree trunks for movement collision instead of canopy-sized model extents; reuse the shooting geometry and retain native pathing for unreadable models.
 - Log tree/trunk classification and add regressions for a clear canopy corridor, trapped starting positions and solid trunk contact.
 

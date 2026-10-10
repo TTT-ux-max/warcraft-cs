@@ -191,6 +191,13 @@ EXE installation: `<installation folder>/Game/WarcraftCS/WarcraftCS.ini`.
 Default source installation: `.local/warcraft-cs/WarcraftCS/WarcraftCS.ini`.
 Edit it and press F8 in FPS.
 
+- `[Rendering] MaxFPS=144` raises the client frame cap above Warcraft's original ~64 FPS.
+  Positive targets are clamped to 30–360; `0` restores the native limiter. Actual FPS depends on
+  hardware, scene load and graphics-driver limits. `DrawDistance=10000` doubles the FPS world-camera
+  far clip from 5000 Warcraft units; valid distances are 3000–20000. Both apply at startup/on F8.
+  Updates preserve existing values. Draw distance does not reveal unexplored units or remove the
+  map's atmospheric fog; N controls fog of war separately. Greater distances increase render work.
+
 - `[Logging] Detailed=true` enables control, validated-setting, movement and renderer details.
   `IntervalMs=1000` samples movement/render summaries every second (100–60000 ms).
   `MaxFileMB=8` bounds each runtime log to 1–64 MiB; `ArchiveCount=3` keeps 0–8 previous

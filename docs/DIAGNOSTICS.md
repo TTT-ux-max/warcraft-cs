@@ -1,5 +1,10 @@
 # Diagnostic logging
 
+Test-branch rendering settings log the validated MaxFPS/DrawDistance snapshot, verified frame-rate
+adapter setup, applied native/custom mode and failures to change the guarded operand. `render frames`
+reports presentations within the configured Logging.IntervalMs, so use that interval when estimating
+FPS from the count; loading/focus transitions and capture overhead affect individual samples.
+
 Both source-only and DLL-included launchers have **Read logs**. It works before installation,
 without download consent and while setup or Warcraft is running. The selected installation folder
 determines which game's logs appear. The current game journal opens first when available.

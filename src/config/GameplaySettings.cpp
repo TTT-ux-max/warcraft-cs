@@ -25,6 +25,10 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.logging.intervalMs = unsigned(std::max(100.f, number("Logging", "IntervalMs", 1000, 60000)));
     result.logging.maxFileMB = unsigned(std::max(1.f, number("Logging", "MaxFileMB", 8, 64)));
     result.logging.archiveCount = unsigned(number("Logging", "ArchiveCount", 3, 8));
+    // Zero opts back into Warcraft's original limiter; positive targets stay within a bounded range.
+    float maxFPS=number("Rendering","MaxFPS",144,360);
+    result.render.maxFPS=maxFPS==0 ? 0 : int(std::max(30.f,maxFPS));
+    result.render.drawDistance=std::max(3000.f,number("Rendering","DrawDistance",10000,20000));
     result.runeAmmoPercent=number("Runes","AmmoPercent",20,100);
     // Missing settings enable the requested hopping; malformed switches preserve documented defaults.
     auto boolean = [&](const char* key, bool fallback) {

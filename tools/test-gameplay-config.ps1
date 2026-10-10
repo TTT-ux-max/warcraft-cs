@@ -9,7 +9,7 @@ $config=Join-Path $folder 'legacy.ini'
 # Updates append missing keys inside existing sections while retaining all custom values.
 Update-GameplayConfig $template $config
 $text=Get-Content -LiteralPath $config -Raw
-foreach ($required in @('AmmoPercent=37','Price=0','Damage=81','FriendlyFirePercent=25','AWPOneShot=false','BombCount=20','Access=anywhere','AmmoPrice=80','CSVolumePercent=100','Detailed=true','IntervalMs=1000','MaxFileMB=8','ArchiveCount=3','JumpBoostPercent=0','AutoJump=true')) {
+foreach ($required in @('AmmoPercent=37','Price=0','Damage=81','FriendlyFirePercent=25','AWPOneShot=false','BombCount=20','Access=anywhere','AmmoPrice=80','CSVolumePercent=100','Detailed=true','IntervalMs=1000','MaxFileMB=8','ArchiveCount=3','JumpBoostPercent=0','AutoJump=true','MaxFPS=144','DrawDistance=10000')) {
     if (!$text.Contains($required)) { throw "Missing/patched preference: $required" }
 }
 if ([regex]::Matches($text,'(?m)^\[AK47\]').Count -ne 1) { throw 'Duplicate section can hide new INI keys.' }
@@ -79,6 +79,19 @@ foreach ($preference in @('true','false')) {
     if ((Get-FileHash -LiteralPath $awpConfig).Hash -ne $awpBefore) { throw 'Repeated AWP migration changed the config.' }
 }
 Write-Output 'PASS fresh/legacy/empty/repeated config updates preserve custom values and expose new settings.'
+# Rendering migration adds defaults without changing an explicit old/custom cap or distance.
+foreach ($cap in @('0','120','240')) {
+    $renderConfig=Join-Path $folder ('custom-render-'+$cap+'.ini')
+    @('[Rendering]',('MaxFPS='+$cap),'DrawDistance=7500') | Set-Content -LiteralPath $renderConfig -Encoding ascii
+    Update-GameplayConfig $template $renderConfig
+    $renderText=Get-Content -LiteralPath $renderConfig -Raw
+    if (!$renderText.Contains('MaxFPS='+$cap) -or !$renderText.Contains('DrawDistance=7500') -or
+        [regex]::Matches($renderText,'(?m)^\[Rendering\]').Count -ne 1 -or
+        [regex]::Matches($renderText,'(?m)^MaxFPS=').Count -ne 1) {throw 'Rendering update lost/duplicated custom preferences.'}
+    $renderBefore=(Get-FileHash -LiteralPath $renderConfig).Hash
+    Update-GameplayConfig $template $renderConfig
+    if ((Get-FileHash -LiteralPath $renderConfig).Hash -ne $renderBefore) {throw 'Rendering migration is not idempotent.'}
+}
 # Logging preferences survive upgrades while missing sibling keys are inserted exactly once.
 $customLogging=Join-Path $folder 'custom-logging.ini'
 @('[Logging]','Detailed=false','IntervalMs=2500','MaxFileMB=2') | Set-Content -LiteralPath $customLogging -Encoding ascii

@@ -14,6 +14,7 @@ void Tick(uintptr_t base, const char* root) {
     static FirstPersonCamera camera;
     static std::string mode;
     static float startX=0, startY=0, startZ=0, yaw=0, peakSpeed=0;
+    static float drawDistance=10000;
     static int frame=0, duration=600, hops=0;
     static bool fell=false;
     std::string request=std::string(root)+"\\test-movement.request";
@@ -55,7 +56,8 @@ void Tick(uintptr_t base, const char* root) {
         wc3::PauseUnit(unit,TRUE);
         startX=wc3::Real(wc3::GetUnitX(unit));startY=wc3::Real(wc3::GetUnitY(unit));
         startZ=wc3::Ground(startX,startY);
-        movement.Configure(GameplaySettings::Load(std::string(root)+"\\WarcraftCS.ini").movement);
+        auto settings=GameplaySettings::Load(std::string(root)+"\\WarcraftCS.ini");
+        movement.Configure(settings.movement);drawDistance=settings.render.drawDistance;
         movement.Reset(startZ);collision.Reset();mode=command;frame=hops=0;peakSpeed=0;fell=false;
         duration=std::clamp(duration,60,1200);
         if(mode=="prop" || mode=="walkprop") {
@@ -88,7 +90,8 @@ void Tick(uintptr_t base, const char* root) {
     float x=wc3::Real(wc3::GetUnitX(unit)), y=wc3::Real(wc3::GetUnitY(unit));
     peakSpeed=std::max(peakSpeed,movement.Speed());
     if (!movement.Grounded() && movement.FeetZ()<startZ-1) fell=true;
-    camera.Update(x,y,movement.EyeZ(),input.yaw,-10,85);
+    // The oracle camera uses the configuration captured when this disposable trial starts.
+    camera.Update(x,y,movement.EyeZ(),input.yaw,-10,85,drawDistance);
     if (++frame%30==0) wc3::Log("movement oracle progress mode=%s frame=%d x=%.1f y=%.1f feet=%.1f floor=%.1f speed=%.1f grounded=%d hops=%d",
         mode.c_str(),frame,x,y,movement.FeetZ(),wc3::Ground(x,y),movement.Speed(),movement.Grounded(),hops);
     if((mode=="prop" || mode=="walkprop") && frame==30) {

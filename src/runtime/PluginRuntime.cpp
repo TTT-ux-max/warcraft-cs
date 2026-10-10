@@ -4,6 +4,7 @@
 #include "../platform/WarcraftApi.hpp"
 #include "../platform/DiagnosticLog.hpp"
 #include "../platform/GameWindowInput.hpp"
+#include "../platform/NativeFrameRate.hpp"
 #include "../application/ShooterController.hpp"
 #include "../presentation/Overlay.hpp"
 #include "../presentation/ReticleDiagnostics.hpp"
@@ -37,6 +38,7 @@
 
 static ShooterController controller;
 static Overlay overlay;
+static NativeFrameRate frameRate;
 static bool healthy = true;
 static DWORD lastWorld = 0;
 static char root[MAX_PATH];
@@ -196,10 +198,14 @@ static void APIENTRY DrawElementsHook(GLenum mode, GLsizei count, GLenum type, c
 static void __fastcall PerspectiveHook(uintptr_t output, uintptr_t unused, float fov, float aspect, float nearZ, float farZ) {
     // Projection precedes world batching, so scope by the FPS camera's configured far distance.
     // Keep native FOV/aspect and portrait projection unchanged.
-    nearZ=FpsProjection::NearPlane(healthy && controller.Visible() && GetTickCount()-lastWorld<500,nearZ,farZ);
+    nearZ=FpsProjection::NearPlane(healthy && controller.Visible() && GetTickCount()-lastWorld<500,nearZ,farZ,
+        controller.Settings().render.drawDistance);
     originalPerspective(output, unused, fov, aspect, nearZ, farZ);
 }
 static BOOL WINAPI SwapHook(HDC dc, UINT planes) {
+    // F8's validated snapshot drives the client cap; gameplay continues to use elapsed real time.
+    frameRate.Configure(controller.Settings().render.maxFPS);
+    frameRate.Pace();
     static DWORD previous = 0;
     static unsigned frames = 0;
     ++frames;
@@ -260,6 +266,7 @@ static DWORD WINAPI Initialize(void*) {
         wc3::Log("World render signature mismatch: no hooks installed"); return 0;
     }
     controller.Configure(root, base); overlay.Configure(root);
+    frameRate.Install(base);
     if (MH_Initialize() != MH_OK) { wc3::Log("MinHook initialization failed"); return 0; }
     // Map timers may request RTS camera presets repeatedly; live FPS owns those native camera writes.
     MapCameraGuard::Install(base, []() { return healthy && controller.BlocksMapCamera(); }, Hook);

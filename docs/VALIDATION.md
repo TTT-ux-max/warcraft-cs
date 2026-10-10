@@ -331,5 +331,27 @@ and the narrower bounds of that owned model. The production swept-collision test
 immobility inside the old canopy box, verifies passage beside the decoded trunk, and retains
 blocking on a direct approach. Adapter checks cover separate unit/destructable model caches
 and map reset, preventing tree animation names on units from changing their movement bounds.
-All independent native suites pass. Interactive verification in a disposable Warcraft map
-is pending while the user's campaign remains open; the active game and its saves are untouched.
+All independent native suites pass. Interactive tree-corridor verification remains pending;
+the original diagnosis was read-only while the user's campaign was open, without touching its saves.
+
+## Configurable frame rate and draw distance (test branch)
+
+The owner's 1.26.0.6401 Game.dll confirms the render-completion demand-bit instruction identified
+through RenderEdge's published address. The adapter validates the surrounding opcode bytes before
+changing one in-memory operand; it does not patch game files or alter simulation time. A synthetic
+executable-memory oracle covers enable/disable/reload, unexpected instruction refusal and real
+Windows high-resolution waiting (30 intervals at 120 FPS take at least 0.25 seconds).
+
+Real INI tests cover missing/empty/malformed/non-finite values, native mode, 30–360 FPS clamping,
+3000–20000-unit distance clamping and reload. Migration in PowerShell 7 and Windows PowerShell 5.1
+preserves explicit caps/distances and remains idempotent. Production camera-field writes and
+near-plane selection pass for 3000/5000/10000/15000/20000 while preserving portrait/RTS projection.
+All independent native suites and the ordinary x86 build pass. With user-approved focus, a disposable
+flat Warcraft map contains a player and a scaled castle at x=6500. In one ordinary Player session,
+F8 changes MaxFPS/DrawDistance from 144/10000 to 0/5000 and back. Stable native-mode samples are
+approximately 62–65 frames/s; the extended FPS world view is approximately 99–103 frames/s, with the
+RTS view approximately 136–138. These are scene-specific measurements, not a promise of 144 FPS.
+Matched captures at the same player position show the castle absent at 5000 and present at 10000.
+The reticle and nearby terrain remain visible; a one-second W input moves the player normally.
+No controller fault or GL error appears in this trial. The test exits normally, restores its private
+INI snapshot and leaves no test process; user installations/campaign saves are untouched.

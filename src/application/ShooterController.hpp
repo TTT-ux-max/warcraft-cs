@@ -26,6 +26,7 @@
 #include "../squad/SquadController.hpp"
 #include <string>
 #include <vector>
+#include <chrono>
 
 class ShooterController {
 public:
@@ -157,7 +158,9 @@ private:
     bool keys_[256] = {};
     int weapon_ = 0, ammo_[WeaponSlots::Count] = {}, reserve_[WeaponSlots::Count] = {};
     float yaw_ = 0, pitch_ = 0, health_ = 0;
-    DWORD tick_ = 0, lastShot_ = 0, reloadEnd_ = 0, animationTick_ = 0;
+    // Movement needs a finer clock than GetTickCount's ~16ms steps once rendering exceeds 64 FPS.
+    std::chrono::steady_clock::time_point tick_{};
+    DWORD lastShot_ = 0, reloadEnd_ = 0, animationTick_ = 0;
     std::string root_, animation_ = "idle";
     MeleeAttack meleeAttack_ = MeleeAttack::Select(WeaponSlots::Knife, false);
     WeaponRecoil recoil_;

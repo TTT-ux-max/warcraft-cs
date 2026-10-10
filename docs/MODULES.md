@@ -51,6 +51,14 @@ sweeps the player footprint against terrain, native bridge decks and solid model
 `MovementObstacles`. The obstacle adapter owns model/type caches and clears them on map changes.
 `GameplaySettings` loads movement tuning; the controller applies that snapshot on startup and F8.
 
+`RenderSettings` is part of that validated snapshot. `NativeFrameRate` verifies the supported native
+render-demand instruction, owns its one-byte in-memory override and paces presentation with the
+Windows performance counter and waitable timer. MaxFPS=0 restores the original operand. The runtime
+consumes settings on each swap; Warcraft simulation clocks are untouched. The controller uses steady
+elapsed time for movement, while existing weapon/event deadlines keep their established clock.
+`FirstPersonCamera` writes the configured far clip and `FpsProjection` matches that same distance when
+adjusting the world's near plane, leaving portrait and native cinematic projection independent.
+
 Tree movement bounds reuse `TreeTrunkMesh`'s standing ground-connected components, the same decoded
 geometry used for destructable shots. Canopy cards and death-only stumps do not expand the player
 blocker. The platform adapter applies the existing native sprite transform and visual scale to those

@@ -167,7 +167,7 @@ void ShooterController::ResetMap() {
     hitboxes_.Reset(); destructableHitboxes_.Reset(); bombs_.Reset(); plantProgress_ = 0;
     buyMenu_.Close();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;
     fixtureGate_ = 0;
-    unit_ = 0; active_ = false; suspended_ = false; paused_ = false; ui_ = 0; tick_ = 0;
+    unit_ = 0; active_ = false; suspended_ = false; paused_ = false; ui_ = 0; tick_ = {};
     scopeLevel_ = 0; cinematicRequested_ = false; toggleRequested_ = false; ownCameraRequest_ = false;
     status_ = {}; meleeContact_ = meleeReady_ = 0; recoil_.Reset();
     std::fill(std::begin(keys_), std::end(keys_), false); lastShot_ = 0;
@@ -286,7 +286,7 @@ void ShooterController::Camera() {
     // Body/attachments are hidden by the world-only render filter; preserve native portrait tint/alpha.
     camera_.Update(wc3::Real(wc3::GetUnitX(unit_)), wc3::Real(wc3::GetUnitY(unit_)),
         movement_.EyeZ() + wc3::Real(wc3::GetUnitFlyHeight(unit_)), yaw_ + recoil_.Yaw(), std::clamp(pitch_ + recoil_.Pitch(), -65.0f, 65.0f),
-        scopeLevel_ == 2 ? 10.0f : Scoped() ? 40.0f : 85.0f);
+        scopeLevel_ == 2 ? 10.0f : Scoped() ? 40.0f : 85.0f, settings_.render.drawDistance);
     ownCameraRequest_ = false;
 }
 void ShooterController::Reload() {
@@ -318,6 +318,8 @@ void ShooterController::SwitchWeapon(int slot) {
 void ShooterController::ReloadSettings() {
     // Replace one complete snapshot; stale fractional credit must not survive a percentage/scope change.
     settings_=GameplaySettings::Load(root_+"\\WarcraftCS.ini");
+    // Camera and runtime pacing consume this same snapshot on the next render frame.
+    wc3::Log("Rendering configured maxFPS=%d drawDistance=%.0f",settings_.render.maxFPS,settings_.render.drawDistance);
     // F8 restores the saved preference; V is a session switch and never rewrites the player's INI.
     showSpeed_=settings_.showSpeed;
     fogOfWarDisabled_=settings_.disableFogOfWar;
@@ -492,7 +494,11 @@ const char* ShooterController::Animation() const { return animation_.c_str(); }
 float ShooterController::AnimationTime() const { return (GetTickCount() - animationTick_) * 0.001f * animationRate_; }
 void ShooterController::Tick(uintptr_t ui) {
     if (ui_ && ui != ui_) ResetMap(); ui_ = ui;
-    DWORD now = GetTickCount(); float dt = tick_ ? std::min((now - tick_) * 0.001f, 0.05f) : 0; tick_ = now;
+    DWORD now = GetTickCount();
+    // High-resolution elapsed time smooths movement at the new cap without speeding up gameplay timers.
+    auto frameTime=std::chrono::steady_clock::now();
+    float dt=tick_.time_since_epoch().count() ? std::min(std::chrono::duration<float>(frameTime-tick_).count(),0.05f) : 0;
+    tick_=frameTime;
     DWORD foregroundPid = 0; GetWindowThreadProcessId(GetForegroundWindow(), &foregroundPid);
     if (bombs_.Tick(audio_) && Visible()) hits_.Record();
     if (foregroundPid != GetCurrentProcessId()) {
