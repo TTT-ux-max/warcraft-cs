@@ -32,6 +32,24 @@ $audioBefore=(Get-FileHash -LiteralPath $customAudio).Hash
 Update-GameplayConfig $template $customAudio
 if ((Get-FileHash -LiteralPath $customAudio).Hash -ne $audioBefore) { throw 'Repeated audio migration changed the config.' }
 $empty=Join-Path $folder 'empty.ini'
+# Preserve custom team-bar preferences and add defaults without duplicate sections/keys.
+foreach ($preference in @('true','false')) {
+    $barConfig=Join-Path $folder ('custom-health-bars-'+$preference+'.ini')
+    @('[Interface]',('ShowAllyHealthBars='+$preference),'ShowEnemyHealthBars=true','HealthBarDistance=850','ShowSpeed=true') | Set-Content -LiteralPath $barConfig -Encoding ascii
+    Update-GameplayConfig $template $barConfig
+    $barText=Get-Content -LiteralPath $barConfig -Raw
+    foreach ($key in @('ShowAllyHealthBars','ShowEnemyHealthBars','HealthBarDistance')) {
+        if ([regex]::Matches($barText,('(?m)^'+$key+'=')).Count -ne 1) {throw 'Health bar migration duplicated a key.'}
+    }
+    if (!$barText.Contains('ShowAllyHealthBars='+$preference) -or !$barText.Contains('ShowEnemyHealthBars=true') -or
+        !$barText.Contains('HealthBarDistance=850') -or !$barText.Contains('ShowSpeed=true') -or
+        [regex]::Matches($barText,'(?m)^\[Interface\]').Count -ne 1) {throw 'Health bar migration replaced preferences.'}
+    $barBefore=(Get-FileHash -LiteralPath $barConfig).Hash;Update-GameplayConfig $template $barConfig
+    if ((Get-FileHash -LiteralPath $barConfig).Hash -ne $barBefore) {throw 'Health bar migration is not idempotent.'}
+}
+foreach ($default in @('ShowAllyHealthBars=false','ShowEnemyHealthBars=false','HealthBarDistance=2000')) {
+    if (!$text.Contains($default)) {throw ('Legacy config lacks '+$default)}
+}
 # Optional speed/fog preferences migrate into the existing Interface section without resetting it.
 foreach ($preference in @('true','false')) {
     $speedConfig=Join-Path $folder ('custom-speed-'+$preference+'.ini')

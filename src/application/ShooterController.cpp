@@ -131,6 +131,7 @@ void ShooterController::InterfaceRequest(bool show) {
     }
 }
 void ShooterController::Disable(bool restoreCamera) {
+    allyHealthToggle_=enemyHealthToggle_=false; // Do not replay pending bar switches on the next F6.
     // Restore the current map before native RTS/menu input takes over.
     nativeFog_.Update(false);fogToggleRequested_=false;
     buyMenu_.Close();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;
@@ -156,6 +157,7 @@ void ShooterController::Disable(bool restoreCamera) {
     wc3::Log("FPS disabled");
 }
 void ShooterController::ResetMap() {
+    allyHealthToggle_=enemyHealthToggle_=false;
     nativeFog_.Reset();fogToggleRequested_=false; // An unloaded map's fog snapshot must be forgotten.
     collision_.Reset(); // Custom-map model bounds must never leak into the next world's collision.
     nativeSky_.Reset();
@@ -315,9 +317,20 @@ void ShooterController::SwitchWeapon(int slot) {
     recoil_.ResetBurst(); weapon_ = slot; reloadEnd_ = 0; scopeLevel_ = 0; Play("draw");
     wc3::Log("weapon selected=%s slot=%d", weapons[slot].name, slot + 1);
 }
+void ShooterController::ToggleHealthBar(bool allies) {
+    // Save just this team's preference without replacing other settings or minting a new loadout.
+    bool& enabled=allies ? settings_.healthBars.allies : settings_.healthBars.enemies;
+    enabled=!enabled;
+    const char* key=allies ? "ShowAllyHealthBars" : "ShowEnemyHealthBars";
+    bool saved=WritePrivateProfileStringA("Interface",key,enabled ? "true" : "false",(root_+"\\WarcraftCS.ini").c_str())!=FALSE;
+    wc3::Log("Health bars toggled team=%s enabled=%d saved=%d",allies ? "allies" : "enemies",enabled,saved);
+    Notice(saved ? (allies ? (enabled ? "ALLY HEALTH BARS ON" : "ALLY HEALTH BARS OFF") :
+        (enabled ? "ENEMY HEALTH BARS ON" : "ENEMY HEALTH BARS OFF")) : "HEALTH BAR SETTING COULD NOT BE SAVED");
+}
 void ShooterController::ReloadSettings() {
     // Replace one complete snapshot; stale fractional credit must not survive a percentage/scope change.
     settings_=GameplaySettings::Load(root_+"\\WarcraftCS.ini");
+    wc3::Log("Health bars configured allies=%d enemies=%d distance=%.0f",settings_.healthBars.allies,settings_.healthBars.enemies,settings_.healthBars.distance);
     // Camera and runtime pacing consume this same snapshot on the next render frame.
     wc3::Log("Rendering configured maxFPS=%d drawDistance=%.0f",settings_.render.maxFPS,settings_.render.drawDistance);
     // F8 restores the saved preference; V is a session switch and never rewrites the player's INI.
@@ -543,8 +556,10 @@ void ShooterController::Tick(uintptr_t ui) {
     nativeSky_.Update(ui_,Visible() && settings_.nativeSky && !settings_.csSky,mapTileset_);
     nativeFog_.Update(Visible() && fogOfWarDisabled_);
     // A queued display tap cannot take effect after FPS is suspended or left.
-    if (!active_ || suspended_) { mouseLook_.Reset();weaponWheel_.Reset();itemRequested_=false;squadRequested_=0;speedToggleRequested_=fogToggleRequested_=false;return; }
+    if (!active_ || suspended_) { mouseLook_.Reset();weaponWheel_.Reset();itemRequested_=false;squadRequested_=0;speedToggleRequested_=fogToggleRequested_=false;allyHealthToggle_=enemyHealthToggle_=false;return; }
     if (settingsRequested_) { settingsRequested_=false;ReloadSettings(); }
+    if(allyHealthToggle_) { allyHealthToggle_=false;ToggleHealthBar(true); }
+    if(enemyHealthToggle_) { enemyHealthToggle_=false;ToggleHealthBar(false); }
     if (speedToggleRequested_) {
         speedToggleRequested_=false;showSpeed_=!showSpeed_;
         wc3::Log("Speed display toggled visible=%d units=CS",showSpeed_);

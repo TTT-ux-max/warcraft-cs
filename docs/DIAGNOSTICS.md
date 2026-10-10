@@ -1,5 +1,9 @@
 # Diagnostic logging
 
+Health bars log the validated allied/enemy switches and distance, K/L toggles and whether the INI
+save succeeded. Sampled records report native candidate and submitted-bar counts. Submission is
+not proof of visible pixels: world depth may correctly occlude a submitted bar.
+
 Ground-clipping test builds log native far-limit signature verification, FPS channel ceiling changes
 and restoration. Sampled `world projection` records show `requestedFar`, `cameraFar`, `projectionFar`
 and `near` before/after correction, distinguishing saved settings from actual engine values.

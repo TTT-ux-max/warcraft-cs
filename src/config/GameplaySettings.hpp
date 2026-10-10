@@ -2,6 +2,7 @@
 #include "../combat/WeaponSlots.hpp"
 #include "LoggingSettings.hpp"
 #include "RenderSettings.hpp"
+#include "HealthBarSettings.hpp"
 
 #include "../movement/MovementSettings.hpp"
 #include <array>
@@ -11,6 +12,7 @@
 struct GameplaySettings {
     LoggingSettings logging;
     RenderSettings render;
+    HealthBarSettings healthBars;
 
     MovementSettings movement;
     float runeAmmoPercent = 20;

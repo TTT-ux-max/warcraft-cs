@@ -3,11 +3,13 @@
 #include "GunMesh.hpp"
 #include "../application/ShooterController.hpp"
 #include "SkyView.hpp"
+#include "HealthBarRenderer.hpp"
 
 class Overlay {
 public:
     void Configure(const char* root) { root_ = root; }
-    void Draw(HDC dc, const ShooterController& controller);
+    void Draw(HDC dc, const ShooterController& controller,const std::vector<UnitHealthBar>& bars,
+        const WorldLabelView& barView,float nearPlane,float farPlane);
     void ContextDeleted(HGLRC context);
     void RefreshAfterFocus() { refreshPending_ = true; }
 private:

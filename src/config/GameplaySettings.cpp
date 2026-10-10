@@ -57,6 +57,16 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // Old configs retain 50%; zero disables allied damage and full damage is capped at 100%.
     result.friendlyFirePercent=number("Damage","FriendlyFirePercent",50,100);
     result.floatingTextDistance=number("Interface","FloatingTextDistance",1200,5000);
+    // Team bars require an explicit opt-in; invalid/legacy preferences keep the FPS view clear.
+    auto healthSwitch=[&](const char* key) {
+        auto value=text("Interface",key,"false");
+        if(!_stricmp(value.c_str(),"true") || value=="1") return true;
+        if(!value.empty() && _stricmp(value.c_str(),"false") && value!="0") wc3::Log("Invalid Interface.%s; using false",key);
+        return false;
+    };
+    result.healthBars.allies=healthSwitch("ShowAllyHealthBars");
+    result.healthBars.enemies=healthSwitch("ShowEnemyHealthBars");
+    result.healthBars.distance=number("Interface","HealthBarDistance",2000,15000);
     // Keep the optional counter hidden for old/invalid configs; accept explicit boolean preferences.
     auto showSpeed=text("Interface","ShowSpeed","false");
     result.showSpeed=!_stricmp(showSpeed.c_str(),"true") || showSpeed=="1";

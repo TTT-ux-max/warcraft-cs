@@ -98,3 +98,9 @@ shared reads, persistent launcher records and full export; `LogViewerForm` is it
 
 After structural changes, run native tests, launcher tests, the native build and both launcher package
 checks. Hook/render changes also require a disposable native map. Never run fixtures in user saves.
+
+`UnitHealthBars` samples living visible allied/enemy units on the game thread and owns per-map model
+bounds. It passes handle-free `UnitHealthBar` snapshots to `HealthBarRenderer`; `HealthBarView` owns
+portable projection/fill rules. The renderer depth-tests before the weapon clears world depth and
+restores GL state. The runtime extracts actual projection scales (Warcraft's FOV field is diagonal).
+K/L queue independent switches in the controller, which saves only the corresponding INI key.

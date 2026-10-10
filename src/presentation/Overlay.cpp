@@ -46,7 +46,8 @@ void Overlay::ContextDeleted(HGLRC context) {
     ResetGraphics(false); context_ = nullptr;
     wc3::Log("Overlay context deleted; GPU names forgotten");
 }
-void Overlay::Draw(HDC dc, const ShooterController& controller) {
+void Overlay::Draw(HDC dc, const ShooterController& controller,const std::vector<UnitHealthBar>& bars,
+    const WorldLabelView& barView,float nearPlane,float farPlane) {
     // Explain early returns as well as submitted geometry when investigating a missing aiming mark.
     if (!controller.Visible()) { ReticleDiagnostics::Skip("fps-inactive"); return; }
     if (!wglGetCurrentContext()) { ReticleDiagnostics::Skip("no-gl-context"); return; }
@@ -104,6 +105,10 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
     // Sky touches only far-depth pixels before the weapon's private depth clear, preserving native scenery.
     if (controller.Settings().csSky && !controller.Status().contained && !controller.Status().hidden)
         sky_.Draw(root_,controller.SkyName(),controller.ViewYaw(),controller.ViewPitch(),controller.ViewFov(),float(width)/height);
+    // World depth still exists here; the first-person weapon clears it in the next pass.
+    unsigned barCount=0;
+    if(!controller.Status().contained && !controller.Status().hidden && !controller.Buying())
+        barCount=HealthBarRenderer::Draw(bars,barView,width,height,nearPlane,farPlane);
     glMatrixMode(GL_PROJECTION); glPushMatrix(); glLoadIdentity();
     int index = controller.WeaponIndex();
     // Slightly tighten USP/AWP framing while preserving the original lower-edge arm origins.
@@ -166,6 +171,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
     // Show the independent release key beside both recruitment policies.
     char squad[128];sprintf_s(squad,"H: FIGHT | O: FOLLOW | J: RELEASE | SQUAD %u %s",unsigned(controller.SquadCount()),controller.SquadCount() ? (controller.SquadPassive() ? "FOLLOW" : "COMBAT") : "");
     Text(25,88,squad);
+    Text(25,146,"K: ALLY HP | L: ENEMY HP");
     // Keep mod-specific shortcuts; familiar movement, reload, jump and crouch need no permanent tutorial.
     Text(25, 30, "Warcraft CS by Yazgul | F6: RTS | B: BUY | .: AMMO | V: SPEED | N: FOG");
     char economy[96];sprintf_s(economy,"GOLD %d | B: BUY | .: AMMO | F7: FREE AMMO | F9: ALL WEAPONS",controller.Gold());Text(25,117,economy);
@@ -203,6 +209,8 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
     if (activeTexture) activeTexture(oldTexture);
     // Report submission decisions, not pixel visibility; sampled GL errors can originate in the host frame.
     if (DiagnosticLog::Due(lastDiagnostic_)) {
+        wc3::Trace("health bars allies=%d enemies=%d candidates=%u submitted=%u distance=%.0f",
+            controller.Settings().healthBars.allies,controller.Settings().healthBars.enemies,unsigned(bars.size()),barCount,controller.Settings().healthBars.distance);
         // Sample display submission with the same bounded cadence as existing overlay diagnostics.
         wc3::Trace("overlay speed visible=%d speedCS=%.1f",controller.SpeedVisible(),controller.DisplaySpeed());
         GLint viewport[4] = {}; GLboolean mask[4] = {};

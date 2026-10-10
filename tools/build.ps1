@@ -39,6 +39,8 @@ $sources += '"' + (Join-Path $modRoot 'src/platform/GameWindowInput.cpp') + '"'
 $sources += '"' + (Join-Path $modRoot 'src/platform/NativeFrameRate.cpp') + '"'
 # The FPS camera limit is restored through native generation keys when its map/camera disappears.
 $sources += '"' + (Join-Path $modRoot 'src/platform/NativeCameraFarClip.cpp') + '"'
+# Keep native health sampling separate from depth-tested presentation.
+$sources += @('platform/UnitHealthBars.cpp','presentation/HealthBarRenderer.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 $sources += '"' + (Join-Path $modRoot 'src/platform/MovementObstacles.cpp') + '"'
 # Shop access is native-world policy; inventory prices/navigation remain independently testable.
 $sources += @('economy/BuyAccess.cpp','presentation/BuyMenuView.cpp','presentation/SkyView.cpp','platform/MapEnvironment.cpp','platform/NativeSky.cpp','platform/NativeFloatingText.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }

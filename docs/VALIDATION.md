@@ -1,5 +1,26 @@
 # Validation of the 0.1.0 source baseline
 
+## Allied/enemy health bars (test branch, 2026-10-11)
+
+The production native sampler in a synthetic world filters controlled/dead/hidden/transported,
+fog-hidden and passive-neutral units, applies independent team switches, preserves actual health
+fractions, computes fallback model tops and balances group creation/destruction. A hidden native
+WGL window exercises actual green/red pixels, full/half fill, scope projection, behind-camera/range
+culling, nearer-depth occlusion and GL-state restoration. The full independent suite passes.
+Real INI loading covers legacy/empty/malformed/mixed-case/numeric switches, independent team reload
+and finite bounded 0..15000 distance. Migration in PowerShell 7 and Windows PowerShell 5.1 preserves
+custom switches/distance and remains idempotent. The ordinary x86 Player build also passes.
+
+With user-approved focus, the disposable map has a damaged ally, enemy and enemy behind a scaled
+castle, plus hidden/dead fixtures. Native captures show green/red bars above rendered model tops;
+the damaged ally has a partial fill and the full-health replacement hostile target has a full fill.
+The castle occludes its rear target's bar. K removes only the ally bar; L subsequently removes the
+enemy bar. F8 logs both saved switches, then the independently saved false/true state. No controller
+fault or GL error occurs. The scene starts with a native placement offset, so the test steps back
+from the castle and uses an explicit private paused-target request after the first enemy dies.
+Normal Exit closes the game, no test process remains, and the private INI snapshot is restored.
+No user installation or campaign save is changed; full campaign/multiplayer testing is not claimed.
+
 ## Ground clipping and the native far-channel ceiling (test branch, 2026-10-11)
 
 Inspection of the owner's supported Game.dll shows the camera controller's FARZ wrapper at +114

@@ -6,6 +6,7 @@
 #include "../platform/GameWindowInput.hpp"
 #include "../platform/NativeFrameRate.hpp"
 #include "../platform/NativeCameraFarClip.hpp"
+#include "../platform/UnitHealthBars.hpp"
 #include "../application/ShooterController.hpp"
 #include "../presentation/Overlay.hpp"
 #include "../presentation/ReticleDiagnostics.hpp"
@@ -41,6 +42,10 @@ static ShooterController controller;
 static Overlay overlay;
 static NativeFrameRate frameRate;
 static NativeCameraFarClip cameraFarClip;
+static UnitHealthBars healthBars;
+static WorldLabelView healthBarView;
+static float healthNear=8,healthFar=15000;
+static float healthVerticalFov=85,healthAspect=1;
 static bool healthy = true;
 static DWORD lastWorld = 0;
 static char root[MAX_PATH];
@@ -107,6 +112,7 @@ static void ObserveMap(uintptr_t ui) {
     if (mapUI == ui) return;
     // A real UI unload/replacement marks map boundaries; a rendering pause is only a focus pause.
     controller.ResetMap(); mapUI = ui;
+    healthBars.Reset();healthBarView.active=false; // Native models/snapshots belong to the current map.
     if (ui) healthy = true;
     wc3::Log("Map lifecycle: %s ui=%08X", ui ? "loaded" : "unloaded", ui);
 }
@@ -122,7 +128,10 @@ static void __cdecl InterfaceHook(BOOL show, float* duration) {
 }
 static void SafeTick(uintptr_t ui) {
     // Disable the extension on a native fault, leaving the game callback intact.
-    __try { controller.Tick(ui); }
+    __try {
+        controller.Tick(ui);
+        healthBars.Update(controller.ViewActor(),controller.Settings().healthBars);
+    }
     __except (EXCEPTION_EXECUTE_HANDLER) {
         healthy = false; wc3::LogError("Controller fault %08X; disabled", GetExceptionCode());
         // A diagnostic/native failure must never keep FPS input or camera ownership locked over an exit dialog.
@@ -173,6 +182,8 @@ static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
         labelView.maximumDistance=controller.Settings().floatingTextDistance;
     }
     NativeFloatingText::SetView(labelView);
+    healthBarView=labelView;healthBarView.maximumDistance=controller.Settings().healthBars.distance;
+    healthBarView.verticalFov=healthVerticalFov;healthBarView.aspect=healthAspect;
     // Suppress only the controlled actor during world drawing; menus, portraits and RTS still render it.
     ActorRenderFilter::Begin(healthy ? controller.ViewActor() : 0);
     int result = originalWorld(ui, unused);
@@ -206,11 +217,23 @@ static void __fastcall PerspectiveHook(uintptr_t output, uintptr_t unused, float
     float cameraFar=fps ? wc3::Real(wc3::GetCameraField(1)) : farZ;
     float originalNear=nearZ;
     nearZ=FpsProjection::NearPlane(fps,nearZ,farZ,cameraFar);
+    if(fps && std::abs(farZ-cameraFar)<.01f) {
+        // Actual world projection keeps bar depth/FOV valid during scope and native distance clamping.
+        healthNear=nearZ;healthFar=farZ;
+    }
     static DWORD projectionLog=0;
     if(fps && std::abs(farZ-cameraFar)<.01f && DiagnosticLog::Due(projectionLog))
         wc3::Trace("world projection requestedFar=%.1f cameraFar=%.1f projectionFar=%.1f near=%.1f->%.1f",
             controller.Settings().render.drawDistance,cameraFar,farZ,originalNear,nearZ);
     originalPerspective(output, unused, fov, aspect, nearZ, farZ);
+    if(fps && std::abs(farZ-cameraFar)<.01f) {
+        // Warcraft derives vertical FOV from its diagonal field. Read actual matrix scale, not the INI angle.
+        const float* matrix=reinterpret_cast<const float*>(output);
+        if(std::isfinite(matrix[0]) && std::isfinite(matrix[5]) && matrix[0]>0 && matrix[5]>0) {
+            healthVerticalFov=2*std::atan(1/matrix[5])/.01745329252f;healthAspect=matrix[5]/matrix[0];
+            healthBarView.verticalFov=healthVerticalFov;healthBarView.aspect=healthAspect;
+        }
+    }
 }
 static BOOL WINAPI SwapHook(HDC dc, UINT planes) {
     // F8's validated snapshot drives the client cap; gameplay continues to use elapsed real time.
@@ -229,7 +252,7 @@ static BOOL WINAPI SwapHook(HDC dc, UINT planes) {
         overlay.RefreshAfterFocus();
     }
     overlayPass = true;
-    if (healthy && GetTickCount() - lastWorld < 500) overlay.Draw(dc, controller);
+    if (healthy && GetTickCount() - lastWorld < 500) overlay.Draw(dc,controller,healthBars.Items(),healthBarView,healthNear,healthFar);
     // The reticle cannot reach its draw entry while native recovery or stale world frames suppress the overlay.
     else ReticleDiagnostics::Skip(healthy ? "world-frame-stale" : "controller-fault", 0, 0, GetTickCount() - lastWorld);
     overlayPass = false; nativeUIPhase = false;

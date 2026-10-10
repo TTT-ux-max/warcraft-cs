@@ -7,6 +7,8 @@ foreach ($name in @('window-input','fog-of-war','diagnostic-log','native-frame-r
     & (Join-Path $PSScriptRoot "test-$name.ps1")
 }
 & (Join-Path $PSScriptRoot 'test-tree-and-wheel.ps1')
+# Health bars verify native filtering and actual WGL depth/state without taking input focus.
+& (Join-Path $PSScriptRoot 'test-health-bars.ps1')
 # Buying/sky decoding are independent of Warcraft and use only synthetic/private-free test inputs.
 & (Join-Path $PSScriptRoot 'test-buy-menu.ps1')
 Write-Output 'All native-independent regression suites passed.'

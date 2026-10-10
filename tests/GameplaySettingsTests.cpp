@@ -19,6 +19,7 @@ int main() {
     assert(settings.floatingTextDistance==1200);
     assert(!settings.showSpeed);
     assert(!settings.disableFogOfWar);
+    assert(!settings.healthBars.allies && !settings.healthBars.enemies && settings.healthBars.distance==2000);
     assert(settings.csVolumePercent==100);
     assert(settings.render.maxFPS==144 && settings.render.drawDistance==15000);
     assert(!settings.startAllWeapons && settings.startBombs==20 && settings.maxBombs==100 );
@@ -75,9 +76,11 @@ int main() {
     int speedIndex=0;
     for (const auto& test:speedCases) {
         const auto sample=path+".speed-"+std::to_string(speedIndex++);
-        { std::ofstream file(sample);file<<"[Interface]\nShowSpeed="<<test.value<<"\nDisableFogOfWar="<<test.value<<"\n"; }
+        { std::ofstream file(sample);file<<"[Interface]\nShowSpeed="<<test.value<<"\nDisableFogOfWar="<<test.value<<
+            "\nShowAllyHealthBars="<<test.value<<"\nShowEnemyHealthBars="<<test.value<<"\n"; }
         assert(GameplaySettings::Load(sample).showSpeed==test.enabled);
         assert(GameplaySettings::Load(sample).disableFogOfWar==test.enabled);
+        assert(GameplaySettings::Load(sample).healthBars.allies==test.enabled && GameplaySettings::Load(sample).healthBars.enemies==test.enabled);
         DeleteFileA(sample.c_str());
     }
     const auto speedReload=path+".speed-reload";
@@ -90,6 +93,19 @@ int main() {
     WritePrivateProfileStringA("Interface","DisableFogOfWar","false",speedReload.c_str());
     assert(!GameplaySettings::Load(speedReload).showSpeed);
     assert(!GameplaySettings::Load(speedReload).disableFogOfWar);DeleteFileA(speedReload.c_str());
+    // Reload independent team switches and distance through the actual Windows INI boundary.
+    const auto barsReload=path+".bars-reload";
+    WritePrivateProfileStringA("Interface","ShowAllyHealthBars","true",barsReload.c_str());
+    WritePrivateProfileStringA("Interface","ShowEnemyHealthBars","false",barsReload.c_str());
+    auto bars=GameplaySettings::Load(barsReload);assert(bars.healthBars.allies && !bars.healthBars.enemies);
+    WritePrivateProfileStringA("Interface","ShowAllyHealthBars","false",barsReload.c_str());
+    WritePrivateProfileStringA("Interface","ShowEnemyHealthBars","true",barsReload.c_str());
+    bars=GameplaySettings::Load(barsReload);assert(!bars.healthBars.allies && bars.healthBars.enemies);
+    for(const auto& test: {std::pair<const char*,float>{"",2000},{"bad",2000},{"nan",2000},{"-1",0},{"0",0},{"850",850},{"20000",15000}}) {
+        WritePrivateProfileStringA("Interface","HealthBarDistance",test.first,barsReload.c_str());
+        assert(GameplaySettings::Load(barsReload).healthBars.distance==test.second);
+    }
+    DeleteFileA(barsReload.c_str());
     // Exercise the actual INI boundary, including absent/invalid defaults and explicit opt-in/out reloads.
     const struct { const char* value; bool enabled; } awpCases[] = {
         {"",false},{"false",false},{"true",true},{"TrUe",true},{"0",false},{"1",true},{"broken",false}
