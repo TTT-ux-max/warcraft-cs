@@ -1,5 +1,31 @@
 # Validation of the 0.1.0 source baseline
 
+## Ground clipping and the native far-channel ceiling (test branch, 2026-10-11)
+
+Inspection of the owner's supported Game.dll shows the camera controller's FARZ wrapper at +114
+initialized with a 100..10000 range. Both scalar writes and evaluations clamp through the channel's
++80/+84 bounds. Comparing native far=10000 with requested far=15000 skips the old near correction
+and leaves a 100-unit plane in front of an eye only 96 units above the ground. Earlier field stubs
+did not emulate that native bound; the earlier 15000 tests prove parameter plumbing, not native reach.
+
+The production platform owner now changes only the active FPS channel's ceiling to 20000 and restores
+it through native generation keys. Tests reproduce the 15000/10000 failure, verify the live-field near
+fallback, 15000 acceptance, untouched portrait projection, repeated updates, camera replacement,
+stale generations and foreign limit preservation. The complete independent wrapper and ordinary
+x86 runtime build pass. Native getter/resolver/scalar-limit signatures gate the layout; failure retains
+the stock channel and the near correction still matches the actual camera field.
+
+A private owned map with a 257x257 flat terrain, a player and a castle at 13000 was rebuilt; all 15
+archive members round-trip exactly. With the user's save/close and input approval, the ordinary
+Player DLL runs in the disposable Warcraft copy. Native signatures verify, the FPS channel ceiling
+rises from 10000 to 20000, and the requested/live/projection far values settle at 15000. The initial
+10000 transition also receives near=8, covering the fallback. A horizontal capture shows the castle
+at 13000; the maximum downward pitch of -65 degrees shows continuous textured ground below the
+96-unit eye, including during movement. F6 releases FPS and logs restoration of the stock 10000
+ceiling. No controller fault or GL error occurs. The test game closes normally and its private INI
+backup is restored. User installation files and campaign saves are untouched; this is a flat-map
+ground/projection check, not a full campaign or ledge-collision validation.
+
 ## Draw-distance default 15000 (test branch, 2026-10-10)
 
 The default settings snapshot, missing/malformed INI fallback and fresh-install template now use

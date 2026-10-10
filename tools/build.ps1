@@ -37,6 +37,8 @@ $sources += '"' + (Join-Path $modRoot 'src/platform/NativeFogOfWar.cpp') + '"'
 $sources += '"' + (Join-Path $modRoot 'src/platform/GameWindowInput.cpp') + '"'
 # Presentation pacing and the guarded 1.26a demand operand belong to the native adapter.
 $sources += '"' + (Join-Path $modRoot 'src/platform/NativeFrameRate.cpp') + '"'
+# The FPS camera limit is restored through native generation keys when its map/camera disappears.
+$sources += '"' + (Join-Path $modRoot 'src/platform/NativeCameraFarClip.cpp') + '"'
 $sources += '"' + (Join-Path $modRoot 'src/platform/MovementObstacles.cpp') + '"'
 # Shop access is native-world policy; inventory prices/navigation remain independently testable.
 $sources += @('economy/BuyAccess.cpp','presentation/BuyMenuView.cpp','presentation/SkyView.cpp','platform/MapEnvironment.cpp','platform/NativeSky.cpp','platform/NativeFloatingText.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }

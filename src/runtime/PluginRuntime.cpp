@@ -5,6 +5,7 @@
 #include "../platform/DiagnosticLog.hpp"
 #include "../platform/GameWindowInput.hpp"
 #include "../platform/NativeFrameRate.hpp"
+#include "../platform/NativeCameraFarClip.hpp"
 #include "../application/ShooterController.hpp"
 #include "../presentation/Overlay.hpp"
 #include "../presentation/ReticleDiagnostics.hpp"
@@ -39,6 +40,7 @@
 static ShooterController controller;
 static Overlay overlay;
 static NativeFrameRate frameRate;
+static NativeCameraFarClip cameraFarClip;
 static bool healthy = true;
 static DWORD lastWorld = 0;
 static char root[MAX_PATH];
@@ -133,6 +135,8 @@ static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
     lastWorld = now;
     // RenderWorld's this pointer is not CGameUI; query the real UI for cinematic flags.
     uintptr_t gameUI = CurrentUI(); ObserveMap(gameUI);
+    // Lift the native channel ceiling before the FPS camera writes its validated distance.
+    cameraFarClip.Update(healthy && controller.Visible());
     if (healthy && gameUI) SafeTick(gameUI);
 #ifdef WCS_FLOATING_TEXT_TEST
     if (healthy && gameUI) FloatingTextScene::Tick(controller,gameBase,root);
@@ -196,10 +200,16 @@ static void APIENTRY DrawElementsHook(GLenum mode, GLsizei count, GLenum type, c
     originalDrawElements(mode, count, type, indices);
 }
 static void __fastcall PerspectiveHook(uintptr_t output, uintptr_t unused, float fov, float aspect, float nearZ, float farZ) {
-    // Projection precedes world batching, so scope by the FPS camera's configured far distance.
-    // Keep native FOV/aspect and portrait projection unchanged.
-    nearZ=FpsProjection::NearPlane(healthy && controller.Visible() && GetTickCount()-lastWorld<500,nearZ,farZ,
-        controller.Settings().render.drawDistance);
+    bool fps=healthy && controller.Visible() && GetTickCount()-lastWorld<500;
+    // Native limits/interpolation can differ from the requested INI value. Scope near clipping by
+    // the actual world-camera field so the fallback also keeps nearby ground when a limit cannot be lifted.
+    float cameraFar=fps ? wc3::Real(wc3::GetCameraField(1)) : farZ;
+    float originalNear=nearZ;
+    nearZ=FpsProjection::NearPlane(fps,nearZ,farZ,cameraFar);
+    static DWORD projectionLog=0;
+    if(fps && std::abs(farZ-cameraFar)<.01f && DiagnosticLog::Due(projectionLog))
+        wc3::Trace("world projection requestedFar=%.1f cameraFar=%.1f projectionFar=%.1f near=%.1f->%.1f",
+            controller.Settings().render.drawDistance,cameraFar,farZ,originalNear,nearZ);
     originalPerspective(output, unused, fov, aspect, nearZ, farZ);
 }
 static BOOL WINAPI SwapHook(HDC dc, UINT planes) {
@@ -210,6 +220,8 @@ static BOOL WINAPI SwapHook(HDC dc, UINT planes) {
     static unsigned frames = 0;
     ++frames;
     ObserveMap(CurrentUI());
+    // Menus, cinematics, faults and F6 release the camera limit even without another world batch.
+    cameraFarClip.Update(healthy && controller.Visible());
     HWND window = WindowFromDC(dc);
     // Recheck the real render window after films: Warcraft may replace it or reset its input procedure.
     if (windowInput.Observe(window)) {

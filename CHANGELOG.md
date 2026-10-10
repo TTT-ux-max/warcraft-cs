@@ -2,6 +2,8 @@
 
 ## Unreleased — test branches
 
+- Fix disappearing nearby ground above the native 10000-unit camera limit: match the live camera field for near clipping and temporarily lift only the FPS far-channel ceiling to the supported 20000-unit range.
+- Restore the native camera ceiling on FPS exit, menus, faults and camera changes using generation keys; log actual world projection near/far values separately from the INI request.
 - Recognize the full native cliff rim, including diagonal corners, so landing below a ledge does not trap the player in its walkability mask.
 - Permit retreat from an existing solid overlap and its native footprint while still rejecting deeper penetration, new solids and unknown flat blockers.
 - Log sampled movement rejection reasons and terrain/cliff coordinates for diagnosing stuck positions.

@@ -56,8 +56,11 @@ render-demand instruction, owns its one-byte in-memory override and paces presen
 Windows performance counter and waitable timer. MaxFPS=0 restores the original operand. The runtime
 consumes settings on each swap; Warcraft simulation clocks are untouched. The controller uses steady
 elapsed time for movement, while existing weapon/event deadlines keep their established clock.
-`FirstPersonCamera` writes the configured far clip and `FpsProjection` matches that same distance when
-adjusting the world's near plane, leaving portrait and native cinematic projection independent.
+`NativeCameraFarClip` owns the active FPS channel's ceiling and restores it through native generation
+keys, preserving other cameras and foreign edits. `WarcraftApi` validates and resolves that 1.26a
+channel; no shared constant or game file is patched. `FirstPersonCamera` writes the configured far
+clip and `FpsProjection` matches the live native field when adjusting the world's near plane,
+leaving portrait and native cinematic projection independent, including a clamped fallback.
 
 Tree movement bounds reuse `TreeTrunkMesh`'s standing ground-connected components, the same decoded
 geometry used for destructable shots. Canopy cards and death-only stumps do not expand the player

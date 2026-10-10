@@ -1,5 +1,9 @@
 # Diagnostic logging
 
+Ground-clipping test builds log native far-limit signature verification, FPS channel ceiling changes
+and restoration. Sampled `world projection` records show `requestedFar`, `cameraFar`, `projectionFar`
+and `near` before/after correction, distinguishing saved settings from actual engine values.
+
 The ledge-recovery test branch adds sampled `movement blocked` records with `solid-volume`,
 `uphill-terrain`, `invalid-terrain`, `native-pathing`, `native-relocation` or `world-boundary` reasons.
 They include the original position, rejected sample, reachable height, sampled terrain/object height
