@@ -1,5 +1,32 @@
 # Diagnostic logging
 
+Startup/settings reload logs every resolved keyboard shortcut and spell slot override. Invalid or
+conflicting layouts revert as a whole. Spell records identify unit/slot/rawcode/native order, target
+form and point, engine acceptance and mana. Unlearned/passive/unsupported notices are logged too.
+Completion/interruption records distinguish explicit spell ownership from normal FPS order cancellation;
+an accepted order does not by itself prove a successful effect when the engine rejects costs/targets.
+Automatic lookups also log the hero type, all four resolved rawcodes and the requested slot, making
+custom list-order/replacement problems distinguishable from native cost or cooldown rejection.
+
+Health bars log the validated allied/enemy switches and distance, the shared K toggle and whether
+each INI key save succeeded. Sampled records report native candidate and submitted-bar counts. Submission is
+not proof of visible pixels: world depth may correctly occlude a submitted bar.
+
+Ground-clipping test builds log native far-limit signature verification, FPS channel ceiling changes
+and restoration. Sampled `world projection` records show `requestedFar`, `cameraFar`, `projectionFar`
+and `near` before/after correction, distinguishing saved settings from actual engine values.
+
+The ledge-recovery test branch adds sampled `movement blocked` records with `solid-volume`,
+`uphill-terrain`, `invalid-terrain`, `native-pathing`, `native-relocation` or `world-boundary` reasons.
+They include the original position, rejected sample, reachable height, sampled terrain/object height
+and original/sample native cliff levels. All rejection paths share one `IntervalMs` clock and obey
+`Detailed`; standing still produces no rejection record.
+
+Test-branch rendering settings log the validated MaxFPS/DrawDistance snapshot, verified frame-rate
+adapter setup, applied native/custom mode and failures to change the guarded operand. `render frames`
+reports presentations within the configured Logging.IntervalMs, so use that interval when estimating
+FPS from the count; loading/focus transitions and capture overhead affect individual samples.
+
 Both source-only and DLL-included launchers have **Read logs**. It works before installation,
 without download consent and while setup or Warcraft is running. The selected installation folder
 determines which game's logs appear. The current game journal opens first when available.
@@ -67,3 +94,27 @@ For a missing-crosshair report, reproduce with the affected weapon and attach th
 an FPS screenshot, launcher version/mode, GPU/driver and map/edition. The source fingerprint distinguishes
 different DLLs carrying the same version number. These diagnostic fields ship in 0.7.0;
 update older launchers and modules to record them.
+
+FPS attack guards log validated hook installation for native validation/dispatch and numeric/string
+map orders. Bounded `FPS blocked native attack` traces identify rejection phases; existing cancellation
+records still report cleanup of a lingering native target. Spell components keep their own diagnostics.
+
+`FPS native attack target lookup installed` reports the forwarding native target hook. Sampled
+`spell HUD slot` records include rawcode, learned level, passive status, timer support, live remaining
+seconds and Art path. `Spell icon loaded` reports archive decode/upload success, dimensions and path
+once per map/context cache entry. A missing/unsupported icon remains an empty framed slot.
+
+The native walking guard separately reports verified/installed motor interception and bounded
+`FPS blocked native walking` records with the caller offset. An idle actor may previously drift
+with order=0 and mod speed=0; compare successive XY samples rather than relying on orders alone.
+The stats getter and explicitly owned spell approach retain native speed; no persistent speed/root
+field is modified. Squad order records include `yielding`, accepted native result and destination.
+
+Spell HUD samples additionally report total cooldown, matched native command button, mana shortage
+and disabled state. Actor-level definitions supply cost/duration when an unavailable button drops
+its native object reference. A remaining timer is always read from Warcraft's simulation clock.
+Live command art and the current actor's ability chain account for toggles and map replacements.
+
+The target lookup preserves its native return value: Warcraft's morph/combat update dereferences
+retained targets without a null check. Suppression belongs to order dispatch and the walking motor;
+fabricating a null target can crash a transformation such as Avatar.

@@ -1,19 +1,83 @@
 #include "RuneCombatScene.hpp"
+#include "BackgroundGameplay.hpp"
+#include "../src/platform/NativeSpellSlots.hpp"
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <array>
+
+namespace {
+void Mana(uintptr_t base,wc3::Handle unit,float value) {
+    using SetState=void (__cdecl*)(wc3::Handle,int,float*);
+    reinterpret_cast<SetState>(base+0x3C5EA0)(unit,2,&value);
+}
+template<class T> bool Read(uintptr_t at,T& value) {
+    SIZE_T got=0;return at && ReadProcessMemory(GetCurrentProcess(),reinterpret_cast<void*>(at),&value,sizeof(value),&got) && got==sizeof(value);
+}
+void Buttons(uintptr_t base) {
+    // Opt-in read-only command-card telemetry is restricted to disposable test builds.
+    using GetUI=uintptr_t (__fastcall*)(int,int);
+    uintptr_t ui=reinterpret_cast<GetUI>(base+0x300710)(0,0),bar=0,items=0,rows=0,buttons=0;
+    if(!Read(ui+0x3C8,bar) || !Read(bar+0x154,items) || !Read(items+8,rows) || !Read(rows,buttons))return;
+    for(int i=0;i<12;++i) {
+        uintptr_t data=0;std::array<unsigned char,0x6D8> bytes={};
+        if(!Read(buttons+i*0x1C0+0x190,data) || !Read(data,bytes))continue;
+        wc3::Log("fixture button index=%d ability=%08X order=%d flags=%08X object=%08X",i,
+            *reinterpret_cast<int*>(bytes.data()+4),*reinterpret_cast<int*>(bytes.data()+8),
+            *reinterpret_cast<int*>(bytes.data()+0x10),*reinterpret_cast<int*>(bytes.data()+0x6D4));
+        for(size_t start=0;start<bytes.size();) {
+            size_t end=start;while(end<bytes.size() && bytes[end]>=32 && bytes[end]<127)++end;
+            if(end-start>=5)wc3::Log("fixture button string index=%d offset=%X text=%.*s",i,unsigned(start),int(end-start),bytes.data()+start);
+            start=end+1;
+        }
+    }
+}
+}
 
 void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const char* root) {
     static std::vector<wc3::Handle> items;
     static std::vector<wc3::Handle> party;
     static wc3::Handle enemy=0;static DWORD check=0,observeUntil=0;
-    if (!controller.Visible() || GetTickCount()-check<250) return;
+    if ((!controller.Visible() && !BackgroundGameplay::Enabled()) || GetTickCount()-check<250) return;
     check=GetTickCount();auto unit=controller.TestUnit();
     std::string path=std::string(root)+"\\test-gameplay.request";
     if (GetFileAttributesA(path.c_str())!=INVALID_FILE_ATTRIBUTES) {
         std::ifstream file(path);std::string line;std::getline(file,line);file.close();DeleteFileA(path.c_str());
         std::istringstream input(line);std::string command;input>>command;
-        if (command=="hero" || command=="creep") {
+        // The background oracle uses the same controller mailboxes without sending desktop input.
+        if(BackgroundGameplay::Enabled() && command=="toggle")controller.RequestToggle();
+        else if(BackgroundGameplay::Enabled() && command=="spell") {int slot=0;input>>slot;controller.RequestSpell(slot-1);}
+        else if(BackgroundGameplay::Enabled() && command=="bars")controller.RequestHealthBarToggle();
+        else if(BackgroundGameplay::Enabled() && command=="minimap")controller.RequestMinimapToggle();
+        else if(BackgroundGameplay::Enabled() && command=="buttons")Buttons(base);
+        else if(BackgroundGameplay::Enabled() && command=="follow")controller.RequestSquad(true);
+        else if(BackgroundGameplay::Enabled() && command=="dota") {
+            // Spawn/learn the current map's own Anti-Mage definitions, including its skill-learning triggers.
+            float x=0,y=0,facing=0;auto hero=wc3::CreateUnit(wc3::GetLocalPlayer(),0x4564656D,&x,&y,&facing);
+            using Level=void (__cdecl*)(wc3::Handle,int,BOOL);using Learn=void (__cdecl*)(wc3::Handle,int);
+            reinterpret_cast<Level>(base+0x3C6D70)(hero,7,FALSE);
+            NativeSpellSlots slots;slots.Configure(base);SpellSettings defaults;
+            for(int i=0;i<4;++i) {int id=slots.Ability(hero,i,defaults);if(id)reinterpret_cast<Learn>(base+0x3C7050)(hero,id);}
+            Mana(base,hero,1000);
+            using Clear=void (__cdecl*)();using Select=void (__cdecl*)(wc3::Handle,BOOL);
+            reinterpret_cast<Clear>(base+0x3BBAA0)();reinterpret_cast<Select>(base+0x3C7910)(hero,TRUE);
+            controller.RequestToggle();wc3::Log("fixture dota actor=%08X",hero);
+        }
+        else if(BackgroundGameplay::Enabled() && command=="nativewalk") {
+            // Exercise an already-started native walking motor, rather than only rejected attack orders.
+            float x=wc3::Real(wc3::GetUnitX(unit))+500,y=wc3::Real(wc3::GetUnitY(unit));
+            wc3::IssuePointOrderById(unit,851986,&x,&y);
+            wc3::Log("fixture native walk speed=%.1f",wc3::Real(wc3::GetUnitMoveSpeed(unit)));
+        }
+        else if(BackgroundGameplay::Enabled() && command=="front") {
+            float x=wc3::Real(wc3::GetUnitX(unit))+130,y=wc3::Real(wc3::GetUnitY(unit))+20,facing=180;
+            party.push_back(wc3::CreateUnit(wc3::GetLocalPlayer(),0x68666F6F,&x,&y,&facing));
+            y-=40;party.push_back(wc3::CreateUnit(wc3::GetLocalPlayer(),0x68666F6F,&x,&y,&facing));
+        }
+        else if(BackgroundGameplay::Enabled() && command=="mana") {
+            float mana=0;input>>mana;Mana(base,unit,mana);wc3::Log("fixture mana=%.1f",wc3::Real(wc3::GetUnitState(unit,2)));
+        }
+        else if (command=="hero" || command=="creep") {
             // A native hero has an inventory, unlike an unupgraded starting worker.
             // Move the private actor away from the starting workers so squad membership has an exact oracle.
             float x=wc3::Real(wc3::GetUnitX(unit))-1000,y=wc3::Real(wc3::GetUnitY(unit)),facing=0;
@@ -63,7 +127,9 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
                 wc3::Log("fixture item=%08X type=%08X category=%d x=%.1f y=%.1f",item,id,wc3::GetItemType(item),x,y);
             }
         } else if (command=="enemy") {
-            float x=wc3::Real(wc3::GetUnitX(unit))+100,y=wc3::Real(wc3::GetUnitY(unit)),facing=180;
+            // A distant attacker reproduces pursuit as well as close retaliation in the disposable scene.
+            float distance=100;input>>distance;
+            float x=wc3::Real(wc3::GetUnitX(unit))+distance,y=wc3::Real(wc3::GetUnitY(unit)),facing=180;
             enemy=wc3::CreateUnit(wc3::Player(12),0x68666F6F,&x,&y,&facing);
             using Order=BOOL (__cdecl*)(wc3::Handle,int,wc3::Handle);
             auto order=reinterpret_cast<Order>(base+0x3C89D0);
