@@ -1,6 +1,10 @@
 #pragma once
 #include "../combat/WeaponSlots.hpp"
 #include "LoggingSettings.hpp"
+#include "RenderSettings.hpp"
+#include "HealthBarSettings.hpp"
+#include "SpellSettings.hpp"
+#include "../input/ShortcutBindings.hpp"
 
 #include "../movement/MovementSettings.hpp"
 #include <array>
@@ -9,6 +13,10 @@
 // Editable combat defaults and live settings are replaced as one complete snapshot on F8.
 struct GameplaySettings {
     LoggingSettings logging;
+    RenderSettings render;
+    HealthBarSettings healthBars;
+    ShortcutBindings shortcuts;
+    SpellSettings spells;
 
     MovementSettings movement;
     float runeAmmoPercent = 20;
@@ -21,7 +29,7 @@ struct GameplaySettings {
     float friendlyFirePercent = 50;
     // Limit world labels to nearby FPS activity without altering native resource production.
     float floatingTextDistance=1200;
-    // Startup/F8 preference; V may change visibility for the current session.
+    // Startup/F8 preference; the Speed shortcut may change visibility for the current session.
     bool showSpeed=false;
     // Temporary FPS visibility preference; ordinary map fog is restored outside FPS.
     bool disableFogOfWar=false;

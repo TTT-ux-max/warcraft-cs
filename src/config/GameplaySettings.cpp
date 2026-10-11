@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <cctype>
 
 GameplaySettings GameplaySettings::Load(const std::string& filename) {
     GameplaySettings result;
@@ -25,6 +26,11 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.logging.intervalMs = unsigned(std::max(100.f, number("Logging", "IntervalMs", 1000, 60000)));
     result.logging.maxFileMB = unsigned(std::max(1.f, number("Logging", "MaxFileMB", 8, 64)));
     result.logging.archiveCount = unsigned(number("Logging", "ArchiveCount", 3, 8));
+    // Zero opts back into Warcraft's original limiter; positive targets stay within a bounded range.
+    float maxFPS=number("Rendering","MaxFPS",144,360);
+    result.render.maxFPS=maxFPS==0 ? 0 : int(std::max(30.f,maxFPS));
+    // Missing or malformed distances use the same default as a fresh settings snapshot.
+    result.render.drawDistance=std::max(3000.f,number("Rendering","DrawDistance",result.render.drawDistance,20000));
     result.runeAmmoPercent=number("Runes","AmmoPercent",20,100);
     // Missing settings enable the requested hopping; malformed switches preserve documented defaults.
     auto boolean = [&](const char* key, bool fallback) {
@@ -52,6 +58,47 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // Old configs retain 50%; zero disables allied damage and full damage is capped at 100%.
     result.friendlyFirePercent=number("Damage","FriendlyFirePercent",50,100);
     result.floatingTextDistance=number("Interface","FloatingTextDistance",1200,5000);
+    // Team bars require an explicit opt-in; invalid/legacy preferences keep the FPS view clear.
+    auto healthSwitch=[&](const char* key) {
+        auto value=text("Interface",key,"false");
+        if(!_stricmp(value.c_str(),"true") || value=="1") return true;
+        if(!value.empty() && _stricmp(value.c_str(),"false") && value!="0") wc3::Log("Invalid Interface.%s; using false",key);
+        return false;
+    };
+    result.healthBars.allies=healthSwitch("ShowAllyHealthBars");
+    result.healthBars.enemies=healthSwitch("ShowEnemyHealthBars");
+    result.healthBars.distance=number("Interface","HealthBarDistance",2000,15000);
+    // Apply an entire keyboard layout together; a conflicting layout retains usable default controls.
+    bool layoutValid=true;
+    for(size_t i=0;i<ShortcutBindings::Count;++i) {
+        auto action=ShortcutAction(i);auto fallback=ShortcutBindings::Label(result.shortcuts.Key(action));
+        int key=ShortcutBindings::Parse(text("Shortcuts",ShortcutBindings::Name(action),fallback.c_str()));
+        if(key<0)layoutValid=false;else result.shortcuts.Set(action,key);
+    }
+    if(!layoutValid || !result.shortcuts.Valid()) {result.shortcuts=ShortcutBindings();wc3::Log("Invalid/conflicting Shortcuts; using default keyboard layout");}
+    // Rawcodes and order IDs describe existing abilities; they never grant skills or bypass native costs.
+    auto spellsEnabled=text("Spells","Enabled","true");
+    result.spells.enabled=!_stricmp(spellsEnabled.c_str(),"true") || spellsEnabled=="1";
+    if(_stricmp(spellsEnabled.c_str(),"true") && _stricmp(spellsEnabled.c_str(),"false") && spellsEnabled!="1" && spellsEnabled!="0") {
+        result.spells.enabled=true;wc3::Log("Invalid Spells.Enabled; using true");
+    }
+    result.spells.aimDistance=std::max(100.f,number("Spells","AimDistance",3000,15000));
+    for(int slot=0;slot<4;++slot) {
+        std::string prefix="Slot"+std::to_string(slot+1);
+        auto raw=text("Spells",(prefix+"Ability").c_str(),"");
+        if(raw.size()==4 && raw.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")==std::string::npos)result.spells.ability[slot]=raw;
+        else if(!raw.empty())wc3::Log("Invalid Spells.%sAbility; using native hero slot",prefix.c_str());
+        // An order ID is discrete: reject overflow/fractions instead of clamping to another native command.
+        auto orderText=text("Spells",(prefix+"Order").c_str(),"0");char* orderEnd=nullptr;
+        double order=std::strtod(orderText.c_str(),&orderEnd);
+        if(orderEnd!=orderText.c_str() && !*orderEnd && std::isfinite(order) && order==std::floor(order) &&
+            (order==0 || (order>=852000 && order<=853999)))result.spells.order[slot]=int(order);
+        else wc3::Log("Invalid Spells.%sOrder; using native order",prefix.c_str());
+        auto mode=text("Spells",(prefix+"Target").c_str(),"auto");
+        for(auto& c:mode)c=char(std::tolower(static_cast<unsigned char>(c)));
+        if(mode=="auto" || mode=="unit" || mode=="point" || mode=="immediate" || mode=="self")result.spells.target[slot]=mode;
+        else wc3::Log("Invalid Spells.%sTarget; using auto",prefix.c_str());
+    }
     // Keep the optional counter hidden for old/invalid configs; accept explicit boolean preferences.
     auto showSpeed=text("Interface","ShowSpeed","false");
     result.showSpeed=!_stricmp(showSpeed.c_str(),"true") || showSpeed=="1";

@@ -51,6 +51,22 @@ sweeps the player footprint against terrain, native bridge decks and solid model
 `MovementObstacles`. The obstacle adapter owns model/type caches and clears them on map changes.
 `GameplaySettings` loads movement tuning; the controller applies that snapshot on startup and F8.
 
+`RenderSettings` is part of that validated snapshot. `NativeFrameRate` verifies the supported native
+render-demand instruction, owns its one-byte in-memory override and paces presentation with the
+Windows performance counter and waitable timer. MaxFPS=0 restores the original operand. The runtime
+consumes settings on each swap; Warcraft simulation clocks are untouched. The controller uses steady
+elapsed time for movement, while existing weapon/event deadlines keep their established clock.
+`NativeCameraFarClip` owns the active FPS channel's ceiling and restores it through native generation
+keys, preserving other cameras and foreign edits. `WarcraftApi` validates and resolves that 1.26a
+channel; no shared constant or game file is patched. `FirstPersonCamera` writes the configured far
+clip and `FpsProjection` matches the live native field when adjusting the world's near plane,
+leaving portrait and native cinematic projection independent, including a clamped fallback.
+
+Tree movement bounds reuse `TreeTrunkMesh`'s standing ground-connected components, the same decoded
+geometry used for destructable shots. Canopy cards and death-only stumps do not expand the player
+blocker. The platform adapter applies the existing native sprite transform and visual scale to those
+local trunk bounds; unreadable tree geometry supplies no broad box and retains native pathing checks.
+
 The optional speed counter uses the same boundaries: `InputDispatcher` queues a V press,
 `ShooterController` owns session visibility and exposes horizontal speed in CS units, and `Overlay`
 draws the counter above status notices. `GameplaySettings` supplies the startup/F8 preference;
@@ -82,3 +98,17 @@ shared reads, persistent launcher records and full export; `LogViewerForm` is it
 
 After structural changes, run native tests, launcher tests, the native build and both launcher package
 checks. Hook/render changes also require a disposable native map. Never run fixtures in user saves.
+
+`UnitHealthBars` samples living visible allied/enemy units on the game thread and owns per-map model
+bounds. It passes handle-free `UnitHealthBar` snapshots to `HealthBarRenderer`; `HealthBarView` owns
+portable projection/fill rules. The renderer depth-tests before the weapon clears world depth and
+restores GL state. The runtime extracts actual projection scales (Warcraft's FOV field is diagonal).
+K queues one shared switch in the controller, which saves both existing team INI keys.
+
+`ShortcutBindings` is the keyboard snapshot shared by input dispatch, held movement and HUD labels;
+`GameplaySettings` validates the whole layout before replacing it. `HeroSpellSlots` parses owned
+table metadata without engine pointers or bundled game data. `NativeSpellSlots` reads supported
+learned ability order getters, while `SpellAim` resolves the visible reticle widget/world point.
+`SpellCaster` owns only explicitly requested spell orders until native completion or deliberate
+player interruption; the controller yields its ordinary order cancellation and firing during that
+state. Map reset forgets orders without issuing commands to unloaded handles.

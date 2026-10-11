@@ -9,7 +9,7 @@ $config=Join-Path $folder 'legacy.ini'
 # Updates append missing keys inside existing sections while retaining all custom values.
 Update-GameplayConfig $template $config
 $text=Get-Content -LiteralPath $config -Raw
-foreach ($required in @('AmmoPercent=37','Price=0','Damage=81','FriendlyFirePercent=25','AWPOneShot=false','BombCount=20','Access=anywhere','AmmoPrice=80','CSVolumePercent=100','Detailed=true','IntervalMs=1000','MaxFileMB=8','ArchiveCount=3','JumpBoostPercent=0','AutoJump=true')) {
+foreach ($required in @('AmmoPercent=37','Price=0','Damage=81','FriendlyFirePercent=25','AWPOneShot=false','BombCount=20','Access=anywhere','AmmoPrice=80','CSVolumePercent=100','Detailed=true','IntervalMs=1000','MaxFileMB=8','ArchiveCount=3','JumpBoostPercent=0','AutoJump=true','MaxFPS=144','DrawDistance=15000')) {
     if (!$text.Contains($required)) { throw "Missing/patched preference: $required" }
 }
 if ([regex]::Matches($text,'(?m)^\[AK47\]').Count -ne 1) { throw 'Duplicate section can hide new INI keys.' }
@@ -32,6 +32,24 @@ $audioBefore=(Get-FileHash -LiteralPath $customAudio).Hash
 Update-GameplayConfig $template $customAudio
 if ((Get-FileHash -LiteralPath $customAudio).Hash -ne $audioBefore) { throw 'Repeated audio migration changed the config.' }
 $empty=Join-Path $folder 'empty.ini'
+# Preserve custom team-bar preferences and add defaults without duplicate sections/keys.
+foreach ($preference in @('true','false')) {
+    $barConfig=Join-Path $folder ('custom-health-bars-'+$preference+'.ini')
+    @('[Interface]',('ShowAllyHealthBars='+$preference),'ShowEnemyHealthBars=true','HealthBarDistance=850','ShowSpeed=true') | Set-Content -LiteralPath $barConfig -Encoding ascii
+    Update-GameplayConfig $template $barConfig
+    $barText=Get-Content -LiteralPath $barConfig -Raw
+    foreach ($key in @('ShowAllyHealthBars','ShowEnemyHealthBars','HealthBarDistance')) {
+        if ([regex]::Matches($barText,('(?m)^'+$key+'=')).Count -ne 1) {throw 'Health bar migration duplicated a key.'}
+    }
+    if (!$barText.Contains('ShowAllyHealthBars='+$preference) -or !$barText.Contains('ShowEnemyHealthBars=true') -or
+        !$barText.Contains('HealthBarDistance=850') -or !$barText.Contains('ShowSpeed=true') -or
+        [regex]::Matches($barText,'(?m)^\[Interface\]').Count -ne 1) {throw 'Health bar migration replaced preferences.'}
+    $barBefore=(Get-FileHash -LiteralPath $barConfig).Hash;Update-GameplayConfig $template $barConfig
+    if ((Get-FileHash -LiteralPath $barConfig).Hash -ne $barBefore) {throw 'Health bar migration is not idempotent.'}
+}
+foreach ($default in @('ShowAllyHealthBars=false','ShowEnemyHealthBars=false','HealthBarDistance=2000')) {
+    if (!$text.Contains($default)) {throw ('Legacy config lacks '+$default)}
+}
 # Optional speed/fog preferences migrate into the existing Interface section without resetting it.
 foreach ($preference in @('true','false')) {
     $speedConfig=Join-Path $folder ('custom-speed-'+$preference+'.ini')
@@ -79,6 +97,19 @@ foreach ($preference in @('true','false')) {
     if ((Get-FileHash -LiteralPath $awpConfig).Hash -ne $awpBefore) { throw 'Repeated AWP migration changed the config.' }
 }
 Write-Output 'PASS fresh/legacy/empty/repeated config updates preserve custom values and expose new settings.'
+# Rendering migration adds defaults without changing an explicit old/custom cap or distance.
+foreach ($cap in @('0','120','240')) {
+    $renderConfig=Join-Path $folder ('custom-render-'+$cap+'.ini')
+    @('[Rendering]',('MaxFPS='+$cap),'DrawDistance=7500') | Set-Content -LiteralPath $renderConfig -Encoding ascii
+    Update-GameplayConfig $template $renderConfig
+    $renderText=Get-Content -LiteralPath $renderConfig -Raw
+    if (!$renderText.Contains('MaxFPS='+$cap) -or !$renderText.Contains('DrawDistance=7500') -or
+        [regex]::Matches($renderText,'(?m)^\[Rendering\]').Count -ne 1 -or
+        [regex]::Matches($renderText,'(?m)^MaxFPS=').Count -ne 1) {throw 'Rendering update lost/duplicated custom preferences.'}
+    $renderBefore=(Get-FileHash -LiteralPath $renderConfig).Hash
+    Update-GameplayConfig $template $renderConfig
+    if ((Get-FileHash -LiteralPath $renderConfig).Hash -ne $renderBefore) {throw 'Rendering migration is not idempotent.'}
+}
 # Logging preferences survive upgrades while missing sibling keys are inserted exactly once.
 $customLogging=Join-Path $folder 'custom-logging.ini'
 @('[Logging]','Detailed=false','IntervalMs=2500','MaxFileMB=2') | Set-Content -LiteralPath $customLogging -Encoding ascii
@@ -91,3 +122,17 @@ if ([regex]::Matches($loggingText,'(?m)^\[Logging\]').Count -ne 1) { throw 'Logg
 $loggingBefore=(Get-FileHash -LiteralPath $customLogging).Hash
 Update-GameplayConfig $template $customLogging
 if ((Get-FileHash -LiteralPath $customLogging).Hash -ne $loggingBefore) { throw 'Repeated logging migration changed the file.' }
+# A custom keyboard layout and spell mapping must survive updates, with missing siblings inserted once.
+$customShortcuts=Join-Path $folder 'custom-shortcuts.ini'
+@('[Shortcuts]','Spell1=Q','Spell2=E','Pickup=Z','Speed=TAB','[Spells]','Slot1Ability=AHtb','Slot1Order=852095','Slot1Target=unit','AimDistance=850') | Set-Content -LiteralPath $customShortcuts -Encoding ascii
+Update-GameplayConfig $template $customShortcuts
+$shortcutsText=Get-Content -LiteralPath $customShortcuts -Raw
+foreach($setting in @('Spell1=Q','Spell2=E','Pickup=Z','Speed=TAB','Spell3=C','Spell4=V','Slot1Ability=AHtb','Slot1Order=852095','Slot1Target=unit','AimDistance=850','Enabled=true')) {
+    if(!$shortcutsText.Contains($setting)) {throw "Shortcut/spell migration lost preference/default: $setting"}
+}
+foreach($section in @('Shortcuts','Spells')) {
+    if([regex]::Matches($shortcutsText,'(?m)^\['+$section+'\]').Count -ne 1) {throw 'Shortcut/spell section was duplicated.'}
+}
+$shortcutsBefore=(Get-FileHash -LiteralPath $customShortcuts).Hash
+Update-GameplayConfig $template $customShortcuts
+if((Get-FileHash -LiteralPath $customShortcuts).Hash -ne $shortcutsBefore) {throw 'Shortcut/spell migration is not idempotent.'}

@@ -1,92 +1,67 @@
 #include "InputDispatcher.hpp"
 #include "../application/ShooterController.hpp"
 
-std::optional<LRESULT> InputDispatcher::Handle(HWND window, UINT message, WPARAM key, LPARAM data, bool healthy) {
-    // Record mod controls only: never log WM_CHAR, pasted text or unrelated desktop keystrokes.
-    bool controlKey = key == VK_F6 || (healthy && controller_.Visible() &&
-        (key == 'W' || key == 'A' || key == 'S' || key == 'D' || key == 'R' || key == 'B' ||
-         key == 'E' || key == 'H' || key == 'O' || key == 'J' || key == 'V' || key == 'N' || key == VK_SPACE || key == VK_CONTROL ||
-         key == VK_SHIFT || key == VK_ESCAPE || key == VK_OEM_PERIOD ||
-         (key >= '0' && key <= '9') || (key >= VK_F7 && key <= VK_F10)));
-    if (controlKey && (message == WM_KEYUP || ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN) && !(data & (1L << 30)))))
-        wc3::Trace("control key=%u event=%s fps=%d buying=%d healthy=%d", unsigned(key),
-            message == WM_KEYUP ? "up" : "down", controller_.Visible(), controller_.Buying(), healthy);
-    if (healthy && controller_.Visible() && (message == WM_LBUTTONDOWN || message == WM_LBUTTONUP ||
-        message == WM_RBUTTONDOWN || message == WM_RBUTTONUP || message == WM_MOUSEWHEEL))
-        wc3::Trace("control mouseMessage=%u wheel=%d buying=%d", message,
-            message == WM_MOUSEWHEEL ? GET_WHEEL_DELTA_WPARAM(key) : 0, controller_.Buying());
-    if (message==WM_INPUT) {
-        // Raw packets retain fast movement and keep 360-degree look independent of cursor recentering.
+std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM key,LPARAM data,bool healthy) {
+    const auto& bindings=controller_.Settings().shortcuts;
+    auto match=[&](ShortcutAction action) {return bindings.Matches(action,int(key));};
+    bool down=message==WM_KEYDOWN || message==WM_SYSKEYDOWN;
+    bool up=message==WM_KEYUP || message==WM_SYSKEYUP;
+    bool tap=down && !(data&(1L<<30));
+    // Log only configured mod controls, never text entry or unrelated desktop keystrokes.
+    bool control=key==VK_F6 || match(ShortcutAction::ToggleFPS);
+    if(healthy && controller_.Visible())for(size_t i=0;i<ShortcutBindings::Count;++i)control|=match(ShortcutAction(i));
+    if(control && (up || tap))wc3::Trace("control key=%u event=%s fps=%d buying=%d healthy=%d",unsigned(key),up ? "up" : "down",controller_.Visible(),controller_.Buying(),healthy);
+    if(healthy && controller_.Visible() && (message==WM_LBUTTONDOWN || message==WM_LBUTTONUP || message==WM_RBUTTONDOWN || message==WM_RBUTTONUP || message==WM_MOUSEWHEEL))
+        wc3::Trace("control mouseMessage=%u wheel=%d buying=%d",message,message==WM_MOUSEWHEEL ? GET_WHEEL_DELTA_WPARAM(key) : 0,controller_.Buying());
+    if(message==WM_INPUT) {
         controller_.MouseInput(data,healthy && controller_.Visible() && !controller_.Buying() && GetForegroundWindow()==window);
-        if (healthy && controller_.Visible()) return DefWindowProcA(window,message,key,data);
+        if(healthy && controller_.Visible())return DefWindowProcA(window,message,key,data);
     }
-    // Focus transitions discard queued relative input; renderer recovery belongs to the runtime.
-    if (message == WM_ACTIVATEAPP) {
-        controller_.ResetMouse();
+    if(message==WM_ACTIVATEAPP)controller_.ResetMouse();
+    // F6 remains a recovery alias even after remapping ToggleFPS, including native campaign movie transitions.
+    if((key==VK_F6 || match(ShortcutAction::ToggleFPS)) && (down || up)) {
+        if(tap)controller_.RequestToggle();return 0;
     }
-    // F6 belongs to the extension even before FPS is active, avoiding native quicksave.
-    if (key == VK_F6 && (message == WM_KEYDOWN || message == WM_KEYUP)) {
-        if (message == WM_KEYDOWN && !(data & (1L << 30))) controller_.RequestToggle();
+    if(!healthy || !controller_.Visible())return std::nullopt;
+    // Native pause is always available and regains ordinary RTS input before its system key is forwarded.
+    if(key==VK_F10 && (down || up)) {if(tap)controller_.RequestMenu();return 0;}
+    if(controller_.Buying() && message==WM_LBUTTONDOWN) {
+        RECT client={};GetClientRect(window,&client);controller_.RequestBuyClick(short(LOWORD(data)),short(HIWORD(data)),client.right,client.bottom);return 0;
+    }
+    if(message==WM_MOUSEWHEEL) {
+        if(GetForegroundWindow()==window) {controller_.RequestSpellCancel();controller_.RequestWeaponWheel(GET_WHEEL_DELTA_WPARAM(key));}return 0;
+    }
+    // New deliberate movement/fire interrupts channeling; a held key cannot repeatedly cancel new casts.
+    if(message==WM_LBUTTONDOWN || message==WM_RBUTTONDOWN)controller_.RequestSpellCancel();
+    if(down || up) {
+        if(tap && !controller_.Buying()) {
+            for(auto action:{ShortcutAction::Forward,ShortcutAction::Backward,ShortcutAction::Left,ShortcutAction::Right,
+                ShortcutAction::Jump,ShortcutAction::Crouch,ShortcutAction::Reload})if(match(action))controller_.RequestSpellCancel();
+            for(int i=0;i<WeaponSlots::Count;++i)if(match(ShortcutAction(int(ShortcutAction::Weapon1)+i)))controller_.RequestSpellCancel();
+        }
+        // Buy row numbers belong to the open catalog even when weapon shortcuts were remapped.
+        if(controller_.Buying() && key>='0' && key<='9') {if(tap)controller_.RequestBuyKey(int(key-'0'));return 0;}
+        if(tap) {
+            if(match(ShortcutAction::Buy))controller_.RequestBuyToggle();
+            else if(match(ShortcutAction::BuyAmmo))controller_.RequestBuyAmmo();
+            else if(match(ShortcutAction::Speed))controller_.RequestSpeedToggle();
+            else if(match(ShortcutAction::Fog))controller_.RequestFogToggle();
+            else if(match(ShortcutAction::HealthBars))controller_.RequestHealthBarToggle();
+            else if(match(ShortcutAction::Refill))controller_.RequestRefill();
+            else if(match(ShortcutAction::AllWeapons))controller_.RequestAllWeapons();
+            else if(match(ShortcutAction::ReloadSettings))controller_.RequestSettingsReload();
+            else if(!controller_.Buying()) {
+                if(match(ShortcutAction::Pickup))controller_.RequestItemPickup();
+                else if(match(ShortcutAction::SquadFight))controller_.RequestSquad(false);
+                else if(match(ShortcutAction::SquadFollow))controller_.RequestSquad(true);
+                else if(match(ShortcutAction::SquadRelease))controller_.RequestSquadRelease();
+                else for(int i=0;i<4;++i)if(match(ShortcutAction(int(ShortcutAction::Spell1)+i)))controller_.RequestSpell(i);
+            }
+        }
+        // Native HUD stays visible for portraits, but unused keyboard input must not issue RTS orders in FPS.
         return 0;
     }
-    // Consume FPS inputs so Warcraft does not also issue RTS orders or select units.
-    if (healthy && controller_.Visible()) {
-        // One V/N press toggles its display option; repeats and releases never flip it again.
-        if ((key=='V' || key=='N') && (message==WM_KEYDOWN || message==WM_KEYUP)) {
-            if (message==WM_KEYDOWN && !(data&(1L<<30))) {
-                if (key=='V') controller_.RequestSpeedToggle();else controller_.RequestFogToggle();
-            }
-            return 0;
-        }
-        // B/period and menu rows are mailbox events; no native economy calls occur in the input handler.
-        if ((message==WM_KEYDOWN || message==WM_KEYUP) && (key=='B' || key==VK_OEM_PERIOD ||
-            (controller_.Buying() && key>='0' && key<='9'))) {
-            if (message==WM_KEYDOWN && !(data&(1L<<30))) {
-                if (key=='B') controller_.RequestBuyToggle();
-                else if (key==VK_OEM_PERIOD) controller_.RequestBuyAmmo();
-                else controller_.RequestBuyKey(int(key-'0'));
-            }
-            return 0;
-        }
-        if (controller_.Buying() && message==WM_LBUTTONDOWN) {
-            RECT client={};GetClientRect(window,&client);
-            controller_.RequestBuyClick(short(LOWORD(data)),short(HIWORD(data)),client.right,client.bottom);return 0;
-        }
-        // Queue each signed wheel packet for the game tick; Warcraft must not also zoom its RTS camera.
-        if (message == WM_MOUSEWHEEL) {
-            if (GetForegroundWindow() == window) controller_.RequestWeaponWheel(GET_WHEEL_DELTA_WPARAM(key));
-            return 0;
-        }
-        // Free refill/grant keys are consumed before Warcraft interprets native strategy shortcuts.
-        if ((key == VK_F7 || key == VK_F9) && (message == WM_KEYDOWN || message == WM_KEYUP)) {
-            if (message == WM_KEYDOWN && !(data & (1L << 30))) {
-                if (key==VK_F9) controller_.RequestAllWeapons();else controller_.RequestRefill();
-            }
-            return 0;
-        }
-        // Preserve short pickup/squad/config taps; J releases followers without leaving FPS.
-        if ((key=='E' || key=='H' || key=='O' || key=='J' || key==VK_F8) && (message==WM_KEYDOWN || message==WM_KEYUP)) {
-            if (message==WM_KEYDOWN && !(data&(1L<<30))) {
-                if (key=='E') controller_.RequestItemPickup();
-                else if (key=='H' || key=='O') controller_.RequestSquad(key=='O');
-                else if (key=='J') controller_.RequestSquadRelease();
-                else controller_.RequestSettingsReload();
-            }
-            return 0;
-        }
-        // The native pause menu requires restored RTS input before handling its hotkey.
-        // Windows delivers F10 as a system key even when Alt is not pressed.
-        if (key == VK_F10 && (message == WM_KEYDOWN || message == WM_KEYUP || message == WM_SYSKEYDOWN || message == WM_SYSKEYUP)) {
-            if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN) && !(data & (1L << 30))) controller_.RequestMenu();
-            return 0;
-        }
-        if ((message == WM_KEYDOWN || message == WM_KEYUP) &&
-            (key == 'W' || key == 'A' || key == 'S' || key == 'D' || key == 'R' ||
-             key == VK_F6 || key == VK_SPACE || key == VK_CONTROL || key == VK_SHIFT || (key >= '1' && key <= '1' + WeaponSlots::Count - 1))) return 0;
-        if (message == WM_LBUTTONDOWN || message == WM_LBUTTONUP || message == WM_RBUTTONDOWN ||
-            message == WM_RBUTTONUP || message == WM_MOUSEMOVE) return 0;
-        // Native HUD stays enabled for portrait rendering; unused keys must not issue RTS orders in FPS.
-        if (message==WM_KEYDOWN || message==WM_KEYUP || message==WM_CHAR) return 0;
-    }
+    if(message==WM_CHAR || message==WM_SYSCHAR || message==WM_LBUTTONDOWN || message==WM_LBUTTONUP ||
+        message==WM_RBUTTONDOWN || message==WM_RBUTTONUP || message==WM_MOUSEMOVE)return 0;
     return std::nullopt;
 }

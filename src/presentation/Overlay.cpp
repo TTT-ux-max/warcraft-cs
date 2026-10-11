@@ -46,7 +46,8 @@ void Overlay::ContextDeleted(HGLRC context) {
     ResetGraphics(false); context_ = nullptr;
     wc3::Log("Overlay context deleted; GPU names forgotten");
 }
-void Overlay::Draw(HDC dc, const ShooterController& controller) {
+void Overlay::Draw(HDC dc, const ShooterController& controller,const std::vector<UnitHealthBar>& bars,
+    const WorldLabelView& barView,float nearPlane,float farPlane) {
     // Explain early returns as well as submitted geometry when investigating a missing aiming mark.
     if (!controller.Visible()) { ReticleDiagnostics::Skip("fps-inactive"); return; }
     if (!wglGetCurrentContext()) { ReticleDiagnostics::Skip("no-gl-context"); return; }
@@ -104,6 +105,10 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
     // Sky touches only far-depth pixels before the weapon's private depth clear, preserving native scenery.
     if (controller.Settings().csSky && !controller.Status().contained && !controller.Status().hidden)
         sky_.Draw(root_,controller.SkyName(),controller.ViewYaw(),controller.ViewPitch(),controller.ViewFov(),float(width)/height);
+    // World depth still exists here; the first-person weapon clears it in the next pass.
+    unsigned barCount=0;
+    if(!controller.Status().contained && !controller.Status().hidden && !controller.Buying())
+        barCount=HealthBarRenderer::Draw(bars,barView,width,height,nearPlane,farPlane);
     glMatrixMode(GL_PROJECTION); glPushMatrix(); glLoadIdentity();
     int index = controller.WeaponIndex();
     // Slightly tighten USP/AWP framing while preserving the original lower-edge arm origins.
@@ -161,14 +166,20 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
     }
     // Advertise wheel switching beside the existing direct-selection slots.
     // Sword/secondary-melee remain usable, but their shortcuts no longer clutter the HUD.
-    Text(25, 59, "1-7 / WHEEL: WEAPONS | 6: C4 (HOLD FIRE) | E: ITEM | F8: CONFIG");
+    auto key=[&](ShortcutAction action) {return controller.Shortcut(action);};
+    std::string controls="WHEEL: WEAPONS | "+key(ShortcutAction::Weapon6)+": C4 | "+key(ShortcutAction::Pickup)+": ITEM | "+key(ShortcutAction::ReloadSettings)+": CONFIG";
+    Text(25,59,controls.c_str());
     // The squad mode/count remains visible after its short confirmation disappears.
     // Show the independent release key beside both recruitment policies.
-    char squad[128];sprintf_s(squad,"H: FIGHT | O: FOLLOW | J: RELEASE | SQUAD %u %s",unsigned(controller.SquadCount()),controller.SquadCount() ? (controller.SquadPassive() ? "FOLLOW" : "COMBAT") : "");
+    char squad[192];sprintf_s(squad,"%s: FIGHT | %s: FOLLOW | %s: RELEASE | SQUAD %u %s",key(ShortcutAction::SquadFight).c_str(),key(ShortcutAction::SquadFollow).c_str(),key(ShortcutAction::SquadRelease).c_str(),unsigned(controller.SquadCount()),controller.SquadCount() ? (controller.SquadPassive() ? "FOLLOW" : "COMBAT") : "");
     Text(25,88,squad);
+    // One shared shortcut controls both colored team bars.
+    controls=key(ShortcutAction::HealthBars)+": HEALTH BARS | "+key(ShortcutAction::Spell1)+"/"+key(ShortcutAction::Spell2)+"/"+key(ShortcutAction::Spell3)+"/"+key(ShortcutAction::Spell4)+": SPELLS | "+key(ShortcutAction::SelfCast)+": SELF";
+    Text(25,146,controls.c_str());
     // Keep mod-specific shortcuts; familiar movement, reload, jump and crouch need no permanent tutorial.
-    Text(25, 30, "Warcraft CS by Yazgul | F6: RTS | B: BUY | .: AMMO | V: SPEED | N: FOG");
-    char economy[96];sprintf_s(economy,"GOLD %d | B: BUY | .: AMMO | F7: FREE AMMO | F9: ALL WEAPONS",controller.Gold());Text(25,117,economy);
+    controls="Warcraft CS by Yazgul | "+key(ShortcutAction::ToggleFPS)+": RTS | "+key(ShortcutAction::Buy)+": BUY | "+key(ShortcutAction::Speed)+": SPEED | "+key(ShortcutAction::Fog)+": FOG";
+    Text(25,30,controls.c_str());
+    char economy[192];sprintf_s(economy,"GOLD %d | %s: AMMO | %s: FREE AMMO | %s: ALL WEAPONS",controller.Gold(),key(ShortcutAction::BuyAmmo).c_str(),key(ShortcutAction::Refill).c_str(),key(ShortcutAction::AllWeapons).c_str());Text(25,117,economy);
     if (controller.RefillNotice()) Text(statusPad, statusY - statusSize - 16, controller.AmmoMessage(), statusFont_);
     // Horizontal CS units match MaxBunnySpeed, excluding vertical falling/jumping velocity.
     // Stack above notices/status so the optional counter never covers health or ammunition.
@@ -178,7 +189,7 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
         Text(statusPad,statusY-(statusSize+16)*rows,speed,statusFont_);
     }
     // Ground items advertise interaction without issuing a walk-to-item RTS order.
-    if (controller.ItemNearby()) Text(width*.5f-120,height*.72f,"E: PICK UP ITEM",statusFont_);
+    if (controller.ItemNearby()) {controls=key(ShortcutAction::Pickup)+": PICK UP ITEM";Text(width*.5f-120,height*.72f,controls.c_str(),statusFont_);}
     // Explain blocked controls next to the status HUD while the corresponding Warcraft effect lasts.
     if (*controller.Status().Label()) {
         char effect[96]; sprintf_s(effect, "%s", controller.Status().Label());
@@ -203,6 +214,8 @@ void Overlay::Draw(HDC dc, const ShooterController& controller) {
     if (activeTexture) activeTexture(oldTexture);
     // Report submission decisions, not pixel visibility; sampled GL errors can originate in the host frame.
     if (DiagnosticLog::Due(lastDiagnostic_)) {
+        wc3::Trace("health bars allies=%d enemies=%d candidates=%u submitted=%u distance=%.0f",
+            controller.Settings().healthBars.allies,controller.Settings().healthBars.enemies,unsigned(bars.size()),barCount,controller.Settings().healthBars.distance);
         // Sample display submission with the same bounded cadence as existing overlay diagnostics.
         wc3::Trace("overlay speed visible=%d speedCS=%.1f",controller.SpeedVisible(),controller.DisplaySpeed());
         GLint viewport[4] = {}; GLboolean mask[4] = {};

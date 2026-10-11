@@ -9,7 +9,7 @@ $fixture=Join-Path $build ('cs-audio-'+[guid]::NewGuid().ToString('N'))
 # Verify actual CS mixer gain with synthetic silence; Warcraft, its saves and original assets are never opened.
 $script=Join-Path $build 'test-cs-audio.cmd'
 @('@echo off',('call "'+$environment+'" >nul'),
-    ('cl /nologo /std:c++17 /EHsc /O2 /W4 /DNOMINMAX "'+(Join-Path $root 'tests/GameAudioVolumeTests.cpp')+'" "'+(Join-Path $root 'src/audio/GameAudio.cpp')+'" "'+(Join-Path $root 'src/config/GameplaySettings.cpp')+'" /Fe:cs-audio-tests.exe /link ole32.lib'),
+    ('cl /nologo /std:c++17 /EHsc /O2 /W4 /DNOMINMAX "'+(Join-Path $root 'tests/GameAudioVolumeTests.cpp')+'" "'+(Join-Path $root 'src/audio/GameAudio.cpp')+'" "'+(Join-Path $root 'src/config/GameplaySettings.cpp')+'" "'+(Join-Path $root 'src/input/ShortcutBindings.cpp')+'" /Fe:cs-audio-tests.exe /link ole32.lib'),
     'if errorlevel 1 exit /b 1',('cs-audio-tests.exe "'+$fixture+'"')) | Set-Content -LiteralPath $script -Encoding ascii
 Push-Location $build
 try { & $env:COMSPEC /d /c $script;if ($LASTEXITCODE) { throw 'Native CS audio volume verification failed.' } }

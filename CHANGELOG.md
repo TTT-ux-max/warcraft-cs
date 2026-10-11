@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased — test branches
+
+- Fix automatic enemy pursuit in FPS by rejecting native basic-attack validation and retaliation dispatch before chase starts; preserve spell components, ordinary units and RTS control, with bounded rejection diagnostics.
+
+- Fix custom hero spell mapping when the primary ability is fifth/later in the list: prioritize declared research columns, preserve passive slots and prefer learned replacements in duplicate columns; log all four resolved rawcodes.
+
+- Add first-person native hero spell casting on Z/X/C/V, reticle unit/point targeting and Alt self-targeting; preserve learned/passive slots, native mana/cooldowns and explicit cast/channel order ownership.
+- Move the speed toggle from V to P and add validated, conflict-checked keyboard shortcuts with live reload, matching HUD labels and update preservation; retain F6 recovery and native Escape/F10 menus.
+- Add spell enable/distance/ability/order/target configuration for custom maps and detailed spell/shortcut diagnostics.
+- Add FPS health bars for allies (green) and enemies (red), one K toggle for both teams, saved preferences, F8 reload and configurable distance; filter dead/hidden/transported/fog-hidden units and depth-test against the world.
+- Fix disappearing nearby ground above the native 10000-unit camera limit: match the live camera field for near clipping and temporarily lift only the FPS far-channel ceiling to the supported 20000-unit range.
+- Restore the native camera ceiling on FPS exit, menus, faults and camera changes using generation keys; log actual world projection near/far values separately from the INI request.
+- Recognize the full native cliff rim, including diagonal corners, so landing below a ledge does not trap the player in its walkability mask.
+- Permit retreat from an existing solid overlap and its native footprint while still rejecting deeper penetration, new solids and unknown flat blockers.
+- Log sampled movement rejection reasons and terrain/cliff coordinates for diagnosing stuck positions.
+- Raise the client FPS target to 144 and FPS world-camera far clip to 15000 Warcraft units; add Rendering.MaxFPS (0/native or 30–360) and DrawDistance (3000–20000), F8 reload and upgrade preservation.
+- Use high-resolution elapsed time for player movement and guarded native render-demand changes with paced presentation, without changing Warcraft's simulation timers.
+- Use decoded standing tree trunks for movement collision instead of canopy-sized model extents; reuse the shooting geometry and retain native pathing for unreadable models.
+- Log tree/trunk classification and add regressions for a clear canopy corridor, trapped starting positions and solid trunk contact.
+
 ## 0.7.0 — 2026-10-10
 
 - Restore F6 and other mod controls after native campaign movies replace Warcraft's window; also recover a known native input-procedure reset and log attachment/destruction/recovery.
