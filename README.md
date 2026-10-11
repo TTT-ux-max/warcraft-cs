@@ -29,7 +29,8 @@ native/optional CS skies, bridge movement and corrected FPS rendering. Earlier c
 - Consistent fullscreen DPI scaling and texture/context recovery after Alt-Tab; native hero portraits keep their layout.
 - WASD, jumping, crouching, acceleration, friction and weapon movement speeds inspired by CS.
 - Half-Life-style air strafing and held-Space bunnyhops; jump over low solids and fall from cliffs.
-- V toggles a horizontal speed counter; N toggles offline FPS fog and the unexplored mask.
+- P toggles a horizontal speed counter; N toggles offline FPS fog and the unexplored mask.
+- Z/X/C/V cast the four learned hero spell slots from first person; keyboard shortcuts are configurable.
 - K toggles ally (green) and enemy (red) health bars together and saves the choice in the INI.
 - Filled crosshair geometry and automatic control recovery after native campaign movies.
 - Classic AK/M4 and USP/AWP punch calculations, recoil recovery and burst behavior.
@@ -183,14 +184,42 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | E | Pick up the nearest item/rune if the unit has an available inventory |
 | H / O / J | Your units: follow and fight / follow without attacking / release squad |
 | F8 | Reload settings |
-| V | Show/hide horizontal speed in CS units/s |
+| P | Show/hide horizontal speed in CS units/s |
 | N | Disable/restore fog of war while in FPS |
+| K | Show/hide allied and enemy health bars together |
+| Z / X / C / V | Cast hero spell slots 1–4; target the visible unit or world surface under the reticle |
+| Alt + spell key | Target yourself when the spell allows it |
 
 ## Configuration
 
 EXE installation: `<installation folder>/Game/WarcraftCS/WarcraftCS.ini`.
 Default source installation: `.local/warcraft-cs/WarcraftCS/WarcraftCS.ini`.
 Edit it and press F8 in FPS.
+
+- `[Shortcuts]` configures all keyboard actions listed in the shipped INI, including movement,
+  weapon slots, spell slots, pickup, buying, squad commands, display switches and settings reload.
+  Defaults are `Spell1=Z`, `Spell2=X`, `Spell3=C`, `Spell4=V`, `Speed=P`, `SelfCast=ALT`.
+  Values are English physical `A-Z`, `0-9`, `F1-F12`, `SPACE`, `CTRL`, `SHIFT`, `ALT`, `TAB`,
+  `PERIOD` (or `.`), and `NONE` to disable an action. Keys are case-insensitive and must be unique;
+  swap all conflicting bindings together. An invalid layout falls back to the complete default layout
+  and logs why. Escape/F10 stay reserved; F6 always remains an FPS recovery alias and may only bind
+  ToggleFPS. ToggleFPS cannot be disabled. F8 (or the configured ReloadSettings key) applies edits.
+  HUD labels follow the same loaded bindings. Mouse actions and buy-menu row numbers remain fixed.
+  Install/Update adds missing keys while preserving existing shortcuts.
+
+- `[Spells] Enabled=true`, `AimDistance=3000` (Warcraft units, 100..15000) enable native spell orders.
+  The owner's `UnitAbilities.slk` and race ability UI tables supply the four hero research columns,
+  preserving passive/unlearned gaps. Passive, empty or unsupported slots show a notice. Spell effects,
+  mana, cooldowns, legal targets and native cast range remain Warcraft's responsibility. AimDistance
+  only limits reticle selection; point spells require an actual ground/object surface under the reticle.
+  Movement/fire/reload/weapon switching and opening the buy menu interrupt windup or channeling;
+  held movement/fire does not repeatedly interrupt a newly started cast. Mouse look remains available.
+  For custom map heroes, edited ability lists or unsupported dynamic order getters, set
+  `Slot1Ability=AHtb` (four-character rawcode), `Slot1Order=852095` (native spell order, 852000..853999),
+  and `Slot1Target=unit`; repeat for slots 2–4. Empty ability/zero order uses automatic lookup.
+  Target modes are `auto`, `unit`, `point`, `immediate`, `self`; SelfCast targets the actor for allowed
+  unit spells. These settings reload live and survive updates. Automatic discovery of arbitrary
+  map object modifications and automatic learning of hero skills are outside this first version.
 
 - `[Rendering] MaxFPS=144` raises the client frame cap above Warcraft's original ~64 FPS.
   Positive targets are clamped to 30–360; `0` restores the native limiter. Actual FPS depends on
@@ -250,7 +279,7 @@ Edit it and press F8 in FPS.
 - `[Sky] WarcraftEnabled=true` (default) shows Warcraft's stock summer/winter sky in FPS on maps without
   a sky. Keep `Enabled=false` for this mode. Existing map skies are preserved; F6 and cinematics
   restore the map's original sky. Set `WarcraftEnabled=false` and press F8 to disable the preview.
-- `[Interface] ShowSpeed=false` hides the horizontal speed counter by default. V toggles it during
+- `[Interface] ShowSpeed=false` hides the horizontal speed counter by default. P toggles it during
   the session, including across F6 switches; startup/F8 restores the INI value (`true`/`false`, also `1`/`0`).
   The counter uses CS/GoldSrc units/s, matching `MaxBunnySpeed`; vertical jump/fall velocity is excluded.
   Updates add missing keys and preserve custom values. The HUD omits basic WASD/reload/jump/crouch hints.

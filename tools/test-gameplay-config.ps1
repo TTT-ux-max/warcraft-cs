@@ -122,3 +122,17 @@ if ([regex]::Matches($loggingText,'(?m)^\[Logging\]').Count -ne 1) { throw 'Logg
 $loggingBefore=(Get-FileHash -LiteralPath $customLogging).Hash
 Update-GameplayConfig $template $customLogging
 if ((Get-FileHash -LiteralPath $customLogging).Hash -ne $loggingBefore) { throw 'Repeated logging migration changed the file.' }
+# A custom keyboard layout and spell mapping must survive updates, with missing siblings inserted once.
+$customShortcuts=Join-Path $folder 'custom-shortcuts.ini'
+@('[Shortcuts]','Spell1=Q','Spell2=E','Pickup=Z','Speed=TAB','[Spells]','Slot1Ability=AHtb','Slot1Order=852095','Slot1Target=unit','AimDistance=850') | Set-Content -LiteralPath $customShortcuts -Encoding ascii
+Update-GameplayConfig $template $customShortcuts
+$shortcutsText=Get-Content -LiteralPath $customShortcuts -Raw
+foreach($setting in @('Spell1=Q','Spell2=E','Pickup=Z','Speed=TAB','Spell3=C','Spell4=V','Slot1Ability=AHtb','Slot1Order=852095','Slot1Target=unit','AimDistance=850','Enabled=true')) {
+    if(!$shortcutsText.Contains($setting)) {throw "Shortcut/spell migration lost preference/default: $setting"}
+}
+foreach($section in @('Shortcuts','Spells')) {
+    if([regex]::Matches($shortcutsText,'(?m)^\['+$section+'\]').Count -ne 1) {throw 'Shortcut/spell section was duplicated.'}
+}
+$shortcutsBefore=(Get-FileHash -LiteralPath $customShortcuts).Hash
+Update-GameplayConfig $template $customShortcuts
+if((Get-FileHash -LiteralPath $customShortcuts).Hash -ne $shortcutsBefore) {throw 'Shortcut/spell migration is not idempotent.'}

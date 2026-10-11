@@ -1,5 +1,29 @@
 # Validation of the 0.1.0 source baseline
 
+## Configurable keyboard and first-person spells (test branch, 2026-10-11)
+
+Production shortcut parsing validates unique layouts atomically, permits swaps and disabled actions,
+and preserves F6 as a recovery key. Real INI tests cover custom spell/pickup/speed keys, conflicting
+layouts, bounded aiming distance, rawcodes/target modes and strictly validated discrete order IDs.
+Synthetic owned-table metadata verifies SYLK coordinate inheritance, research-column order and
+passive slot preservation. Spell order tests cover unit/point/immediate/self forms, rejection,
+unlearned/passive slots, native completion, explicit interruption and unloaded-map reset. Reticle
+world tests cover nearest visible living widgets, terrain, hidden/loaded/dead filtering, destructable
+occlusion and balanced groups. The independent suites, buying regressions, actual XAudio2 gain and
+INI migration in PowerShell 7/Windows PowerShell 5.1 pass. The ordinary x86 Player build passes.
+
+The user-approved disposable native map verifies the 1.26a lookup signature and automatic Storm
+Bolt/Thunder Clap/Avatar slots. Native logs show mana costs of 75/90/150 with regeneration between
+samples, cooldown/insufficient-mana rejection and Q replacing C via live F8 reload. The initial
+native run revealed Bash's misleading accepted no-op order; stock passive button metadata now
+rejects that slot before dispatch, with an added regression. Blizzard's order was accepted but
+interrupted by subsequent input in this session; full sustained channel verification remains pending.
+The private game closed normally and its INI was restored exactly. No campaign save was used.
+
+Automatic slots use stock/overlaid archive tables rather than arbitrary map object modifications;
+custom heroes/edited ability lists can use documented ability/order/target overrides. Native costs,
+legal target restrictions and cast ranges remain enforced by Warcraft. Multiplayer is not tested.
+
 ## Shared health-bar shortcut (test branch, 2026-10-11)
 
 K now switches both teams together. The production settings toggle is checked for all four old

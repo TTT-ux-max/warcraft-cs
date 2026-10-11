@@ -2,6 +2,9 @@
 
 ## Unreleased — test branches
 
+- Add first-person native hero spell casting on Z/X/C/V, reticle unit/point targeting and Alt self-targeting; preserve learned/passive slots, native mana/cooldowns and explicit cast/channel order ownership.
+- Move the speed toggle from V to P and add validated, conflict-checked keyboard shortcuts with live reload, matching HUD labels and update preservation; retain F6 recovery and native Escape/F10 menus.
+- Add spell enable/distance/ability/order/target configuration for custom maps and detailed spell/shortcut diagnostics.
 - Add FPS health bars for allies (green) and enemies (red), one K toggle for both teams, saved preferences, F8 reload and configurable distance; filter dead/hidden/transported/fog-hidden units and depth-test against the world.
 - Fix disappearing nearby ground above the native 10000-unit camera limit: match the live camera field for near clipping and temporarily lift only the FPS far-channel ceiling to the supported 20000-unit range.
 - Restore the native camera ceiling on FPS exit, menus, faults and camera changes using generation keys; log actual world projection near/far values separately from the INI request.

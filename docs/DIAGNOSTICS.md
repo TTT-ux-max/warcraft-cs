@@ -1,5 +1,11 @@
 # Diagnostic logging
 
+Startup/settings reload logs every resolved keyboard shortcut and spell slot override. Invalid or
+conflicting layouts revert as a whole. Spell records identify unit/slot/rawcode/native order, target
+form and point, engine acceptance and mana. Unlearned/passive/unsupported notices are logged too.
+Completion/interruption records distinguish explicit spell ownership from normal FPS order cancellation;
+an accepted order does not by itself prove a successful effect when the engine rejects costs/targets.
+
 Health bars log the validated allied/enemy switches and distance, the shared K toggle and whether
 each INI key save succeeded. Sampled records report native candidate and submitted-bar counts. Submission is
 not proof of visible pixels: world depth may correctly occlude a submitted bar.

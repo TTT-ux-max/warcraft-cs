@@ -24,6 +24,7 @@
 #include "../inventory/AmmoRecovery.hpp"
 #include "../inventory/ItemPickup.hpp"
 #include "../squad/SquadController.hpp"
+#include "../platform/SpellCaster.hpp"
 #include <string>
 #include <vector>
 #include <chrono>
@@ -59,6 +60,10 @@ public:
     void RequestFogToggle() { fogToggleRequested_=true; }
     // Queue one switch for both teams; save preferences only on the game thread.
     void RequestHealthBarToggle() { healthBarToggleRequested_=true; }
+    // Spell and interruption taps are executed on the game thread, never inside WindowProc.
+    void RequestSpell(int slot) { spellRequested_=slot; }
+    void RequestSpellCancel() { spellCancelRequested_=true; }
+    std::string Shortcut(ShortcutAction action) const {return ShortcutBindings::Label(settings_.shortcuts.Key(action));}
     bool SpeedVisible() const { return showSpeed_; }
     float DisplaySpeed() const { return movement_.Speed()/MovementPhysics::worldScale; }
     // Buy-menu events are consumed on Warcraft's simulation thread, never inside WindowProc.
@@ -119,6 +124,8 @@ public:
 private:
     bool Pressed(int key);
     bool Down(int key) const;
+    bool Down(ShortcutAction action) const {return Down(settings_.shortcuts.Key(action));}
+    bool Pressed(ShortcutAction action) {return Pressed(settings_.shortcuts.Key(action));}
     void Toggle();
     void Disable(bool restoreCamera);
     void AimAndMove(float dt);
@@ -158,6 +165,9 @@ private:
     bool speedToggleRequested_=false,showSpeed_=false;
     bool fogToggleRequested_=false,fogOfWarDisabled_=false;
     bool healthBarToggleRequested_=false;
+    int spellRequested_=-1;
+    bool spellCancelRequested_=false;
+    SpellCaster spells_;
     int squadRequested_=0;
     bool keys_[256] = {};
     int weapon_ = 0, ammo_[WeaponSlots::Count] = {}, reserve_[WeaponSlots::Count] = {};

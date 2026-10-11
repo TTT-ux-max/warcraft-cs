@@ -167,6 +167,23 @@ int main() {
     assert(GameplaySettings::Load(path).csVolumePercent==0);
     WritePrivateProfileStringA("Audio","CSVolumePercent","100",path.c_str());
     assert(GameplaySettings::Load(path).csVolumePercent==100);
+    // Real INI snapshots support swaps/reload and reject a layout as a unit, without duplicate defaults.
+    {std::ofstream file(path);file<<"[Shortcuts]\nSpell1=Q\nSpell2=E\nPickup=Z\nSpeed=TAB\n[Spells]\nEnabled=false\nAimDistance=850\nSlot1Ability=AHtb\nSlot1Order=852095\nSlot1Target=unit\n";}
+    auto customized=GameplaySettings::Load(path);
+    assert(customized.shortcuts.Key(ShortcutAction::Spell1)=='Q' && customized.shortcuts.Key(ShortcutAction::Spell2)=='E');
+    assert(customized.shortcuts.Key(ShortcutAction::Pickup)=='Z' && customized.shortcuts.Key(ShortcutAction::Speed)==VK_TAB);
+    assert(!customized.spells.enabled && customized.spells.aimDistance==850 && customized.spells.ability[0]=="AHtb" && customized.spells.order[0]==852095 && customized.spells.target[0]=="unit");
+    WritePrivateProfileStringA("Shortcuts","Spell1","E",path.c_str());customized=GameplaySettings::Load(path);
+    assert(customized.shortcuts.Key(ShortcutAction::Spell1)=='Z' && customized.shortcuts.Key(ShortcutAction::Speed)=='P');
+    WritePrivateProfileStringA("Spells","Slot1Ability","invalid",path.c_str());
+    WritePrivateProfileStringA("Spells","Slot1Order","851983",path.c_str());
+    WritePrivateProfileStringA("Spells","Slot1Target","invalid",path.c_str());
+    WritePrivateProfileStringA("Spells","AimDistance","NaN",path.c_str());customized=GameplaySettings::Load(path);
+    assert(customized.spells.ability[0].empty() && !customized.spells.order[0] && customized.spells.target[0]=="auto" && customized.spells.aimDistance==3000);
+    // Out-of-range and fractional IDs must never turn into another engine command through clamping/rounding.
+    for(const char* invalid:{"999999","-1","852095.01","NaN","852095x",""}) {
+        WritePrivateProfileStringA("Spells","Slot1Order",invalid,path.c_str());assert(!GameplaySettings::Load(path).spells.order[0]);
+    }
     DeleteFileA(path.c_str());
     // Diagnostic defaults, bounds and F8-style reloads use the actual INI parser.
     { std::ofstream file(path); file << "[Logging]\nDetailed=false\nIntervalMs=1\nMaxFileMB=999\nArchiveCount=-1\n"; }

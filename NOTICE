@@ -44,6 +44,12 @@ ADAPTED MECHANICS AND RESEARCH REFERENCES
    https://github.com/ENAleksey/RenderEdge
    https://github.com/UnryzeC/UjAPI
 
+   First-person spell research also consulted WC3Memory's public ability lookup
+   descriptions, then verified the lookup signature and order getter layout in
+   the owner's 1.26a Game.dll. NativeSpellSlots is original guarded adapter code;
+   no WC3Memory code, game table, disassembly or binary is copied or distributed.
+   https://github.com/DracoL1ch/WC3Memory
+
 4. Valve Half-Life SDK — https://github.com/ValveSoftware/halflife
    Research reference for GoldSrc studio-model layout, animation/event encoding,
    movement and view behavior, including wish-direction projection in PM_AirAccelerate

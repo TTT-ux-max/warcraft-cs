@@ -104,3 +104,11 @@ bounds. It passes handle-free `UnitHealthBar` snapshots to `HealthBarRenderer`; 
 portable projection/fill rules. The renderer depth-tests before the weapon clears world depth and
 restores GL state. The runtime extracts actual projection scales (Warcraft's FOV field is diagonal).
 K queues one shared switch in the controller, which saves both existing team INI keys.
+
+`ShortcutBindings` is the keyboard snapshot shared by input dispatch, held movement and HUD labels;
+`GameplaySettings` validates the whole layout before replacing it. `HeroSpellSlots` parses owned
+table metadata without engine pointers or bundled game data. `NativeSpellSlots` reads supported
+learned ability order getters, while `SpellAim` resolves the visible reticle widget/world point.
+`SpellCaster` owns only explicitly requested spell orders until native completion or deliberate
+player interruption; the controller yields its ordinary order cancellation and firing during that
+state. Map reset forgets orders without issuing commands to unloaded handles.
