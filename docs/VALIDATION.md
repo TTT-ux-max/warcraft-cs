@@ -1,5 +1,21 @@
 # Validation of the 0.1.0 source baseline
 
+## FPS native pursuit rejection (test branch, 2026-10-11)
+
+The guard rejects the controlled basic-attack component at native validation/dispatch and intercepts
+map target/point attack orders, covering numeric and string entry points. Smart unit pursuit is blocked;
+smart item pickup and spell order IDs remain native. Synthetic x86 adapter tests verify argument
+forwarding, passive policy, other actors/spell components and immediate RTS release. Host signatures
+are validated before the new hooks are installed; spell slot/caster/aim regressions pass.
+
+An approved opt-in native scene first exposed one chase step from an explicit map attack command.
+After guarding map orders too, a distant enemy attack was accepted while the actor attack was rejected.
+All sampled actor positions stayed at the pre-order baseline while hostile damage continued, and
+the enemy stayed at 420 HP. The same map runs repeated string target/point attack requests; Blizzard
+then completed natively with mana consumed. Both screenshots were inspected; no controller fault
+was logged. The disposable process closed and its INI was restored byte-exact. Test scene telemetry
+is opt-in and excluded from the normal Player DLL; this does not claim driving the user's DotA match.
+
 ## Custom hero lists beyond four entries (test branch, 2026-10-11)
 
 The reported installed-game log resolved the first slot to an absent/unlearned rawcode. Inspection

@@ -2,6 +2,8 @@
 
 ## Unreleased — test branches
 
+- Fix automatic enemy pursuit in FPS by rejecting native basic-attack validation and retaliation dispatch before chase starts; preserve spell components, ordinary units and RTS control, with bounded rejection diagnostics.
+
 - Fix custom hero spell mapping when the primary ability is fifth/later in the list: prioritize declared research columns, preserve passive slots and prefer learned replacements in duplicate columns; log all four resolved rawcodes.
 
 - Add first-person native hero spell casting on Z/X/C/V, reticle unit/point targeting and Alt self-targeting; preserve learned/passive slots, native mana/cooldowns and explicit cast/channel order ownership.

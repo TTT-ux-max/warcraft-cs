@@ -213,8 +213,10 @@ Edit it and press F8 in FPS.
   declared button columns take precedence over list order, and learned replacements win column collisions.
   Unknown entries fit around declared buttons; extra/hidden research columns are excluded.
   Passive, empty or unsupported slots show a notice. Spell effects,
-  mana, cooldowns, legal targets and native cast range remain Warcraft's responsibility. AimDistance
-  only limits reticle selection; point spells require an actual ground/object surface under the reticle.
+  mana, cooldowns, legal targets and native cast range remain Warcraft's responsibility.
+  Native basic attacks and retaliation cannot start a chase while FPS owns the hero; other units and
+  the hero's spell components retain native control, and F6 immediately restores ordinary RTS attacks.
+  AimDistance only limits reticle selection; point spells require an actual ground/object surface under the reticle.
   Movement/fire/reload/weapon switching and opening the buy menu interrupt windup or channeling;
   held movement/fire does not repeatedly interrupt a newly started cast. Mouse look remains available.
   For custom map heroes, edited ability lists or unsupported dynamic order getters, set

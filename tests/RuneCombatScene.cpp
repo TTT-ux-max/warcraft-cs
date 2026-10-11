@@ -63,7 +63,9 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
                 wc3::Log("fixture item=%08X type=%08X category=%d x=%.1f y=%.1f",item,id,wc3::GetItemType(item),x,y);
             }
         } else if (command=="enemy") {
-            float x=wc3::Real(wc3::GetUnitX(unit))+100,y=wc3::Real(wc3::GetUnitY(unit)),facing=180;
+            // A distant attacker reproduces pursuit as well as close retaliation in the disposable scene.
+            float distance=100;input>>distance;
+            float x=wc3::Real(wc3::GetUnitX(unit))+distance,y=wc3::Real(wc3::GetUnitY(unit)),facing=180;
             enemy=wc3::CreateUnit(wc3::Player(12),0x68666F6F,&x,&y,&facing);
             using Order=BOOL (__cdecl*)(wc3::Handle,int,wc3::Handle);
             auto order=reinterpret_cast<Order>(base+0x3C89D0);

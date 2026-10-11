@@ -94,3 +94,7 @@ For a missing-crosshair report, reproduce with the affected weapon and attach th
 an FPS screenshot, launcher version/mode, GPU/driver and map/edition. The source fingerprint distinguishes
 different DLLs carrying the same version number. These diagnostic fields ship in 0.7.0;
 update older launchers and modules to record them.
+
+FPS attack guards log validated hook installation for native validation/dispatch and numeric/string
+map orders. Bounded `FPS blocked native attack` traces identify rejection phases; existing cancellation
+records still report cleanup of a lingering native target. Spell components keep their own diagnostics.
