@@ -52,7 +52,10 @@ struct GameplaySettings {
     int squadMaxUnits=24;
     // Gold economy and loadout are per-map; reloading settings cannot mint another starting kit.
     bool startAllWeapons=false;
-    int startBombs=20,maxBombs=100;
+    // Default starts without C4; a positive configured count opts into starting bombs.
+    int startBombs=0,maxBombs=100;
+    // Paid C4 purchases may exceed the free-refill/rune amount; players can restore a purchase cap.
+    bool unlimitedBombPurchases=true;
     enum class BuyAccess { Anywhere, FriendlyBuildings, Shops };
     BuyAccess buyAccess=BuyAccess::Anywhere;
     float buyRadius=600;

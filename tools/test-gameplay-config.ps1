@@ -9,7 +9,7 @@ $config=Join-Path $folder 'legacy.ini'
 # Updates append missing keys inside existing sections while retaining all custom values.
 Update-GameplayConfig $template $config
 $text=Get-Content -LiteralPath $config -Raw
-foreach ($required in @('AmmoPercent=37','Price=0','Damage=81','FriendlyFirePercent=25','AWPOneShot=false','BombCount=20','Access=anywhere','AmmoPrice=80','CSVolumePercent=100','Detailed=true','IntervalMs=1000','MaxFileMB=8','ArchiveCount=3','JumpBoostPercent=0','AutoJump=true','MaxFPS=144','DrawDistance=15000')) {
+foreach ($required in @('AmmoPercent=37','Price=0','Damage=81','FriendlyFirePercent=25','AWPOneShot=false','BombCount=0','Access=anywhere','AmmoPrice=80','CSVolumePercent=100','Detailed=true','IntervalMs=1000','MaxFileMB=8','ArchiveCount=3','JumpBoostPercent=0','AutoJump=true','MaxFPS=144','DrawDistance=15000')) {
     if (!$text.Contains($required)) { throw "Missing/patched preference: $required" }
 }
 if ([regex]::Matches($text,'(?m)^\[AK47\]').Count -ne 1) { throw 'Duplicate section can hide new INI keys.' }
@@ -20,18 +20,18 @@ if ((Get-FileHash -LiteralPath $config).Hash -ne $before) { throw 'Repeated conf
 # Reserve/scaling upgrades preserve existing values and do not silently replace a player's damage/economy mode.
 $customScaling=Join-Path $folder 'custom-unit-scaling.ini'
 @('[AK47]','MaxReserve=250','Price=321','[Damage]','Mode=weapon','[Runes]','AmmoPercent=11',
-    '[Combat]','ScaleFireRateFromAttackSpeed=true','EnableAttackEffects=false','[C4]','Price=4321','AmmoPrice=3456','[Movement]','ScaleFromUnitMoveSpeed=true','UnitMoveSpeedReference=270') |
+    '[Loadout]','BombCount=7','UnlimitedBombPurchases=false','[Combat]','ScaleFireRateFromAttackSpeed=true','EnableAttackEffects=false','[C4]','Price=4321','AmmoPrice=3456','[Movement]','ScaleFromUnitMoveSpeed=true','UnitMoveSpeedReference=270') |
     Set-Content -LiteralPath $customScaling -Encoding ascii
 Update-GameplayConfig $template $customScaling
 $scalingText=Get-Content -LiteralPath $customScaling -Raw
 foreach($setting in @('MaxReserve=250','Price=321','Mode=weapon','AmmoPercent=11','ScaleFireRateFromAttackSpeed=true',
-    'ScaleFromUnitMoveSpeed=true','UnitMoveSpeedReference=270','EnableAttackEffects=false','Price=4321','AmmoPrice=3456')) {
+    'ScaleFromUnitMoveSpeed=true','UnitMoveSpeedReference=270','EnableAttackEffects=false','Price=4321','AmmoPrice=3456','BombCount=7','UnlimitedBombPurchases=false')) {
     if(!$scalingText.Contains($setting)){throw "Scaling migration lost preference: $setting"}
 }
 $scalingHash=(Get-FileHash -LiteralPath $customScaling).Hash
 Update-GameplayConfig $template $customScaling
 if((Get-FileHash -LiteralPath $customScaling).Hash -ne $scalingHash){throw 'Scaling migration is not idempotent.'}
-foreach($setting in @('MaxReserve=90','ScaleFireRateFromAttackSpeed=false','EnableAttackEffects=true','ScaleFromUnitMoveSpeed=false','UnitMoveSpeedReference=300','Mode=unit')) {
+foreach($setting in @('MaxReserve=90','ScaleFireRateFromAttackSpeed=false','EnableAttackEffects=true','ScaleFromUnitMoveSpeed=false','UnitMoveSpeedReference=300','Mode=unit','UnlimitedBombPurchases=true')) {
     if(!$text.Contains($setting)){throw "Missing scaling default: $setting"}
 }
 # Existing CS-volume preferences survive both updates and repeated setup; missing sibling settings still migrate.
@@ -39,7 +39,7 @@ $customAudio=Join-Path $folder 'custom-audio.ini'
 @('[Audio]','CSVolumePercent=35','[Runes]','AmmoPercent=11') | Set-Content -LiteralPath $customAudio -Encoding ascii
 Update-GameplayConfig $template $customAudio
 $audioText=Get-Content -LiteralPath $customAudio -Raw
-if (!$audioText.Contains('CSVolumePercent=35') -or !$audioText.Contains('AmmoPercent=11') -or !$audioText.Contains('BombCount=20')) {
+if (!$audioText.Contains('CSVolumePercent=35') -or !$audioText.Contains('AmmoPercent=11') -or !$audioText.Contains('BombCount=0')) {
     throw 'Audio update overwrote preferences or omitted newly migrated defaults.'
 }
 if ([regex]::Matches($audioText,'(?m)^\[Audio\]').Count -ne 1 -or [regex]::Matches($audioText,'(?m)^CSVolumePercent=').Count -ne 1) {
@@ -110,7 +110,7 @@ $movementBefore=(Get-FileHash -LiteralPath $customMovement).Hash
 Update-GameplayConfig $template $customMovement
 if ((Get-FileHash -LiteralPath $customMovement).Hash -ne $movementBefore) { throw 'Movement migration is not idempotent.' }
 [IO.File]::WriteAllText($empty,'');Update-GameplayConfig $template $empty
-if (!(Get-Content -LiteralPath $empty -Raw).Contains('BombCount=20')) { throw 'Empty config repair failed.' }
+if (!(Get-Content -LiteralPath $empty -Raw).Contains('BombCount=0')) { throw 'Empty config repair failed.' }
 $fresh=Join-Path $folder 'fresh.ini';Update-GameplayConfig $template $fresh
 if ((Get-FileHash -LiteralPath $fresh).Hash -ne (Get-FileHash -LiteralPath $template).Hash) { throw 'Fresh config differs from defaults.' }
 # New defaults must not overwrite an existing player's explicit AWP finishing preference.

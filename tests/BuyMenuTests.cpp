@@ -16,9 +16,13 @@ int main() {
     }
     int ammo[7]={},reserve[7]={},magazines[]={30,30,12,10,0,1,0},reserves[]={90,90,100,30,0,0,0};
     inventory.Reset(settings,ammo,reserve,magazines,reserves);
-    assert(!inventory.owned[0] && !inventory.owned[3] && inventory.owned[2] && inventory.owned[4] && inventory.owned[5] && inventory.owned[6]);
-    assert(ammo[2]==12 && reserve[2]==100 && ammo[5]==20 && ammo[0]==0 && reserve[0]==0);
-    assert(inventory.Next(4,1)==5 && inventory.Next(4,-1)==2);
+    assert(!inventory.owned[0] && !inventory.owned[3] && inventory.owned[2] && inventory.owned[4] && !inventory.owned[5] && inventory.owned[6]);
+    assert(ammo[2]==12 && reserve[2]==100 && ammo[5]==0 && ammo[0]==0 && reserve[0]==0);
+    assert(inventory.Next(4,1)==6 && inventory.Next(4,-1)==2);
+    // Optional starting bombs still grant ownership; zero keeps C4 inaccessible until purchase/free grant.
+    settings.startBombs=5;inventory.Reset(settings,ammo,reserve,magazines,reserves);
+    assert(inventory.owned[5] && ammo[5]==5 && inventory.Next(4,1)==5);
+    settings.startBombs=0;inventory.Reset(settings,ammo,reserve,magazines,reserves);
     // Insufficient funds, duplicate guns and full reserves never debit the Warcraft resource budget.
     int gold=1249;
     assert(inventory.Buy(0,false,settings,gold,ammo[0],reserve[0],30,90)==BuyInventory::Result::NoGold);
@@ -31,19 +35,30 @@ int main() {
     reserve[0]=89;assert(inventory.Buy(0,true,settings,gold,ammo[0],reserve[0],30,90)==BuyInventory::Result::Bought && reserve[0]==90);
     int before=gold;assert(inventory.Buy(0,true,settings,gold,ammo[0],reserve[0],30,90)==BuyInventory::Result::Full && gold==before);
     settings.weaponPrice[5]=7;gold=7;
-    assert(inventory.Buy(5,false,settings,gold,ammo[5],reserve[5],1,0)==BuyInventory::Result::Bought && gold==0 && ammo[5]==21);
-    settings.maxBombs=21;gold=100;
-    assert(inventory.Buy(5,true,settings,gold,ammo[5],reserve[5],1,0)==BuyInventory::Result::Full && ammo[5]==21 && gold==100);
+    assert(inventory.Buy(5,false,settings,gold,ammo[5],reserve[5],1,0)==BuyInventory::Result::Bought && gold==0 && ammo[5]==1 && inventory.owned[5]);
+    settings.maxBombs=1;gold=100;
+    settings.unlimitedBombPurchases=false;
+    assert(inventory.Buy(5,true,settings,gold,ammo[5],reserve[5],1,0)==BuyInventory::Result::Full && ammo[5]==1 && gold==100);
+    // Both purchase paths remain repeatable beyond MaxBombs, charging every useful transaction.
+    settings.unlimitedBombPurchases=true;settings.weaponPrice[5]=settings.ammoPrice[5]=7;
+    for(bool quickAmmo : {false,true}) {
+        gold=21;int previous=ammo[5];
+        for(int n=0;n<3;++n)assert(inventory.Buy(5,quickAmmo,settings,gold,ammo[5],reserve[5],1,0)==BuyInventory::Result::Bought);
+        assert(gold==0 && ammo[5]==previous+3);
+    }
+    inventory.Refill(settings,ammo,reserve,magazines,reserves);assert(ammo[5]==7);
+    int fullStorage=std::numeric_limits<int>::max();gold=7;
+    assert(inventory.Buy(5,false,settings,gold,fullStorage,reserve[5],1,0)==BuyInventory::Result::Full && gold==7);
     settings.startAllWeapons=true;inventory.Reset(settings,ammo,reserve,magazines,reserves);
-    assert(inventory.owned[0] && inventory.owned[3] && ammo[0]==30 && reserve[0]==90);
-    // Free refill never unlocks unowned guns, while F9 grants every slot without a gold transaction.
+    assert(inventory.owned[0] && inventory.owned[3] && inventory.owned[5] && ammo[5]==0 && ammo[0]==30 && reserve[0]==90);
+    // F7 grants C4 while leaving unowned firearms locked; F9 grants every slot without a gold transaction.
     settings.startAllWeapons=false;inventory.Reset(settings,ammo,reserve,magazines,reserves);
     ammo[2]=1;reserve[2]=0;gold=83;
     inventory.Refill(settings,ammo,reserve,magazines,reserves);
-    assert(ammo[2]==12 && reserve[2]==100 && ammo[5]==settings.maxBombs && !inventory.owned[0] && ammo[0]==0 && gold==83);
+    assert(ammo[2]==12 && reserve[2]==100 && ammo[5]==settings.maxBombs && inventory.owned[5] && !inventory.owned[0] && ammo[0]==0 && gold==83);
     inventory.Refill(settings,ammo,reserve,magazines,reserves,true);
     for (int slot=0;slot<WeaponSlots::Count;++slot) assert(inventory.owned[slot]);
-    assert(ammo[0]==30 && reserve[0]==90 && ammo[3]==10 && reserve[3]==30 && gold==83);
+    assert(ammo[0]==30 && reserve[0]==90 && ammo[3]==10 && reserve[3]==30 && ammo[5]==settings.maxBombs && gold==83);
     // A custom capacity supports larger reserves and prevents charging gold when the configured cap is zero.
     settings.maxReserve[0]=250;reserves[0]=settings.maxReserve[0];
     inventory.Refill(settings,ammo,reserve,magazines,reserves);

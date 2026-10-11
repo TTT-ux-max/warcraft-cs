@@ -270,9 +270,14 @@ Edit it and press F8 in FPS.
   and `YieldAheadDistance=350` (clearance..1000) are Warcraft units. `OrderIntervalMs=150` (50..1000)
   controls response frequency. All reload with F8 and survive launcher updates; native pathfinding
   still governs travel around obstacles.
-- `[Loadout] Mode=melee` starts each map with a loaded USP, knife, sword and C4; `Mode=all` grants all weapons
-  with their initial ammunition. `BombCount=20` sets starting charges; `MaxBombs=100` caps carried
-  charges (0вЂ“1000). F6/F8 and changing the controlled unit never grant another starting kit.
+- `[Loadout] Mode=melee` starts each map with a loaded USP, knife and sword; `Mode=all` grants all weapons
+  with their initial ammunition. `BombCount=0` excludes C4 from the default kit; a positive count opts
+  into starting bombs. Buying C4 grants ownership; F7 grants/refills C4 and F9 grants all weapons.
+  Updates preserve an existing count; set it to 0 explicitly to adopt the new default on the next map.
+  `MaxBombs=100` sets the starting/free-refill/rune amount (0..1000).
+  `UnlimitedBombPurchases=true` allows repeated paid purchases beyond that amount; false restores
+  it as the purchase cap. F8 applies this switch; refills never discard surplus purchased bombs.
+  F6/F8 and changing the controlled unit never grant another starting kit.
 - `[AK47]`, `[M4A1]`, `[USP]`, `[AWP]`, `[Knife]`, `[Sword]`, `[C4]` use `Price` in native Warcraft
   **gold**. Buying a firearm gives one loaded magazine, with zero reserve rounds. `AmmoPrice` buys
   `AmmoPack` reserve rounds (R loads them). A C4 weapon/ammo purchase grants one charge. Full ammo,
@@ -283,7 +288,8 @@ Edit it and press F8 in FPS.
   qualify when allied or neutral-passive and visible/alive.
   Add custom shop unit rawcodes with `ShopTypes=nmer,ngme`. Both B and every purchase, including `.`,
   check the zone. The menu does not pause the world; leaving a valid zone closes it.
-- F7 always refills carried magazines/reserves and C4 to `MaxBombs` for free; F9 also unlocks all weapons.
+- F7 refills carried magazines/reserves and grants C4 up to at least `MaxBombs` for free;
+  surplus purchased bombs are retained. F9 also unlocks all weapons.
   These shortcuts do not spend gold or bypass Warcraft incapacitation. Legacy `AllowFreeRefill` is ignored.
   Rune rewards still follow `[Runes]` settings, apply only to owned weapons and use `MaxBombs` for C4.
 - `[Sky] Enabled=false` keeps Warcraft's native sky by default; `true` enables a private CS sky in FPS. `Default=Des` is the unknown-tileset fallback;

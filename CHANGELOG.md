@@ -2,6 +2,12 @@
 
 ## Unreleased - test branches
 
+- Remove C4 from the default starting inventory (`[Loadout] BombCount=0`). A positive count or
+  explicit all-weapons mode opts into ownership. F7 grants/refills C4 and F9 still grants every weapon.
+  Allow unlimited repeat C4 purchases by default (`UnlimitedBombPurchases=true`); MaxBombs retains
+  its free-refill/rune amount and optionally caps purchases when the switch is false. Refills preserve
+  surplus purchased bombs. Existing custom starting counts survive updates.
+
 - Add configurable native firearm/melee attack effects: preparation, impact and cleanup preserve
   learned passives, item orbs, native chances and map attack callbacks without issuing pursuit orders.
   `[Combat] EnableAttackEffects=true` reloads with F8; false keeps direct damage and native armor class.

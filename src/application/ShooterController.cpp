@@ -324,7 +324,7 @@ void ShooterController::Reload() {
     reloadEnd_ = animationTick_ + DWORD((duration > 0 ? duration : w.reload) * 1000);
 }
 void ShooterController::RefillAmmo(bool grantAll) {
-    // Free-ammo controls restore carried ammo or additionally unlock every slot without spending gold.
+    // F7 restores carried ammo and grants C4; F9 additionally unlocks every weapon without spending gold.
     int magazines[WeaponSlots::Count],reserves[WeaponSlots::Count];
     for (int i=0;i<WeaponSlots::Count;++i) { magazines[i]=weapons[i].magazine;reserves[i]=settings_.maxReserve[i]; }
     inventory_.Refill(settings_,ammo_,reserve_,magazines,reserves,grantAll);
@@ -396,8 +396,8 @@ void ShooterController::ReloadSettings() {
     // Distinguish a stored preference from the finishing rule actually active in this damage mode.
     wc3::Log("Attack effects enabled=%d AWP finishing active=%d",settings_.enableAttackEffects,settings_.FinishingAWP(WeaponSlots::AWP));
     // Log the validated snapshot, including prices/sky choices, rather than arbitrary raw INI contents.
-    wc3::Trace("settings loadoutAll=%d bombs=%d/%d buyAccess=%d buyRadius=%.1f shops=%s csVolume=%.1f floatingText=%.1f squadRadius=%.1f follow=%.1f leash=%.1f maxUnits=%d csSky=%d nativeSky=%d defaultSky=%s",
-        settings_.startAllWeapons, settings_.startBombs, settings_.maxBombs, int(settings_.buyAccess), settings_.buyRadius,
+    wc3::Trace("settings loadoutAll=%d bombs=%d/%d unlimitedBombPurchases=%d buyAccess=%d buyRadius=%.1f shops=%s csVolume=%.1f floatingText=%.1f squadRadius=%.1f follow=%.1f leash=%.1f maxUnits=%d csSky=%d nativeSky=%d defaultSky=%s",
+        settings_.startAllWeapons, settings_.startBombs, settings_.maxBombs,settings_.unlimitedBombPurchases,int(settings_.buyAccess), settings_.buyRadius,
         settings_.shopTypes.c_str(), settings_.csVolumePercent, settings_.floatingTextDistance, settings_.squadRadius,
         settings_.squadFollowDistance, settings_.squadLeash, settings_.squadMaxUnits, settings_.csSky, settings_.nativeSky, settings_.defaultSky.c_str());
     for (int slot = 0; slot < WeaponSlots::Count; ++slot)

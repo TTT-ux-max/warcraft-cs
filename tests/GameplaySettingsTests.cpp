@@ -23,7 +23,7 @@ int main() {
     assert(!settings.healthBars.allies && !settings.healthBars.enemies && settings.healthBars.distance==2000);
     assert(settings.csVolumePercent==100);
     assert(settings.render.maxFPS==144 && settings.render.drawDistance==15000);
-    assert(!settings.startAllWeapons && settings.startBombs==20 && settings.maxBombs==100 );
+    assert(!settings.startAllWeapons && settings.startBombs==0 && settings.maxBombs==100 && settings.unlimitedBombPurchases);
     assert(settings.buyAccess==GameplaySettings::BuyAccess::Anywhere && !settings.csSky);
     assert(settings.weaponPrice[0]==1250 && settings.weaponPrice[1]==1550 && settings.weaponPrice[2]==250);
     // C4 catalog and quick replenishment charge the same requested default price.
@@ -339,5 +339,14 @@ int main() {
     assert(!GameplaySettings::Load(path).enableAttackEffects);
     WritePrivateProfileStringA("Combat","EnableAttackEffects","true",path.c_str());
     assert(GameplaySettings::Load(path).enableAttackEffects);DeleteFileA(path.c_str());
+    // Real INI reload can restore the purchase cap; malformed values keep unlimited purchases enabled.
+    for(auto value : {"true","1","false","0","broken","","nan"}) {
+        {std::ofstream file(path);file<<"[Loadout]\nUnlimitedBombPurchases="<<value<<"\n";}
+        assert(GameplaySettings::Load(path).unlimitedBombPurchases==(strcmp(value,"false")!=0 && strcmp(value,"0")!=0));
+    }
+    WritePrivateProfileStringA("Loadout","UnlimitedBombPurchases","false",path.c_str());
+    assert(!GameplaySettings::Load(path).unlimitedBombPurchases);
+    WritePrivateProfileStringA("Loadout","UnlimitedBombPurchases","true",path.c_str());
+    assert(GameplaySettings::Load(path).unlimitedBombPurchases);DeleteFileA(path.c_str());
     return 0;
 }

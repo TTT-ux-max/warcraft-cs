@@ -49,3 +49,5 @@
 - Preserved native passive chances, restrictions and orb priority.
 - Changed both C4 purchase prices to 3000 gold per bomb.
 - Improved AWP instant-kill and weapon-effect diagnostics.
+- Removed C4 from the default starting inventory.
+- Preserved F7 C4 grants and added unlimited repeat C4 purchases.

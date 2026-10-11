@@ -163,7 +163,12 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.shopTypes=text("Buy","ShopTypes","");
     result.startAllWeapons=!_stricmp(text("Loadout","Mode","melee").c_str(),"all");
     result.maxBombs=int(number("Loadout","MaxBombs",100,1000));
-    result.startBombs=std::min(result.maxBombs,int(number("Loadout","BombCount",20,1000)));
+    // Missing/invalid starting counts retain the bomb-free default; explicit counts remain configurable.
+    result.startBombs=std::min(result.maxBombs,int(number("Loadout","BombCount",0,1000)));
+    // Unlimited purchases are the default; F8 can restore MaxBombs as a paid-purchase cap.
+    auto unlimitedBombs=text("Loadout","UnlimitedBombPurchases","true");
+    if(!_stricmp(unlimitedBombs.c_str(),"false") || unlimitedBombs=="0")result.unlimitedBombPurchases=false;
+    else if(_stricmp(unlimitedBombs.c_str(),"true") && unlimitedBombs!="1")wc3::Log("Invalid Loadout.UnlimitedBombPurchases; using true");
     result.csSky=_stricmp(text("Sky","Enabled","false").c_str(),"false")!=0;
     // Default to Warcraft's sky even for older configs missing this key; explicit CS sky still takes precedence.
     result.nativeSky=_stricmp(text("Sky","WarcraftEnabled","true").c_str(),"true")==0;
