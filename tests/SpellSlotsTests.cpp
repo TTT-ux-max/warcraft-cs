@@ -23,6 +23,17 @@ int main() {
     assert(slots.Passive(HeroSpellSlots::Rawcode("A003")) && !slots.Passive(HeroSpellSlots::Rawcode("A001")));
     slots.LoadPositions("[A003]\nArt=ReplaceableTextures\\CommandButtons\\BTNTest.blp\n");
     assert(!slots.Passive(HeroSpellSlots::Rawcode("A003")));
+    // A custom list starts with ultimate/stats and puts its first button fifth: never truncate that skill.
+    slots.LoadUnits("C;X1;Y1;K\"unitAbilID\"\nC;X2;K\"heroAbilList\"\nC;X1;Y2;K\"H001\"\nC;X2;K\"B004,B005,B003,B002,B001\"\n");
+    slots.LoadPositions("[B001]\nResearchbuttonpos=0,0\n[B002]\nResearchbuttonpos=1,0\n[B003]\nResearchbuttonpos=2,0\n");
+    spells=slots.ForUnit(HeroSpellSlots::Rawcode("H001"));
+    for(int i=0;i<4;++i)assert(spells[i]==HeroSpellSlots::Rawcode("B00"+std::to_string(i+1)));
+    // Extra attribute/hidden buttons cannot steal a missing spell column through the fallback.
+    slots.LoadPositions("[B005]\nResearchbuttonpos=4,0\n[B004]\nResearchbuttonpos=-11,0\n");
+    spells=slots.ForUnit(HeroSpellSlots::Rawcode("H001"));assert(!spells[3]);
+    slots.LoadPositions("[B004]\nResearchbuttonpos=0,0\n");
+    spells=slots.ForUnit(HeroSpellSlots::Rawcode("H001"),[](int id){return id==HeroSpellSlots::Rawcode("B001");});
+    assert(spells[0]==HeroSpellSlots::Rawcode("B001"));
     slots.LoadUnits("broken");assert((slots.ForUnit(HeroSpellSlots::Rawcode("H000"))==std::array<int,4>{}));
     std::puts("PASS shortcut parsing/conflicts/swaps and owned-table hero spell slot metadata.");
 }

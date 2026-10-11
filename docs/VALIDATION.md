@@ -1,5 +1,19 @@
 # Validation of the 0.1.0 source baseline
 
+## Custom hero lists beyond four entries (test branch, 2026-10-11)
+
+The reported installed-game log resolved the first slot to an absent/unlearned rawcode. Inspection
+of the owner's DotA 6.88f AI tables reproduced the cause: a five-entry hero list starts with the
+ultimate/stats while the primary ability is fifth. The old four-entry truncation discarded it, and
+an unknown list-order fallback also occupied columns before declared UI metadata was considered.
+The production parser now reads the full list, applies declared columns first, fits unknown entries
+into remaining slots and prefers learned replacements within a declared column. Explicit extra/hidden
+columns do not fall back into the four spell controls. Synthetic regressions reproduce reordered
+five-entry lists, missing metadata, passive gaps, extra/hidden columns and learned replacements.
+The unchanged caster/aim suites pass. A private harness using the actual owned map tables now resolves
+the requested hero's four slots in button order, with the primary first and ultimate fourth.
+This data-level check does not claim a cast in the user's running match; that game remains untouched.
+
 ## Configurable keyboard and first-person spells (test branch, 2026-10-11)
 
 Production shortcut parsing validates unique layouts atomically, permits swaps and disabled actions,

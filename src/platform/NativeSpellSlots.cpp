@@ -26,14 +26,18 @@ void NativeSpellSlots::Configure(uintptr_t base) {
 }
 int NativeSpellSlots::Ability(wc3::Handle unit,int slot,const SpellSettings& settings) {
     if(slot<0 || slot>=4)return 0;
-    if(!settings.ability[slot].empty())return HeroSpellSlots::Rawcode(settings.ability[slot]);
     if(!loaded_) {
         loaded_=true;slots_.LoadUnits(ArchiveText("Units\\UnitAbilities.slk"));
         for(const char* race:{"Human","Orc","Undead","NightElf","Neutral"}) {
             std::string path="Units\\"+std::string(race)+"AbilityFunc.txt";slots_.LoadPositions(ArchiveText(path.c_str()));
         }
     }
-    return slots_.ForUnit(wc3::GetUnitTypeId(unit))[slot];
+    // Load passive metadata for configured rawcodes as well as automatically selected hero slots.
+    if(!settings.ability[slot].empty())return HeroSpellSlots::Rawcode(settings.ability[slot]);
+    auto resolved=slots_.ForUnit(wc3::GetUnitTypeId(unit),[&](int ability){return wc3::GetUnitAbilityLevel(unit,ability)>0;});
+    wc3::Log("Hero spell slots unit=%08X type=%08X resolved=%08X,%08X,%08X,%08X requestedSlot=%d",
+        unit,wc3::GetUnitTypeId(unit),resolved[0],resolved[1],resolved[2],resolved[3],slot+1);
+    return resolved[slot];
 }
 int NativeSpellSlots::Order(wc3::Handle unit,int ability) {
     if(!verified_ || !ability || slots_.Passive(ability) || wc3::GetUnitAbilityLevel(unit,ability)<=0)return 0;

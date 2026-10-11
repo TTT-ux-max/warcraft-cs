@@ -30,8 +30,9 @@ void HeroSpellSlots::LoadUnits(const std::string& slk) {
     for(const auto& row:rows) {
         const auto& cells=row.second;auto id=cells.find(idColumn),list=cells.find(listColumn);
         if(id==cells.end() || list==cells.end())continue;
-        std::array<int,4> slots={};std::istringstream ids(list->second);std::string raw;int at=0;
-        while(at<4 && std::getline(ids,raw,','))slots[at++]=Rawcode(raw);
+        // Custom heroes can list stats and ultimate first, with a primary skill after the fourth entry.
+        std::vector<int> slots;std::istringstream ids(list->second);std::string raw;
+        while(slots.size()<128 && std::getline(ids,raw,','))slots.push_back(Rawcode(raw));
         if(int type=Rawcode(id->second))units_[type]=slots;
     }
 }
@@ -47,17 +48,28 @@ void HeroSpellSlots::LoadPositions(const std::string& text) {
         }
         if(id && line.rfind("Researchbuttonpos=",0)==0) {
             const char* first=line.c_str()+18;char* end=nullptr;long column=std::strtol(first,&end,10);
-            if(end!=first && *end==',' && column>=0 && column<4)positions_[id]=int(column);
+            // Remember extra/hidden columns too; they must not fall back into the four spell controls.
+            if(end!=first && *end==',' && column>=-16 && column<16)positions_[id]=int(column);
         }
     }
 }
-std::array<int,4> HeroSpellSlots::ForUnit(int type) const {
+std::array<int,4> HeroSpellSlots::ForUnit(int type,const std::function<bool(int)>& learned) const {
     auto found=units_.find(type);if(found==units_.end())return {};
     std::array<int,4> result={};
-    for(size_t i=0;i<4;++i) {
-        int ability=found->second[i];auto position=positions_.find(ability);
-        size_t slot=position==positions_.end() ? i : size_t(position->second);
-        if(ability && !result[slot])result[slot]=ability;
+    // Explicit research positions win over list order, even when their abilities appear fifth or later.
+    for(int ability:found->second) {
+        auto position=positions_.find(ability);
+        if(!ability || position==positions_.end() || position->second<0 || position->second>=4)continue;
+        auto& selected=result[size_t(position->second)];
+        // Maps can replace a skill with another ID in the same column; prefer the one actually learned.
+        if(!selected || (learned && !learned(selected) && learned(ability)))selected=ability;
+    }
+    // Preserve ordinary list-order gaps, then fit unknown entries around the declared map buttons.
+    for(size_t i=0;i<found->second.size();++i) {
+        int ability=found->second[i];if(!ability || positions_.count(ability))continue;
+        auto empty=std::find(result.begin(),result.end(),0);
+        if(empty==result.end())break;
+        if(i<4 && !result[i])result[i]=ability;else *empty=ability;
     }
     return result;
 }

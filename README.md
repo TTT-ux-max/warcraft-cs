@@ -209,7 +209,10 @@ Edit it and press F8 in FPS.
 
 - `[Spells] Enabled=true`, `AimDistance=3000` (Warcraft units, 100..15000) enable native spell orders.
   The owner's `UnitAbilities.slk` and race ability UI tables supply the four hero research columns,
-  preserving passive/unlearned gaps. Passive, empty or unsupported slots show a notice. Spell effects,
+  preserving passive/unlearned gaps. The entire custom hero list is read, including fifth/later skills;
+  declared button columns take precedence over list order, and learned replacements win column collisions.
+  Unknown entries fit around declared buttons; extra/hidden research columns are excluded.
+  Passive, empty or unsupported slots show a notice. Spell effects,
   mana, cooldowns, legal targets and native cast range remain Warcraft's responsibility. AimDistance
   only limits reticle selection; point spells require an actual ground/object surface under the reticle.
   Movement/fire/reload/weapon switching and opening the buy menu interrupt windup or channeling;

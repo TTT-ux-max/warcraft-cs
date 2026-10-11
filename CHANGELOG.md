@@ -2,6 +2,8 @@
 
 ## Unreleased — test branches
 
+- Fix custom hero spell mapping when the primary ability is fifth/later in the list: prioritize declared research columns, preserve passive slots and prefer learned replacements in duplicate columns; log all four resolved rawcodes.
+
 - Add first-person native hero spell casting on Z/X/C/V, reticle unit/point targeting and Alt self-targeting; preserve learned/passive slots, native mana/cooldowns and explicit cast/channel order ownership.
 - Move the speed toggle from V to P and add validated, conflict-checked keyboard shortcuts with live reload, matching HUD labels and update preservation; retain F6 recovery and native Escape/F10 menus.
 - Add spell enable/distance/ability/order/target configuration for custom maps and detailed spell/shortcut diagnostics.
