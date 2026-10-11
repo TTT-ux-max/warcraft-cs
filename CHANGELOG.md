@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — test branches
+## Unreleased вЂ” test branches
 
 - Fix automatic enemy pursuit in FPS by rejecting native basic-attack validation and retaliation dispatch before chase starts; preserve spell components, ordinary units and RTS control, with bounded rejection diagnostics.
 
@@ -15,12 +15,17 @@
 - Recognize the full native cliff rim, including diagonal corners, so landing below a ledge does not trap the player in its walkability mask.
 - Permit retreat from an existing solid overlap and its native footprint while still rejecting deeper penetration, new solids and unknown flat blockers.
 - Log sampled movement rejection reasons and terrain/cliff coordinates for diagnosing stuck positions.
-- Raise the client FPS target to 144 and FPS world-camera far clip to 15000 Warcraft units; add Rendering.MaxFPS (0/native or 30–360) and DrawDistance (3000–20000), F8 reload and upgrade preservation.
+- Raise the client FPS target to 144 and FPS world-camera far clip to 15000 Warcraft units; add Rendering.MaxFPS (0/native or 30вЂ“360) and DrawDistance (3000вЂ“20000), F8 reload and upgrade preservation.
 - Use high-resolution elapsed time for player movement and guarded native render-demand changes with paced presentation, without changing Warcraft's simulation timers.
 - Use decoded standing tree trunks for movement collision instead of canopy-sized model extents; reuse the shooting geometry and retain native pathing for unreadable models.
 - Log tree/trunk classification and add regressions for a clear canopy corridor, trapped starting positions and solid trunk contact.
 
-## 0.7.0 — 2026-10-10
+- Add a native Warcraft minimap in the top-right corner of FPS, including terrain, fog and native markers; M toggles its session visibility.
+- Keep rectangular-map letterboxing black and restore the world beneath the original RTS map pixel for pixel; leaving FPS retains Warcraft's normal minimap layout.
+- Add `[Interface] ShowMinimap=true` and `MinimapSizePercent=22` (10..40% of window height), validated defaults, live F8 reload and preservation during config upgrades.
+- Compact the top shortcut hints into wrapping groups, wrap them before the minimap on narrow windows, remove duplicate buy/ammo hints and move gold beside health/ammunition.
+
+## 0.7.0 вЂ” 2026-10-10
 
 - Restore F6 and other mod controls after native campaign movies replace Warcraft's window; also recover a known native input-procedure reset and log attachment/destruction/recovery.
 - Add N to disable/restore fog of war in offline FPS, including the unexplored black mask; restore each map's switches for RTS, menus and cinematics.
@@ -49,9 +54,9 @@
 - Merge all completed feature histories through release/0.6.1 and master, then create release/0.7.0; retain previous branches and immutable tags.
 - Publish both launcher variants, source-only packages, verified hashes and complete notes since v0.6.1; see [RELEASE-0.7.0](docs/RELEASE-0.7.0.md).
 
-## 0.6.1 — 2026-10-09
+## 0.6.1 вЂ” 2026-10-09
 
-- Add `[Audio] CSVolumePercent` (0–100, default 100) for CS shots, reloads, footsteps, melee and C4.
+- Add `[Audio] CSVolumePercent` (0вЂ“100, default 100) for CS shots, reloads, footsteps, melee and C4.
 - Apply the CS-only master gain at startup and on F8, including queued/playing sounds; preserve per-event levels and Warcraft's own audio.
 - Validate missing/empty/malformed/non-finite values and clamp finite percentages; expose native gain readback for diagnostics.
 - Preserve custom audio values while migrating old configs; cover default insertion, repeat setup and duplicate-section/key prevention.
@@ -63,7 +68,7 @@
 
 Complete changes since v0.6.0 and validation scope: [RELEASE-0.6.1](docs/RELEASE-0.6.1.md).
 
-## 0.6.0 — 2026-10-09
+## 0.6.0 вЂ” 2026-10-09
 
 - Merge all completed feature work since 0.5.1, retaining earlier release/feature branches and immutable tags.
 - Add remembered RoC/TFT selection in both launchers and `play-roc.bat` with forwarded map/window options.
@@ -83,18 +88,18 @@ Complete changes since v0.6.0 and validation scope: [RELEASE-0.6.1](docs/RELEASE
 
 Full release notes, downloads and validation scope: [RELEASE-0.6.0](docs/RELEASE-0.6.0.md).
 
-## 0.5.1 — 2026-10-07
+## 0.5.1 вЂ” 2026-10-07
 
 - Publish a source-only `WarcraftCSLauncher.exe` in distribution ZIPs and a separate `WarcraftCSLauncher_DLL_Included.exe` for ready mod modules.
 - Separate Install (embedded version) and Update (latest stable GitHub project release); source-only launchers expose one Install button.
 - Preserve launcher variants during verified updates, with independent executable/native-payload hashes and explicit dependency consent.
-- Add `[Damage] FriendlyFirePercent` (0–100, default 50) for firearms, melee and C4 against owned/allied units and buildings.
+- Add `[Damage] FriendlyFirePercent` (0вЂ“100, default 50) for firearms, melee and C4 against owned/allied units and buildings.
 - Apply F8 reloads to subsequent contacts and snapshot C4's percentage at planting; zero allied damage emits no native damage event.
 
 Validation: all nine C++ suites and launcher/update regressions pass. Real package checks verify
 separate executable hashes, identical source snapshots, native-free public ZIPs and native payload integrity.
 
-## 0.5.0 — 2026-10-06
+## 0.5.0 вЂ” 2026-10-06
 
 - Show a release-version/notes confirmation dialog; declining leaves the current installation untouched.
 - Add Player and Developer installation buttons, with explicit dependency information.
@@ -108,7 +113,7 @@ separate executable hashes, identical source snapshots, native-free public ZIPs 
 Validation: launcher/payload regressions and isolated Player/Developer installs pass.
 Older updater-enabled launchers accept the new bundle; saves and settings are preserved.
 
-## 0.4.0 — 2026-10-06
+## 0.4.0 вЂ” 2026-10-06
 
 - Add a complete requirements file for users, source builds and release updater assets.
 - Pick authored tree trunk triangles instead of canopy boxes; preserve ordinary gate/model-bound behavior.
@@ -123,7 +128,7 @@ Older updater-enabled launchers accept the new bundle; saves and settings are pr
 Validation: all nine C++ suites and a disposable native tree/gate/wheel session pass.
 Requirements are included in both the source snapshot and distribution ZIP.
 
-## 0.3.0 — 2026-10-06
+## 0.3.0 вЂ” 2026-10-06
 
 - Windows client EXE with game-folder selection, explicit download/install consent, live setup log and Play.
 - Embedded audited source payload; clients do not need Git or a separate source archive.
@@ -137,7 +142,7 @@ Validation: launcher consent/path/source-payload tests and all seven C++ logic s
 complete isolated client setup passed using existing Python/MSVC/SDK. Fresh vendor installation
 on a clean Windows machine and complete campaign compatibility remain unverified.
 
-## 0.2.0 — 2026-10-06
+## 0.2.0 вЂ” 2026-10-06
 
 - Use the project's original straight silver sword with a gold guard and leather grip.
 - Generate sword geometry from project-owned source; import hands/animations only from the owner's CS knife.
@@ -145,7 +150,7 @@ on a clean Windows machine and complete campaign compatibility remain unverified
 - Translate the complete README to English and update repository/installation links.
 - Start release/0.2.0 after merging the 0.1.0 baseline into master; retain all old branches and tags.
 
-## 0.1.0 — 2026-10-06
+## 0.1.0 вЂ” 2026-10-06
 
 Initial source-only release of Warcraft CS by Yazgul.
 

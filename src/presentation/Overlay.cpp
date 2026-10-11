@@ -3,22 +3,26 @@
 #include "ReticleView.hpp"
 #include "ReticleDiagnostics.hpp"
 #include "BuyMenuView.hpp"
+#include "HudHints.hpp"
+#include "../platform/NativeMinimap.hpp"
 #include "../platform/DiagnosticLog.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
 
-static GLuint BitmapFont(HDC dc, int size) {
+static GLuint BitmapFont(HDC dc, int size, int* glyphWidth=nullptr) {
     // Rasterize each size directly so enlarged status text stays sharp instead of stretching pixels.
     HFONT font = CreateFontA(size, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, ANSI_CHARSET,
         OUT_TT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY, FF_DONTCARE, "Consolas");
     HGDIOBJ old = SelectObject(dc, font); GLuint lists = glGenLists(96);
+    // Use the actual monospace advance so wrapping remains correct at different Windows DPI settings.
+    if (glyphWidth) {TEXTMETRICA metrics={};GetTextMetricsA(dc,&metrics);*glyphWidth=std::max(1,int(metrics.tmAveCharWidth));}
     wglUseFontBitmapsA(dc, 32, 96, lists); SelectObject(dc, old); DeleteObject(font);
     return lists;
 }
 void Overlay::Font(HDC dc, int statusSize) {
-    if (!font_) font_ = BitmapFont(dc, 23);
+    if (!font_) font_ = BitmapFont(dc, 20, &hintGlyphWidth_);
     // Only the bottom HUD scales with resolution; rebuild its glyphs when the viewport size changes.
     if (statusFontSize_ != statusSize) {
         if (statusFont_) glDeleteLists(statusFont_, 96);
@@ -46,7 +50,7 @@ void Overlay::ContextDeleted(HGLRC context) {
     ResetGraphics(false); context_ = nullptr;
     wc3::Log("Overlay context deleted; GPU names forgotten");
 }
-void Overlay::Draw(HDC dc, const ShooterController& controller,const std::vector<UnitHealthBar>& bars,
+void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& minimap,const std::vector<UnitHealthBar>& bars,
     const WorldLabelView& barView,float nearPlane,float farPlane) {
     // Explain early returns as well as submitted geometry when investigating a missing aiming mark.
     if (!controller.Visible()) { ReticleDiagnostics::Skip("fps-inactive"); return; }
@@ -149,10 +153,10 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,const std::vector
     int statusSize = std::clamp(int(std::lround(height * (42.0f / 1080.0f))), 26, 84);
     Font(dc, statusSize);
     controller.Hits().Draw(float(width), float(height));
-    char status[160]; sprintf_s(status, "HP %.0f   %s   %d / %d", controller.Health(),
-        ShooterController::weapons[index].name, controller.Ammo(), controller.Reserve());
+    char status[160]; sprintf_s(status, "HP %.0f   %s   %d / %d   GOLD %d", controller.Health(),
+        ShooterController::weapons[index].name, controller.Ammo(), controller.Reserve(),controller.Gold());
     // Melee equipment has no magazine; show only its name instead of a misleading empty-ammo counter.
-    if (WeaponSlots::Melee(index)) sprintf_s(status, "HP %.0f   %s", controller.Health(), ShooterController::weapons[index].name);
+    if (WeaponSlots::Melee(index)) sprintf_s(status, "HP %.0f   %s   GOLD %d", controller.Health(), ShooterController::weapons[index].name,controller.Gold());
     float statusPad = statusSize * 0.75f, statusY = height - statusPad;
     glColor4f(1.0f, 0.85f, 0.3f, 1); Text(statusPad, statusY, status, statusFont_);
     // Installation progress and fuse are independent of which weapon is currently equipped.
@@ -164,22 +168,20 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,const std::vector
         char message[80]; sprintf_s(message, "C4 x%u  %.0fs",unsigned(controller.BombCount()),double(std::ceil(controller.BombRemaining())));
         Text(float(width - statusSize * 9), statusY, message, statusFont_);
     }
-    // Advertise wheel switching beside the existing direct-selection slots.
-    // Sword/secondary-melee remain usable, but their shortcuts no longer clutter the HUD.
+    // Compact hints reflect the configured keys and wrap before the native minimap.
     auto key=[&](ShortcutAction action) {return controller.Shortcut(action);};
-    std::string controls="WHEEL: WEAPONS | "+key(ShortcutAction::Weapon6)+": C4 | "+key(ShortcutAction::Pickup)+": ITEM | "+key(ShortcutAction::ReloadSettings)+": CONFIG";
-    Text(25,59,controls.c_str());
-    // The squad mode/count remains visible after its short confirmation disappears.
-    // Show the independent release key beside both recruitment policies.
-    char squad[192];sprintf_s(squad,"%s: FIGHT | %s: FOLLOW | %s: RELEASE | SQUAD %u %s",key(ShortcutAction::SquadFight).c_str(),key(ShortcutAction::SquadFollow).c_str(),key(ShortcutAction::SquadRelease).c_str(),unsigned(controller.SquadCount()),controller.SquadCount() ? (controller.SquadPassive() ? "FOLLOW" : "COMBAT") : "");
-    Text(25,88,squad);
-    // One shared shortcut controls both colored team bars.
-    controls=key(ShortcutAction::HealthBars)+": HEALTH BARS | "+key(ShortcutAction::Spell1)+"/"+key(ShortcutAction::Spell2)+"/"+key(ShortcutAction::Spell3)+"/"+key(ShortcutAction::Spell4)+": SPELLS | "+key(ShortcutAction::SelfCast)+": SELF";
-    Text(25,146,controls.c_str());
-    // Keep mod-specific shortcuts; familiar movement, reload, jump and crouch need no permanent tutorial.
-    controls="Warcraft CS by Yazgul | "+key(ShortcutAction::ToggleFPS)+": RTS | "+key(ShortcutAction::Buy)+": BUY | "+key(ShortcutAction::Speed)+": SPEED | "+key(ShortcutAction::Fog)+": FOG";
-    Text(25,30,controls.c_str());
-    char economy[192];sprintf_s(economy,"GOLD %d | %s: AMMO | %s: FREE AMMO | %s: ALL WEAPONS",controller.Gold(),key(ShortcutAction::BuyAmmo).c_str(),key(ShortcutAction::Refill).c_str(),key(ShortcutAction::AllWeapons).c_str());Text(25,117,economy);
+    auto mapLayout=MinimapLayout::Calculate(width,height,controller.Settings().minimapSizePercent);
+    if(controller.MinimapVisible())minimap.Draw(mapLayout);
+    std::string controls="Warcraft CS by Yazgul | "+key(ShortcutAction::ToggleFPS)+": RTS | "+key(ShortcutAction::ReloadSettings)+": CONFIG | "+key(ShortcutAction::Minimap)+": MINIMAP | "+key(ShortcutAction::Speed)+": SPEED | "+key(ShortcutAction::Fog)+": FOG";
+    std::string equipment="WHEEL: WEAPONS | "+key(ShortcutAction::Weapon6)+": C4 | "+key(ShortcutAction::Pickup)+": ITEM | "+key(ShortcutAction::Buy)+": BUY | "+key(ShortcutAction::BuyAmmo)+": AMMO";
+    std::string abilities=key(ShortcutAction::HealthBars)+": HEALTH BARS | "+key(ShortcutAction::Spell1)+"/"+key(ShortcutAction::Spell2)+"/"+key(ShortcutAction::Spell3)+"/"+key(ShortcutAction::Spell4)+": SPELLS | "+key(ShortcutAction::SelfCast)+": SELF";
+    char squad[256];sprintf_s(squad,"%s: FIGHT | %s: FOLLOW | %s: RELEASE | SQUAD %u %s | %s: FREE AMMO | %s: ALL WEAPONS",
+        key(ShortcutAction::SquadFight).c_str(),key(ShortcutAction::SquadFollow).c_str(),key(ShortcutAction::SquadRelease).c_str(),unsigned(controller.SquadCount()),controller.SquadCount() ? (controller.SquadPassive() ? "FOLLOW" : "COMBAT") : "",key(ShortcutAction::Refill).c_str(),key(ShortcutAction::AllWeapons).c_str());
+    int hintRight=controller.MinimapVisible() ? mapLayout.x-mapLayout.padding : width-25;
+    int columns=std::max(1,(hintRight-25)/hintGlyphWidth_);float hintY=27;
+    for(const auto& group : {controls,equipment,abilities,std::string(squad)}) {
+        for(const auto& row : HudHints::Wrap(group,columns)) {Text(25,hintY,row.c_str());hintY+=23;}
+    }
     if (controller.RefillNotice()) Text(statusPad, statusY - statusSize - 16, controller.AmmoMessage(), statusFont_);
     // Horizontal CS units match MaxBunnySpeed, excluding vertical falling/jumping velocity.
     // Stack above notices/status so the optional counter never covers health or ammunition.

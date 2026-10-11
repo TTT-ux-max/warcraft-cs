@@ -138,6 +138,26 @@ module does not log rejection reasons, so this alone cannot identify its exact b
 A separate owned cliff map is prepared for native verification. Live gameplay verification is
 pending user permission to save/close the campaign and temporarily hand over input; no campaign
 state, save or installed DLL was changed during diagnosis.
+## FPS minimap and compact HUD (feature branch, 2026-10-11)
+
+An ordinary build in the private disposable WarcraftCS-Bunnyhop-Test map displayed the native map
+terrain and markers at the top-right. M hid/restored it; an AWP scope retained the map; F6 restored
+the original bottom-left RTS minimap. F8 loaded `ShowMinimap=false` and size 31, M showed the larger
+map, and F8 restored true/22. Resizing and minimizing/restoring retained the map, weapon and aiming mark.
+The top hints appeared in three compact rows. Config was restored after testing, and saves/config/runtime
+were backed up before launch. No controller faults or reported GL errors occurred. Full campaigns and
+custom maps that relocate/hide their native minimap have not been exhaustively tested.
+The final production build was also checked in a separate BootyBay match: rectangular terrain and
+native markers remained visible, letterboxing was black, N changed native fog, M/F8 toggled/restored
+the map, an AWP scope retained it, and F6 restored RTS. Test sessions exited through Warcraft's own menus.
+
+Portable tests cover square screen bounds, narrow-window hint wrapping, real INI parsing, bounded/invalid
+sizes, missing/invalid visibility defaults and preservation/idempotence of upgrades. A hidden synthetic
+Win32/OpenGL context verifies native crop/display/hidden state and pixel-exact restoration of the world
+under the original map, using alternating pixel stripes. Native minimap GL verification is separate from
+`test-all.ps1`; run `tools/test-native-minimap.ps1` on Windows with a usable OpenGL context.
+That GL oracle also rejects a synthetic full-console batch, accepts native map edge overscan and
+checks that rectangular terrain leaves black letterboxing rather than revealing racial console art.
 
 ## 0.7.0 release consolidation (2026-10-10)
 
@@ -403,7 +423,7 @@ machine remains unverified; Developer mode reused installed tools in the integra
 ## Configurable allied damage
 
 `Damage.FriendlyFirePercent` defaults to the previous 50%, accepts fractional values,
-and clamps to 0–100. Real INI tests cover missing keys, 0/25/100/12.5, out-of-range
+and clamps to 0вЂ“100. Real INI tests cover missing keys, 0/25/100/12.5, out-of-range
 values and malformed/NaN input. Damage oracles cover firearms, heavy melee, C4,
 hero-mode attack scaling, enemy damage independence and allied AWP finishing protection.
 Zero allied damage skips the native damage call to avoid damage-trigger side effects.
@@ -481,16 +501,32 @@ changing one in-memory operand; it does not patch game files or alter simulation
 executable-memory oracle covers enable/disable/reload, unexpected instruction refusal and real
 Windows high-resolution waiting (30 intervals at 120 FPS take at least 0.25 seconds).
 
-Real INI tests cover missing/empty/malformed/non-finite values, native mode, 30–360 FPS clamping,
-3000–20000-unit distance clamping and reload. Migration in PowerShell 7 and Windows PowerShell 5.1
+Real INI tests cover missing/empty/malformed/non-finite values, native mode, 30вЂ“360 FPS clamping,
+3000вЂ“20000-unit distance clamping and reload. Migration in PowerShell 7 and Windows PowerShell 5.1
 preserves explicit caps/distances and remains idempotent. Production camera-field writes and
 near-plane selection pass for 3000/5000/10000/15000/20000 while preserving portrait/RTS projection.
 All independent native suites and the ordinary x86 build pass. With user-approved focus, a disposable
 flat Warcraft map contains a player and a scaled castle at x=6500. In one ordinary Player session,
 F8 changes MaxFPS/DrawDistance from 144/10000 to 0/5000 and back. Stable native-mode samples are
-approximately 62–65 frames/s; the extended FPS world view is approximately 99–103 frames/s, with the
-RTS view approximately 136–138. These are scene-specific measurements, not a promise of 144 FPS.
+approximately 62вЂ“65 frames/s; the extended FPS world view is approximately 99вЂ“103 frames/s, with the
+RTS view approximately 136вЂ“138. These are scene-specific measurements, not a promise of 144 FPS.
 Matched captures at the same player position show the castle absent at 5000 and present at 10000.
 The reticle and nearby terrain remain visible; a one-second W input moves the player normally.
 No controller fault or GL error appears in this trial. The test exits normally, restores its private
 INI snapshot and leaves no test process; user installations/campaign saves are untouched.
+
+## Combined FPS test build (2026-10-11)
+
+The feature/add-combined-fps-test branch combines the current first-person spell/health/rendering/
+movement/pursuit fixes with the native minimap branch. The public VERSION remains 0.7.0; this is a
+private test package. Minimap=M participates in the same configurable layout as HealthBars=K,
+Speed=P and Spell1..4=Z/X/C/V, and the compact HUD resolves labels from that layout.
+
+All native-independent regression suites passed, including the actual WGL health bar and minimap
+checks, spell ownership/pursuit guard and config parsing. The combined config regression verifies
+shared display preferences, a remapped minimap key and safe fallback for a minimap/spell collision.
+Config migration preserves custom minimap, health, spell and keyboard values and is idempotent.
+The native minimap now explicitly preserves world depth for health/sky rendering; the hidden WGL
+oracle checks exact background restoration, unchanged depth values and restored depth-write state.
+The sky conversion test initially failed because the sandbox's system temporary directory was
+inaccessible; rerunning that suite with a workspace temporary directory passed.

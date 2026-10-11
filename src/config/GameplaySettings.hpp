@@ -31,6 +31,9 @@ struct GameplaySettings {
     float floatingTextDistance=1200;
     // Startup/F8 preference; the Speed shortcut may change visibility for the current session.
     bool showSpeed=false;
+    // M changes this session preference; F8 restores the editable startup choice and size.
+    bool showMinimap=true;
+    float minimapSizePercent=22;
     // Temporary FPS visibility preference; ordinary map fog is restored outside FPS.
     bool disableFogOfWar=false;
     // Scale only the CS mixer; 100 preserves legacy levels and zero mutes every CS voice.

@@ -44,6 +44,8 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
         if(tap) {
             if(match(ShortcutAction::Buy))controller_.RequestBuyToggle();
             else if(match(ShortcutAction::BuyAmmo))controller_.RequestBuyAmmo();
+            // Minimap follows the same configurable, one-tap input routing as other HUD switches.
+            else if(match(ShortcutAction::Minimap))controller_.RequestMinimapToggle();
             else if(match(ShortcutAction::Speed))controller_.RequestSpeedToggle();
             else if(match(ShortcutAction::Fog))controller_.RequestFogToggle();
             else if(match(ShortcutAction::HealthBars))controller_.RequestHealthBarToggle();

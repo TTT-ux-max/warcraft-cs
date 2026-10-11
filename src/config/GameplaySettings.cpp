@@ -99,6 +99,11 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         if(mode=="auto" || mode=="unit" || mode=="point" || mode=="immediate" || mode=="self")result.spells.target[slot]=mode;
         else wc3::Log("Invalid Spells.%sTarget; using auto",prefix.c_str());
     }
+    // Legacy/invalid configs show the native map; explicit false/0 hides it on startup and F8.
+    auto showMinimap=text("Interface","ShowMinimap","true");
+    if (!_stricmp(showMinimap.c_str(),"false") || showMinimap=="0") result.showMinimap=false;
+    else if (_stricmp(showMinimap.c_str(),"true") && showMinimap!="1") wc3::Log("Invalid Interface.ShowMinimap; using true");
+    result.minimapSizePercent=std::max(10.f,number("Interface","MinimapSizePercent",22,40));
     // Keep the optional counter hidden for old/invalid configs; accept explicit boolean preferences.
     auto showSpeed=text("Interface","ShowSpeed","false");
     result.showSpeed=!_stricmp(showSpeed.c_str(),"true") || showSpeed=="1";

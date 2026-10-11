@@ -66,6 +66,12 @@ Tree movement bounds reuse `TreeTrunkMesh`'s standing ground-connected component
 geometry used for destructable shots. Canopy cards and death-only stumps do not expand the player
 blocker. The platform adapter applies the existing native sprite transform and visual scale to those
 local trunk bounds; unreadable tree geometry supplies no broad box and retains native pathing checks.
+`NativeMinimap` filters projected native map batches and crops them into a context-owned texture, restores the world
+under the original map location, and composites the result after the FPS scope/weapon pass. It changes
+neither frame anchors nor map bounds/fog rules. `MinimapLayout` shares the new rectangle with `HudHints`
+so compact shortcut rows wrap before it. M follows the existing input mailbox; configuration supplies
+startup/F8 visibility and bounded size. Leaving FPS uses the unchanged native RTS map.
+Non-map console/portrait batches are rejected; rectangular level letterboxing stays black.
 
 The optional speed counter uses the same boundaries: `InputDispatcher` queues a V press,
 `ShooterController` owns session visibility and exposes horizontal speed in CS units, and `Overlay`
@@ -112,3 +118,8 @@ learned ability order getters, while `SpellAim` resolves the visible reticle wid
 `SpellCaster` owns only explicitly requested spell orders until native completion or deliberate
 player interruption; the controller yields its ordinary order cancellation and firing during that
 state. Map reset forgets orders without issuing commands to unloaded handles.
+
+The combined FPS overlay draws health bars against retained world depth before the weapon pass,
+then composites the captured native minimap and wraps shortcut hints using the current bindings.
+NativeMinimap prevents native map batches from writing world depth; ShortcutBindings owns its M
+switch alongside the spell and display controls, including validation and live config reload.
