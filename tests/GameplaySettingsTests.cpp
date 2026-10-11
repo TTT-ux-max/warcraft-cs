@@ -2,6 +2,7 @@
 #include "MovementStrafeInput.hpp"
 #include "../src/inventory/AmmoRecovery.hpp"
 #include "../src/combat/CombatDamage.hpp"
+#include "../src/combat/UnitScaling.hpp"
 #include <cassert>
 #include <cmath>
 #include <fstream>
@@ -9,12 +10,12 @@
 namespace wc3 { void Log(const char*,...) {} }
 int main() {
     GameplaySettings settings;
-    assert(settings.ContactDamage(0,false,100)==36);
-    assert(settings.ContactDamage(4,true,100)==65);
+    assert(settings.ContactDamage(0,false,100)==100);
+    assert(settings.ContactDamage(4,true,100)==162.5f);
     // Default AWP hits use their configured base damage rather than health-dependent finishing damage.
     assert(!settings.FinishingAWP(3));
     assert(CombatDamage::Amount(settings.ContactDamage(3,false,100),false,
-        CombatDamage::FinishesTarget(settings.FinishingAWP(3),false),5000)==115);
+        CombatDamage::FinishesTarget(settings.FinishingAWP(3),false),5000)==300);
     assert(settings.friendlyFirePercent==50);
     assert(settings.floatingTextDistance==1200);
     assert(!settings.showSpeed);
@@ -24,8 +25,8 @@ int main() {
     assert(settings.render.maxFPS==144 && settings.render.drawDistance==15000);
     assert(!settings.startAllWeapons && settings.startBombs==20 && settings.maxBombs==100 );
     assert(settings.buyAccess==GameplaySettings::BuyAccess::Anywhere && !settings.csSky);
-    assert(settings.weaponPrice[0]==625 && settings.weaponPrice[1]==775 && settings.weaponPrice[2]==125);
-    assert(settings.weaponPrice[3]==1188 && settings.weaponPrice[5]==50 && settings.weaponPrice[6]==250);
+    assert(settings.weaponPrice[0]==1250 && settings.weaponPrice[1]==1550 && settings.weaponPrice[2]==250);
+    assert(settings.weaponPrice[3]==2376 && settings.weaponPrice[5]==100 && settings.weaponPrice[6]==500);
     assert(settings.squadRadius==600 && settings.squadMaxUnits==24 && settings.squadFollowDistance==180 && settings.squadLeash==900);
     settings.heroDamage=true;settings.heroMultiplier[0]=2;
     assert(settings.ContactDamage(0,false,28)==56);
@@ -44,8 +45,30 @@ int main() {
     for (int i=0;i<4;++i) { recovery.Restore(5,20,1,0,bomb,none);assert(bomb==0); }
     recovery.Restore(5,20,1,0,bomb,none);assert(bomb==1);
     recovery.Reset();bomb=0;recovery.Restore(5,0,1,0,bomb,none);assert(bomb==0);
+    // Native IAS scales cadence only when enabled; malformed stats retain the base interval.
+    assert(UnitScaling::FireInterval(.1f,false,2)==.1f);
+    assert(UnitScaling::FireInterval(.1f,true,2)==.05f);
+    assert(UnitScaling::FireInterval(.1f,true,NAN)==.1f);
+    assert(UnitScaling::FireInterval(.1f,true,0)==.1f);
+    assert(std::abs(UnitScaling::FireInterval(.1f,true,100)-.02f)<.0001f);
+    assert(UnitScaling::MoveScale(false,450,300,1.2f)==1.2f);
+    assert(UnitScaling::MoveScale(true,450,300,1.2f)==1.5f);
+    assert(UnitScaling::MoveScale(true,0,300,1)==0);
+    assert(UnitScaling::MoveScale(true,NAN,300,.5f)==.5f);
+    magazine=reserve=0;recovery.Reset();
+    assert(recovery.Restore(0,40,30,50,magazine,reserve)==32 && magazine==12 && reserve==20);
     char directory[MAX_PATH];GetCurrentDirectoryA(MAX_PATH,directory);
     std::string path=std::string(directory)+"\\settings-test.ini";
+    // Validate configurable reserve capacity and both optional native-stat modes at the real INI boundary.
+    {std::ofstream file(path);file<<"[AK47]\nMaxReserve=250\n[Combat]\nScaleFireRateFromAttackSpeed=true\n[Movement]\nScaleFromUnitMoveSpeed=true\nUnitMoveSpeedReference=250\n";}
+    auto scaling=GameplaySettings::Load(path);
+    assert(scaling.maxReserve[0]==250 && scaling.scaleFireRateFromAttackSpeed);
+    assert(scaling.movement.scaleFromUnitMoveSpeed && scaling.movement.unitMoveSpeedReference==250);
+    for(const auto& test:{std::pair<const char*,int>{"",90},{"bad",90},{"nan",90},{"-1",0},{"0",0},{"999999",100000}}) {
+        WritePrivateProfileStringA("AK47","MaxReserve",test.first,path.c_str());
+        assert(GameplaySettings::Load(path).maxReserve[0]==test.second);
+    }
+    DeleteFileA(path.c_str());
     // Real INI loading covers explicit legacy mode, bounded targets, bad input and live reload.
     const struct {const char* fps;const char* distance;int expectedFPS;float expectedDistance;} renderCases[]={
         {"","",144,15000},{"0","5000",0,5000},{"240","15000",240,15000},
@@ -113,7 +136,7 @@ int main() {
     int awpIndex=0;
     for (const auto& test:awpCases) {
         std::string sample=path+".awp-"+std::to_string(awpIndex++);
-        { std::ofstream file(sample);file<<"[Damage]\nAWPOneShot="<<test.value<<"\n"; }
+        { std::ofstream file(sample);file<<"[Damage]\nMode=weapon\nAWPOneShot="<<test.value<<"\n"; }
         auto configured=GameplaySettings::Load(sample);DeleteFileA(sample.c_str());
         assert(configured.awpOneShot==test.enabled && configured.FinishingAWP(3)==test.enabled);
         assert(!configured.FinishingAWP(0));
@@ -126,6 +149,7 @@ int main() {
     }
     std::string awpReload=path+".awp-reload";DeleteFileA(awpReload.c_str());
     assert(!GameplaySettings::Load(awpReload).FinishingAWP(3));
+    WritePrivateProfileStringA("Damage","Mode","weapon",awpReload.c_str());
     WritePrivateProfileStringA("Damage","AWPOneShot","true",awpReload.c_str());
     assert(GameplaySettings::Load(awpReload).FinishingAWP(3));
     WritePrivateProfileStringA("Damage","AWPOneShot","false",awpReload.c_str());
@@ -137,7 +161,7 @@ int main() {
     assert(settings.heroDamage && settings.heroMultiplier[0]==2.5f);
     assert(settings.damage[0]==36 && settings.damage[2]==34);
     assert(settings.squadRadius==2000 && settings.squadMaxUnits==1 && settings.squadFollowDistance==80 && settings.squadLeash==280);
-    settings=GameplaySettings::Load(path);assert(settings.runeAmmoPercent==20 && settings.runeAmmoAllWeapons && !settings.heroDamage);
+    settings=GameplaySettings::Load(path);assert(settings.runeAmmoPercent==40 && settings.runeAmmoAllWeapons && settings.heroDamage);
     assert(settings.friendlyFirePercent==50); // Missing keys keep legacy 50% damage.
     assert(settings.csVolumePercent==100); // Missing Audio keys retain the previous CS mix.
     // Exercise real INI parsing, sanitization and repeated snapshot loads rather than only assigning the field.

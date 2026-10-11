@@ -19,10 +19,12 @@ struct GameplaySettings {
     SpellSettings spells;
 
     MovementSettings movement;
-    float runeAmmoPercent = 20;
+    float runeAmmoPercent = 40;
     float runePickupRadius = 160;
     bool runeAmmoAllWeapons = true;
-    bool heroDamage = false;
+    // Native attack damage applies to any controlled creature, including non-hero units.
+    bool heroDamage = true;
+    bool scaleFireRateFromAttackSpeed=false;
     // Ordinary AWP damage is the default; instant finishing remains an explicit player opt-in.
     bool awpOneShot = false;
     // One percentage covers owned/allied units and buildings across firearms, melee and C4.
@@ -54,7 +56,9 @@ struct GameplaySettings {
     float buyRadius=600;
     std::string shopTypes="";
     // F7 is always a free refill; ordinary purchases still debit native gold.
-    std::array<int,WeaponSlots::Count> weaponPrice={625,775,125,1188,0,50,250};
+    std::array<int,WeaponSlots::Count> weaponPrice={1250,1550,250,2376,0,100,500};
+    // Reserve excludes the loaded magazine; buying, free refills and runes share this limit.
+    std::array<int,WeaponSlots::Count> maxReserve={90,90,100,30,0,0,0};
     std::array<int,WeaponSlots::Count> ammoPrice={80,60,25,125,0,200,0};
     std::array<int,WeaponSlots::Count> ammoPack={30,30,12,10,0,1,0};
     bool csSky=false;

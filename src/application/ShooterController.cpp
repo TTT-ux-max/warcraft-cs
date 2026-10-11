@@ -1,6 +1,7 @@
 #include "ShooterController.hpp"
 #include "../platform/DiagnosticLog.hpp"
 #include "../combat/CombatDamage.hpp"
+#include "../combat/UnitScaling.hpp"
 #include "../platform/MapCameraGuard.hpp"
 #include "../platform/SpriteTransform.hpp"
 #include "../input/LookAngles.hpp"
@@ -44,7 +45,7 @@ void ShooterController::Configure(const char* root, uintptr_t gameBase) {
 void ShooterController::ResetLoadout() {
     // One kit per map/runtime, not per F6: mode switching cannot create free guns or charges.
     int magazines[WeaponSlots::Count],reserves[WeaponSlots::Count];
-    for (int i=0;i<WeaponSlots::Count;++i) { magazines[i]=weapons[i].magazine;reserves[i]=weapons[i].reserve; }
+    for (int i=0;i<WeaponSlots::Count;++i) { magazines[i]=weapons[i].magazine;reserves[i]=settings_.maxReserve[i]; }
     inventory_.Reset(settings_,ammo_,reserve_,magazines,reserves);
     // The default kit includes a loaded USP, selected when a fresh map starts.
     weapon_=settings_.startAllWeapons ? 0 : WeaponSlots::Pistol;
@@ -58,7 +59,7 @@ void ShooterController::Buy(int slot,bool ammunition) {
     if (!BuyAccess::Allowed(unit_,settings_)) { Notice("OUTSIDE BUY ZONE");return; }
     if (slot<0 || slot>=WeaponSlots::Count) return;
     auto owner=wc3::GetOwningPlayer(unit_);int gold=wc3::GetPlayerState(owner,1);
-    auto result=inventory_.Buy(slot,ammunition,settings_,gold,ammo_[slot],reserve_[slot],weapons[slot].magazine,weapons[slot].reserve);
+    auto result=inventory_.Buy(slot,ammunition,settings_,gold,ammo_[slot],reserve_[slot],weapons[slot].magazine,settings_.maxReserve[slot]);
     // Native gold is charged only after validation, once on the game's main thread.
     if (result==BuyInventory::Result::Bought) {
         wc3::SetPlayerState(owner,1,gold);gold_=gold;Notice(ammunition ? "AMMUNITION PURCHASED" : "WEAPON PURCHASED");
@@ -241,7 +242,9 @@ void ShooterController::AimAndMove(float dt) {
     static const float weaponSpeeds[WeaponSlots::Count] = {221, 230, 250, 210, 250, 250, 220};
     float speed = weapon_ == 3 && Scoped() ? 150.0f : weaponSpeeds[weapon_];
     // Apply Warcraft's current modifier to CS weapon speeds; roots stop movement but still allow falling.
-    speed *= status_.speedScale;
+    float speedScale=UnitScaling::MoveScale(settings_.movement.scaleFromUnitMoveSpeed,status_.nativeSpeed,
+        settings_.movement.unitMoveSpeedReference,status_.speedScale);
+    speed *= speedScale;
     {
         float oldX = wc3::Real(wc3::GetUnitX(unit_)), oldY = wc3::Real(wc3::GetUnitY(unit_));
         bool wasGrounded = movement_.Grounded();
@@ -282,10 +285,10 @@ void ShooterController::UpdateStatus() {
     UnitStatus current = UnitStatus::Read(unit_, gameBase_);
     if (current.incapacitated != status_.incapacitated || current.immobilized != status_.immobilized ||
         current.disarmed != status_.disarmed || current.contained != status_.contained ||
-        current.devoured != status_.devoured || current.hidden != status_.hidden || std::abs(current.speedScale - status_.speedScale) > 0.02f) {
-        wc3::Log("unit status stun=%d root=%d disarm=%d scale=%.3f native=%.1f default=%.1f stunCount=%d loaded=%d devoured=%d hidden=%d hp=%.1f",
+        current.devoured != status_.devoured || current.hidden != status_.hidden || std::abs(current.speedScale - status_.speedScale) > 0.02f || std::abs(current.attackSpeed-status_.attackSpeed)>.02f) {
+        wc3::Log("unit status stun=%d root=%d disarm=%d scale=%.3f native=%.1f default=%.1f stunCount=%d loaded=%d devoured=%d hidden=%d attackSpeed=%.3f hp=%.1f",
             current.incapacitated, current.immobilized, current.disarmed, current.speedScale,
-            current.nativeSpeed, current.defaultSpeed, current.stunCount, current.contained, current.devoured, current.hidden,
+            current.nativeSpeed, current.defaultSpeed, current.stunCount, current.contained, current.devoured, current.hidden,current.attackSpeed,
             wc3::Real(wc3::GetUnitState(unit_, 0)));
         if (current.incapacitated) {
             // A stun interrupts reload/refill and cancels queued action edges instead of replaying them on recovery.
@@ -322,7 +325,7 @@ void ShooterController::Reload() {
 void ShooterController::RefillAmmo(bool grantAll) {
     // Free-ammo controls restore carried ammo or additionally unlock every slot without spending gold.
     int magazines[WeaponSlots::Count],reserves[WeaponSlots::Count];
-    for (int i=0;i<WeaponSlots::Count;++i) { magazines[i]=weapons[i].magazine;reserves[i]=weapons[i].reserve; }
+    for (int i=0;i<WeaponSlots::Count;++i) { magazines[i]=weapons[i].magazine;reserves[i]=settings_.maxReserve[i]; }
     inventory_.Refill(settings_,ammo_,reserve_,magazines,reserves,grantAll);
     if (reloadEnd_) { reloadEnd_ = 0; audio_.CancelAnimation(); Play("idle"); }
     CancelPlant();ammoRecovery_.Reset();
@@ -351,6 +354,10 @@ void ShooterController::ToggleHealthBars() {
 void ShooterController::ReloadSettings() {
     // Replace one complete snapshot; stale fractional credit must not survive a percentage/scope change.
     settings_=GameplaySettings::Load(root_+"\\WarcraftCS.ini");
+    // Reducing a cap on F8 discards surplus reserve, but cannot grant ammunition or empty the magazine.
+    for(int slot=0;slot<4;++slot)reserve_[slot]=std::min(reserve_[slot],settings_.maxReserve[slot]);
+    wc3::Log("Unit scaling fireRate=%d moveSpeed=%d moveReference=%.1f",settings_.scaleFireRateFromAttackSpeed,
+        settings_.movement.scaleFromUnitMoveSpeed,settings_.movement.unitMoveSpeedReference);
     if(!settings_.spells.enabled)spells_.Cancel(); // Live disabling releases an explicitly owned cast.
     wc3::Log("Health bars configured allies=%d enemies=%d distance=%.0f",settings_.healthBars.allies,settings_.healthBars.enemies,settings_.healthBars.distance);
     // Camera and runtime pacing consume this same snapshot on the next render frame.
@@ -391,8 +398,8 @@ void ShooterController::ReloadSettings() {
         settings_.shopTypes.c_str(), settings_.csVolumePercent, settings_.floatingTextDistance, settings_.squadRadius,
         settings_.squadFollowDistance, settings_.squadLeash, settings_.squadMaxUnits, settings_.csSky, settings_.nativeSky, settings_.defaultSky.c_str());
     for (int slot = 0; slot < WeaponSlots::Count; ++slot)
-        wc3::Trace("settings weapon=%s damage=%.1f heroMultiplier=%.2f price=%d ammoPrice=%d ammoPack=%d",
-            weapons[slot].name, settings_.damage[slot], settings_.heroMultiplier[slot], settings_.weaponPrice[slot], settings_.ammoPrice[slot], settings_.ammoPack[slot]);
+        wc3::Trace("settings weapon=%s damage=%.1f heroMultiplier=%.2f price=%d ammoPrice=%d ammoPack=%d maxReserve=%d",
+            weapons[slot].name, settings_.damage[slot], settings_.heroMultiplier[slot], settings_.weaponPrice[slot], settings_.ammoPrice[slot], settings_.ammoPack[slot],settings_.maxReserve[slot]);
     wc3::Trace("settings secondaryDamage knife=%.1f sword=%.1f", settings_.knifeSecondaryDamage, settings_.swordSecondaryDamage);
     for (unsigned code = 0; code < settings_.tilesetSky.size(); ++code)
         if (!settings_.tilesetSky[code].empty()) wc3::Trace("settings tileset=%c sky=%s", code, settings_.tilesetSky[code].c_str());
@@ -411,7 +418,7 @@ void ShooterController::PickupItem() {
     for (int slot=0;slot<WeaponSlots::Count;++slot) {
         if (!inventory_.owned[slot]) continue;
         if (!settings_.runeAmmoAllWeapons && slot!=weapon_) continue;
-        added+=ammoRecovery_.Restore(slot,settings_.runeAmmoPercent,slot==WeaponSlots::C4 ? settings_.maxBombs : weapons[slot].magazine,weapons[slot].reserve,ammo_[slot],reserve_[slot]);
+        added+=ammoRecovery_.Restore(slot,settings_.runeAmmoPercent,slot==WeaponSlots::C4 ? settings_.maxBombs : weapons[slot].magazine,settings_.maxReserve[slot],ammo_[slot],reserve_[slot]);
         wc3::Log("rune ammo weapon=%s ammo=%d reserve=%d",weapons[slot].name,ammo_[slot],reserve_[slot]);
     }
     char message[96];sprintf_s(message,"RUNE: +%.0f%% %s AMMO",settings_.runeAmmoPercent,settings_.runeAmmoAllWeapons ? "ALL" : "CURRENT");
@@ -421,7 +428,9 @@ void ShooterController::PickupItem() {
 void ShooterController::Fire(bool secondary) {
     const Weapon& w = weapons[weapon_]; DWORD now = GetTickCount();
     // Keep CS's fractional firing interval: truncating 87.5ms would permit an early M4 shot.
-    if (reloadEnd_ || now < meleeReady_ || float(now - lastShot_) < w.interval * 1000) return;
+    // IAS changes firearm cadence only; planting and authored melee recovery keep their existing timing.
+    float interval=UnitScaling::FireInterval(w.interval,weapon_<4 && settings_.scaleFireRateFromAttackSpeed,status_.attackSpeed);
+    if (reloadEnd_ || now < meleeReady_ || float(now - lastShot_) < interval * 1000) return;
     if (!WeaponSlots::Melee(weapon_) && ammo_[weapon_] <= 0) { Reload(); return; }
     lastShot_ = now; if (!WeaponSlots::Melee(weapon_)) --ammo_[weapon_];
     wc3::Log("fire weapon=%s ammo=%d mode=%s", w.name, ammo_[weapon_], secondary ? "secondary" : "primary");
@@ -727,8 +736,8 @@ void ShooterController::Tick(uintptr_t ui) {
     if(settings_.showSpellIcons && now-spellHudTick_>=100) {
         spellHudTick_=now;spellHud_=spells_.Snapshot(unit_,settings_.spells);
         if(DiagnosticLog::Due(spellHudLog_))for(int i=0;i<4;++i) {
-            const auto& slot=spellHud_[i];wc3::Trace("spell HUD slot=%d ability=%08X level=%d passive=%d cooldownKnown=%d remaining=%.2f total=%.2f command=%d noMana=%d disabled=%d icon=%s",
-                i+1,slot.ability,slot.level,slot.passive,slot.cooldownKnown,slot.cooldown,slot.cooldownTotal,slot.commandKnown,slot.noMana,slot.disabled,slot.icon.c_str());
+            const auto& slot=spellHud_[i];wc3::Trace("spell HUD slot=%d ability=%08X level=%d passive=%d cooldownKnown=%d remaining=%.2f total=%.2f command=%d noMana=%d disabled=%d charges=%d icon=%s",
+                i+1,slot.ability,slot.level,slot.passive,slot.cooldownKnown,slot.cooldown,slot.cooldownTotal,slot.commandKnown,slot.noMana,slot.disabled,slot.charges,slot.icon.c_str());
         }
     }
     // Releasing followers returns native control even when their FPS leader cannot act.

@@ -253,11 +253,12 @@ Edit it and press F8 in FPS.
   **0** mutes CS, **100** retains the previous levels, and fractional values are accepted.
   F8 applies the new volume immediately, including sounds already playing; restarting also loads it.
   Missing/empty/malformed/non-finite values use 100; finite values outside the range are clamped.
-- `[Runes] AmmoPercent=20`; `AmmoWeapons=all` or `current`.
-- `[Damage] Mode=weapon` uses fixed weapon damage. `Mode=hero` uses the current average Warcraft
-  attack of **any** controlled unit, including creeps, multiplied by each weapon's `HeroMultiplier`.
-- `[Damage] AWPOneShot=false` is the test-build default: AWP uses `[AWP] Damage` (115 by default)
-  and native armor. Set `true` to enable instant enemy kills in `weapon` mode; F8 applies changes.
+- `[Runes] AmmoPercent=40`; `AmmoWeapons=all` or `current`.
+- `[Damage] Mode=unit` is the default: current average Warcraft attack of **any** controlled
+  unit, including creeps and attack bonuses, multiplied by each weapon's `HeroMultiplier`.
+  `Mode=hero` remains a compatible alias; `Mode=weapon` selects fixed damage. C4 retains fixed explosion damage.
+- `[Damage] AWPOneShot=false` is the test-build default: AWP uses unit attack times `HeroMultiplier=3` by default
+  and native armor; `Mode=weapon` instead uses `[AWP] Damage` (115). Set `true` to enable instant enemy kills in `weapon` mode; F8 applies changes.
   Missing/empty/invalid values use `false`; `true`/`false` and `1`/`0` are accepted.
   Updates preserve existing values, so older configs with `AWPOneShot=true` need an explicit edit to disable it.
 - `[Damage] FriendlyFirePercent=50` sets damage to owned/allied units and buildings, including
@@ -331,8 +332,8 @@ A successful purchase closes the menu; rejected purchases leave it open.
 Only supported categories appear, preserving CS keys: 1 pistols, 4 rifles, 6 primary ammo,
 7 secondary ammo, 8 equipment (knife, sword, C4), 0 back/cancel. The `.` key buys current-weapon ammo.
 Primary/secondary ammo rows buy one pack per carried weapon in that category; every transaction checks
-funds independently. Defaults are one quarter of the previous weapon prices: AK47 625, M4A1 775,
-USP 125, AWP 1188 (rounded from 1187.5 gold), knife 0, sword 250 and C4 50. Ammo-pack prices are unchanged.
+funds independently. Weapon prices are doubled: AK47 1250, M4A1 1550,
+USP 250, AWP 2376, knife 0, sword 500 and C4 100. Ammo-pack prices are unchanged.
 No round, buy-time or team-spawn restriction is imposed.
 
 When adding a weapon, apply [warcraft-cs-weapon-menu](skills/warcraft-cs-weapon-menu/SKILL.md).
@@ -421,3 +422,24 @@ their implementations are not bundled. Valve/Blizzard game materials are exclude
 
 For the full list of references, adaptations and license terms, see [NOTICE](NOTICE),
 [LICENSE-MIT](LICENSE-MIT), [LICENSE-APACHE](LICENSE-APACHE) and `licenses/`.
+
+### Unit scaling and ammunition limits (test branch)
+
+- `[AK47]`, `[M4A1]`, `[USP]` and `[AWP] MaxReserve` set reserve rounds, excluding the magazine.
+  Defaults are 90, 90, 100 and 30; range 0..100000. Purchases, F7/F9 and rune rewards all use these caps.
+  F8 discards surplus reserve after a reduction, without granting ammo or changing loaded rounds.
+- `[Combat] ScaleFireRateFromAttackSpeed=false` is optional (`true`/`false`, also `1`/`0`).
+  When enabled, firearm interval is divided by native attack-speed multiplier (0.2..5).
+  Agility, items and buffs participate; 2.0 doubles the rate. Reloads, melee and planting are unchanged.
+- `[Movement] ScaleFromUnitMoveSpeed=false` is optional (`true`/`false`). When enabled, CS weapon
+  speed scales by current Warcraft movement speed divided by `UnitMoveSpeedReference=300`
+  (Warcraft units/s, range 1..1000). This replaces the legacy relative slow/haste ratio; it never doubles bonuses.
+  With it disabled, existing slow/haste behavior remains. Root/stun and bunnyhop limits remain enforced.
+- All settings reload with F8. Updates preserve existing prices, damage mode and rune percentage;
+  edit old configs explicitly to adopt the new defaults (`Mode=unit`, `AmmoPercent=40`, prices above).
+
+Spell requests now check native cooldown, mana and disabled state before dispatch and preserve active
+channels when a request is unavailable. DotA 6.88f AI Sniper's Shrapnel uses three map-owned charges
+with 40-second regeneration, while its native cooldown is zero. Its FPS icon displays the actual charge
+count, and an empty marker blocks requests. The mod does not invent a cooldown or alter the map's timer;
+unknown charged spells retain their map's native validation.

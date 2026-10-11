@@ -169,3 +169,8 @@ these required notices. All .local data, downloaded dependencies, generated
 forwarders/binaries, private mod logs, game assets, saves and recordings are excluded.
 Version guards target offline Warcraft III 1.26a only; there is no affiliation with
 or endorsement by Blizzard, Valve, SDK/library authors or referenced fan projects.
+
+Native IAS multiplier layout (1.26a attack component +0x1B0) was cross-checked against MemHackAPI.
+Unit scaling and bounded native reads are independently authored here. The Shrapnel charge adapter
+uses identifiers observed in the owner's DotA 6.88f AI and existing unit markers; no map script,
+assets, extracted definitions or game binaries are redistributed.

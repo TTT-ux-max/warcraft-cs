@@ -1,4 +1,5 @@
 #include "BuyMenuView.hpp"
+#include "../combat/UnitScaling.hpp"
 #include "BuyMenuLayout.hpp"
 #include <gl/GL.h>
 #include <cstdio>
@@ -55,9 +56,15 @@ void Draw(const ShooterController& controller,int width,int height,HWND window,c
         text(box.detailX,infoY,item->name);infoY+=box.row*.75f;
         sprintf_s(value,": %d GOLD",settings.weaponPrice[previewSlot]);line("PRICE",value);
         sprintf_s(value,": %s",item->caliber);line("CALIBER / TYPE",value);
-        sprintf_s(value,": %d ROUNDS",weapon.magazine);if (!WeaponSlots::Melee(previewSlot) && previewSlot!=WeaponSlots::C4) line("CLIP CAPACITY",value);
-        sprintf_s(value,": %.0f",settings.damage[previewSlot]);line("BASE DAMAGE",value);
-        if (weapon.interval>0 && !WeaponSlots::Melee(previewSlot)) { sprintf_s(value,": %.0f RPM",60/weapon.interval);line("RATE OF FIRE",value); }
+        // Keep magazine/reserve in one row so the existing panel also fits small windows.
+        sprintf_s(value,": %d / %d",weapon.magazine,settings.maxReserve[previewSlot]);
+        if (!WeaponSlots::Melee(previewSlot) && previewSlot!=WeaponSlots::C4) line("CLIP / RESERVE",value);
+        sprintf_s(value,": %.0f",settings.ContactDamage(previewSlot,false,controller.Status().attackDamage));line("BASE DAMAGE",value);
+        if (weapon.interval>0 && !WeaponSlots::Melee(previewSlot)) {
+            // Display the cadence actually used by combat, including the optional native IAS multiplier.
+            float interval=UnitScaling::FireInterval(weapon.interval,settings.scaleFireRateFromAttackSpeed,controller.Status().attackSpeed);
+            sprintf_s(value,": %.0f RPM",60/interval);line("RATE OF FIRE",value);
+        }
         if (!WeaponSlots::Melee(previewSlot)) { sprintf_s(value,": %d GOLD",settings.ammoPrice[previewSlot]);line("AMMO PACK",value); }
         line("INVENTORY",controller.OwnsWeapon(previewSlot) ? ": OWNED" : ": NOT OWNED");
     } else {

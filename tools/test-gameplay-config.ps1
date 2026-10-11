@@ -17,6 +17,23 @@ if ([regex]::Matches($text,'(?m)^\[Audio\]').Count -ne 1) { throw 'Audio migrati
 $before=(Get-FileHash -LiteralPath $config).Hash
 Update-GameplayConfig $template $config
 if ((Get-FileHash -LiteralPath $config).Hash -ne $before) { throw 'Repeated config update changed an already merged file.' }
+# Reserve/scaling upgrades preserve existing values and do not silently replace a player's damage/economy mode.
+$customScaling=Join-Path $folder 'custom-unit-scaling.ini'
+@('[AK47]','MaxReserve=250','Price=321','[Damage]','Mode=weapon','[Runes]','AmmoPercent=11',
+    '[Combat]','ScaleFireRateFromAttackSpeed=true','[Movement]','ScaleFromUnitMoveSpeed=true','UnitMoveSpeedReference=270') |
+    Set-Content -LiteralPath $customScaling -Encoding ascii
+Update-GameplayConfig $template $customScaling
+$scalingText=Get-Content -LiteralPath $customScaling -Raw
+foreach($setting in @('MaxReserve=250','Price=321','Mode=weapon','AmmoPercent=11','ScaleFireRateFromAttackSpeed=true',
+    'ScaleFromUnitMoveSpeed=true','UnitMoveSpeedReference=270')) {
+    if(!$scalingText.Contains($setting)){throw "Scaling migration lost preference: $setting"}
+}
+$scalingHash=(Get-FileHash -LiteralPath $customScaling).Hash
+Update-GameplayConfig $template $customScaling
+if((Get-FileHash -LiteralPath $customScaling).Hash -ne $scalingHash){throw 'Scaling migration is not idempotent.'}
+foreach($setting in @('MaxReserve=90','ScaleFireRateFromAttackSpeed=false','ScaleFromUnitMoveSpeed=false','UnitMoveSpeedReference=300','Mode=unit')) {
+    if(!$text.Contains($setting)){throw "Missing scaling default: $setting"}
+}
 # Existing CS-volume preferences survive both updates and repeated setup; missing sibling settings still migrate.
 $customAudio=Join-Path $folder 'custom-audio.ini'
 @('[Audio]','CSVolumePercent=35','[Runes]','AmmoPercent=11') | Set-Content -LiteralPath $customAudio -Encoding ascii

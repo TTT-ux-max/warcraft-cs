@@ -118,3 +118,9 @@ Live command art and the current actor's ability chain account for toggles and m
 The target lookup preserves its native return value: Warcraft's morph/combat update dereferences
 retained targets without a null check. Suppression belongs to order dispatch and the walking motor;
 fabricating a null target can crash a transformation such as Avatar.
+
+Unit status includes `attackSpeed`; scaling configuration records fire/move switches and the movement
+reference. Weapon settings include `maxReserve`. Spell HUD records `charges=-1` for unknown charge
+sources, or the actual marker count; unavailable requests log their reason, remaining native timer
+and charges. An accepted IssueOrder is an order acknowledgement, not proof of a spell effect.
+Shrapnel's three charges/40-second map timer must not be mistaken for an infinite-cast cooldown bug.

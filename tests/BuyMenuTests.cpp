@@ -11,10 +11,10 @@ int main() {
     assert(ammo[2]==12 && reserve[2]==100 && ammo[5]==20 && ammo[0]==0 && reserve[0]==0);
     assert(inventory.Next(4,1)==5 && inventory.Next(4,-1)==2);
     // Insufficient funds, duplicate guns and full reserves never debit the Warcraft resource budget.
-    int gold=624;
+    int gold=1249;
     assert(inventory.Buy(0,false,settings,gold,ammo[0],reserve[0],30,90)==BuyInventory::Result::NoGold);
-    assert(gold==624 && ammo[0]==0 && !inventory.owned[0]);
-    gold=1125;assert(inventory.Buy(0,false,settings,gold,ammo[0],reserve[0],30,90)==BuyInventory::Result::Bought);
+    assert(gold==1249 && ammo[0]==0 && !inventory.owned[0]);
+    gold=1750;assert(inventory.Buy(0,false,settings,gold,ammo[0],reserve[0],30,90)==BuyInventory::Result::Bought);
     assert(gold==500 && ammo[0]==30 && reserve[0]==0 && inventory.owned[0]);
     assert(inventory.Buy(0,false,settings,gold,ammo[0],reserve[0],30,90)==BuyInventory::Result::AlreadyOwned && gold==500);
     assert(inventory.Buy(1,true,settings,gold,ammo[1],reserve[1],30,90)==BuyInventory::Result::NotOwned && gold==500);
@@ -35,6 +35,15 @@ int main() {
     inventory.Refill(settings,ammo,reserve,magazines,reserves,true);
     for (int slot=0;slot<WeaponSlots::Count;++slot) assert(inventory.owned[slot]);
     assert(ammo[0]==30 && reserve[0]==90 && ammo[3]==10 && reserve[3]==30 && gold==83);
+    // A custom capacity supports larger reserves and prevents charging gold when the configured cap is zero.
+    settings.maxReserve[0]=250;reserves[0]=settings.maxReserve[0];
+    inventory.Refill(settings,ammo,reserve,magazines,reserves);
+    assert(reserve[0]==250 && ammo[0]==30);
+    reserve[0]=240;gold=100;
+    assert(inventory.Buy(0,true,settings,gold,ammo[0],reserve[0],30,settings.maxReserve[0])==BuyInventory::Result::Bought);
+    assert(reserve[0]==250 && gold==20);
+    settings.maxReserve[0]=0;reserve[0]=0;gold=100;
+    assert(inventory.Buy(0,true,settings,gold,ammo[0],reserve[0],30,settings.maxReserve[0])==BuyInventory::Result::Full && gold==100);
     // Every registered weapon is reachable in its menu; no duplicate keys or forgotten slots are permitted.
     bool seen[WeaponSlots::Count]={};
     for (const auto& item : BuyCatalog::Entries) {

@@ -592,3 +592,33 @@ BTNAvatarOn during cooldown, and the FPS panel matches that actual button rather
 an Off icon. First-slot Blizzard completes and shows an actual decreasing6s cooldown sweep.
 No controller fault or GL error occurs in either successful run; owned processes close and private
 DLL/config are restored. Ordinary packages exclude every opt-in fixture command and loading-screen input exception.
+
+### Unit scaling, reserve limits and Shrapnel (2026-10-11)
+
+All native-independent suites pass, including real Windows INI parsing for unit damage, optional
+IAS/movement formulas and reserve bounds. Inventory tests cover zero/custom/larger reserve caps
+and useful purchase charging; rune recovery covers 40 percent. Migration tests pass under
+PowerShell7 and Windows PowerShell5.1, preserving custom prices, reserves, damage mode and switches.
+
+With user approval, the elevated running DotA Sniper was observed through logs and GPU captures,
+without modifying that map or save. Native RTS markers recover1 ->2 ->3; casts spend them to0.
+Four FPS requests after exhaustion leave0. The reported infinite-cast behavior does not reproduce:
+A064 uses map-owned charges with40s restoration, and its native cooldown is deliberately0.
+
+The new DLL in the private stock map uses custom reserve caps50/30/0/70 for F9/F7. After draining,
+a successful native mana-rune pickup at40 percent produces magazines/reserves12/20,12/12,4/0,4/28
+and C4=40. F8 reduces AK reserve50 to20 without granting ammunition. Both optional scaling modes
+reload with reference250. A native Gloves of Haste item changes IAS1.48 to1.63. Thunderclap casts
+once; the repeated request is rejected by the live native timer with5.65s remaining of6.
+
+A disposable DotA copy contains an authored initialization harness, allowing its own hero-entry
+callbacks to finish before learning Shrapnel. Exactly three cast requests succeed from three
+charges; the fourth is rejected. The live marker returns from0 to1 after the map's40s timer.
+Screenshots confirm3 CHG,0 CHG/NO SPELL CHARGES and recharge; no local cooldown timer is fabricated.
+The initial MPQ harness retained stale attributes and was rejected as corrupt; disabling only the
+private attributes fixes that archive. An earlier manually registered hero duplicated its charge
+handler; deferring setup and checking the map's existing trigger fixes the test harness.
+All private DLL/config changes are restored and only owned test PIDs are closed.
+
+Final DLL reruns the stock native checks and buy-panel visual inspection. AK preview shows1250gold,
+clip/reserve30/20, native-scaled base damage58 and978RPM from IAS1.63. Text fits the existing panel.

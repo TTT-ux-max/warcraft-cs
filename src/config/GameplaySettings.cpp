@@ -31,7 +31,7 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.render.maxFPS=maxFPS==0 ? 0 : int(std::max(30.f,maxFPS));
     // Missing or malformed distances use the same default as a fresh settings snapshot.
     result.render.drawDistance=std::max(3000.f,number("Rendering","DrawDistance",result.render.drawDistance,20000));
-    result.runeAmmoPercent=number("Runes","AmmoPercent",20,100);
+    result.runeAmmoPercent=number("Runes","AmmoPercent",result.runeAmmoPercent,100);
     // Missing settings enable the requested hopping; malformed switches preserve documented defaults.
     auto boolean = [&](const char* key, bool fallback) {
         auto value = text("Movement", key, fallback ? "true" : "false");
@@ -40,6 +40,11 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         return fallback;
     };
     result.movement.bunnyHop = boolean("BunnyHop", true);
+    result.movement.scaleFromUnitMoveSpeed=boolean("ScaleFromUnitMoveSpeed",false);
+    result.movement.unitMoveSpeedReference=std::max(1.f,number("Movement","UnitMoveSpeedReference",300,1000));
+    // Fire-rate scaling is opt-in and independent of weapon damage selection.
+    auto fireRate=text("Combat","ScaleFireRateFromAttackSpeed","false");
+    result.scaleFireRateFromAttackSpeed=!_stricmp(fireRate.c_str(),"true") || fireRate=="1";
     result.movement.autoJump = boolean("AutoJump", true);
     result.movement.jumpBoostPercent = number("Movement", "JumpBoostPercent", 0, 100);
     result.movement.maxBunnySpeed = std::max(250.0f, number("Movement", "MaxBunnySpeed", 1000, 2000));
@@ -49,7 +54,10 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.movement.stepHeight = number("Movement", "StepHeight", 27, 64);
     result.runePickupRadius=number("Runes","PickupRadius",160,400);
     result.runeAmmoAllWeapons=_stricmp(text("Runes","AmmoWeapons","all").c_str(),"current")!=0;
-    result.heroDamage=_stricmp(text("Damage","Mode","weapon").c_str(),"hero")==0;
+    auto damageMode=text("Damage","Mode","unit");
+    result.heroDamage=_stricmp(damageMode.c_str(),"weapon")!=0;
+    if(_stricmp(damageMode.c_str(),"unit") && _stricmp(damageMode.c_str(),"hero") && _stricmp(damageMode.c_str(),"weapon"))
+        wc3::Log("Invalid Damage.Mode; using unit");
     // Missing or malformed settings must not silently enable instant kills; explicit preferences still reload on F8.
     auto awpOneShot=text("Damage","AWPOneShot","false");
     result.awpOneShot=!_stricmp(awpOneShot.c_str(),"true") || awpOneShot=="1";
@@ -176,6 +184,7 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         result.weaponPrice[slot]=int(number(sections[slot],"Price",float(result.weaponPrice[slot]),1000000));
         result.ammoPrice[slot]=int(number(sections[slot],"AmmoPrice",float(result.ammoPrice[slot]),1000000));
         result.ammoPack[slot]=int(std::max(1.0f,number(sections[slot],"AmmoPack",float(std::max(1,result.ammoPack[slot])),1000)));
+        if(slot<4)result.maxReserve[slot]=int(number(sections[slot],"MaxReserve",float(result.maxReserve[slot]),100000));
     }
     result.knifeSecondaryDamage=number("Knife","SecondaryDamage",65,1000000);
     result.swordSecondaryDamage=number("Sword","SecondaryDamage",240,1000000);

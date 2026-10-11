@@ -62,6 +62,8 @@ void SpellHudView::Draw(const SpellHudSlots& slots,const std::array<std::string,
         else if(slot.disabled)sprintf_s(label,"DISABLED");
         else if(slot.noMana && (!slot.cooldownKnown || slot.cooldown<=.05f))sprintf_s(label,"NO MANA");
         else if(!cooldowns)continue;
+        // Charge spells may cast repeatedly until empty; their map timer must never be invented locally.
+        else if(slot.charges>=0)sprintf_s(label,"%d CHG",slot.charges);
         else if(!slot.cooldownKnown)sprintf_s(label,"?");
         else if(slot.cooldown>=10)sprintf_s(label,"%.0fs",std::ceil(slot.cooldown));
         else if(slot.cooldown>.05f)sprintf_s(label,"%.1fs",slot.cooldown);

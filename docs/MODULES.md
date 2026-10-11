@@ -139,3 +139,9 @@ The combined FPS overlay draws health bars against retained world depth before t
 then composites the captured native minimap and wraps shortcut hints using the current bindings.
 NativeMinimap prevents native map batches from writing world depth; ShortcutBindings owns its M
 switch alongside the spell and display controls, including validation and live config reload.
+
+`UnitScaling` owns portable cadence/movement formulas; `UnitStatus` samples Warcraft's live IAS
+multiplier without writing attack fields. `GameplaySettings.maxReserve` supplies every controller
+inventory/recovery capacity. F8 clamps existing surplus reserve and resets fractional rune credit.
+`MapSpellCharges` recognizes DotA Shrapnel's existing actor/skill/marker facts and produces a value
+snapshot only. SpellCaster checks the shared native snapshot before replacing an active order.

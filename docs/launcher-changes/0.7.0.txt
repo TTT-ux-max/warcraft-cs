@@ -36,3 +36,12 @@
 - Fixed custom-map spell slots and live ability replacement icons.
 - Added native toggle icons, mana states and radial spell cooldowns.
 - Fixed native target handling during Avatar and other transformations.
+- Changed default weapon damage to scale from the controlled unit attack.
+- Changed weapon prices to twice their previous defaults.
+- Changed default rune ammunition recovery to 40 percent.
+- Added configurable maximum reserve ammunition for each firearm.
+- Added optional firearm rate scaling from native attack speed.
+- Added optional movement speed scaling from the controlled unit.
+- Fixed spell request feedback during native cooldown and mana restrictions.
+- Added actual Shrapnel charge counts and empty-charge rejection.
+- Updated buy previews to show live damage, firing rate and reserve limits.

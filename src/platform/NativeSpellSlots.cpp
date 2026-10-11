@@ -3,6 +3,7 @@
 #include "NativeAbilitySlots.hpp"
 #include "NativeCommandCard.hpp"
 #include "NativeArchive.hpp"
+#include "MapSpellCharges.hpp"
 #include <cstring>
 #include <cctype>
 
@@ -81,6 +82,7 @@ SpellHudSlots NativeSpellSlots::Snapshot(wc3::Handle unit,const SpellSettings& s
         uintptr_t object=Object(unit,slot.ability);
         slot.icon=slots_.Icon(slot.ability);NativeAbilityInfo::Read(object,slot,mana);
         NativeCommandCard::Apply(ui,object,mana,slot);
+        MapSpellCharges::Read(unit,slot);
         // Runtime replacement abilities can be passive without appearing in the hero's original tables.
         auto lower=slot.icon;for(auto& c:lower)c=char(std::tolower(static_cast<unsigned char>(c)));
         if(lower.find("passivebuttons\\")!=std::string::npos)slot.passive=true;

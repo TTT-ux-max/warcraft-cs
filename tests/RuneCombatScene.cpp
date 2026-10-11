@@ -50,6 +50,18 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         else if(BackgroundGameplay::Enabled() && command=="bars")controller.RequestHealthBarToggle();
         else if(BackgroundGameplay::Enabled() && command=="minimap")controller.RequestMinimapToggle();
         else if(BackgroundGameplay::Enabled() && command=="buttons")Buttons(base);
+        // New tuning follows production mailboxes; only disposable fixture builds expose these commands.
+        else if(BackgroundGameplay::Enabled() && command=="settings")controller.RequestSettingsReload();
+        else if(BackgroundGameplay::Enabled() && command=="refill")controller.RequestRefill();
+        else if(BackgroundGameplay::Enabled() && command=="grant")controller.RequestAllWeapons();
+        else if(BackgroundGameplay::Enabled() && command=="pickup")controller.RequestItemPickup();
+        else if(BackgroundGameplay::Enabled() && command=="buy")controller.RequestBuyToggle();
+        else if(BackgroundGameplay::Enabled() && command=="buykey") {int key=0;input>>key;controller.RequestBuyKey(key);}
+        else if(BackgroundGameplay::Enabled() && command=="haste") {
+            float x=wc3::Real(wc3::GetUnitX(unit)),y=wc3::Real(wc3::GetUnitY(unit));
+            auto item=wc3::CreateItem(0x6763656C,&x,&y);items.push_back(item);
+            wc3::Log("fixture haste added=%d",wc3::UnitAddItem(unit,item));
+        }
         else if(BackgroundGameplay::Enabled() && command=="follow")controller.RequestSquad(true);
         else if(BackgroundGameplay::Enabled() && command=="dota") {
             // Spawn/learn the current map's own Anti-Mage definitions, including its skill-learning triggers.
@@ -149,6 +161,10 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
             wc3::Real(wc3::GetUnitX(unit)),wc3::Real(wc3::GetUnitY(unit)),wc3::Real(wc3::GetUnitState(unit,0)),
             wc3::UnitAttackAverage(unit),wc3::GetUnitCurrentOrder(unit),enemy ? wc3::Real(wc3::GetUnitState(enemy,0)) : -1);
         controller.TestLogAmmo();
+        const auto& status=controller.Status();const auto& settings=controller.Settings();
+        wc3::Log("fixture scaling attackSpeed=%.3f nativeMove=%.1f reference=%.1f fireEnabled=%d moveEnabled=%d damageMode=%d",
+            status.attackSpeed,status.nativeSpeed,settings.movement.unitMoveSpeedReference,
+            settings.scaleFireRateFromAttackSpeed,settings.movement.scaleFromUnitMoveSpeed,settings.heroDamage);
         controller.TestLogSquad();
         int slots=wc3::UnitInventorySize(unit),used=0;
         for (int i=0;i<slots;++i) if (wc3::UnitItemInSlot(unit,i)) ++used;

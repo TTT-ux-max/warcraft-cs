@@ -23,6 +23,17 @@ const char* SpellCaster::Cast(wc3::Handle unit,int slot,const SpellSettings& set
         wc3::Log("Spell unavailable unit=%08X slot=%d ability=%08X reason=empty-or-unlearned",unit,slot+1,ability);
         return "SPELL SLOT EMPTY OR NOT LEARNED";
     }
+    // Check live engine/map state before canceling an existing channel or reporting an accepted order.
+    // IssueOrder can accept a command even when its later native spell validation rejects the cast.
+    const auto state=slots_.Snapshot(unit,settings)[slot];
+    const char* blocked=state.charges==0 ? "NO SPELL CHARGES" :
+        state.cooldownKnown && state.cooldown>.05f ? "SPELL ON COOLDOWN" :
+        state.disabled ? "SPELL DISABLED" : state.noMana ? "NOT ENOUGH MANA" : nullptr;
+    if(blocked) {
+        wc3::Log("Spell unavailable unit=%08X slot=%d ability=%08X reason=%s remaining=%.2f charges=%d",unit,slot+1,ability,blocked,state.cooldown,state.charges);
+        return blocked;
+    }
+    // A transformation can change its order getter while its original ability timer is still running.
     int order=settings.order[slot] ? settings.order[slot] : slots_.Order(unit,ability);
     if(!order) {wc3::Log("Spell unavailable unit=%08X slot=%d ability=%08X reason=passive-or-unsupported",unit,slot+1,ability);return "PASSIVE OR UNSUPPORTED SPELL";}
     Cancel();

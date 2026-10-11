@@ -2,6 +2,13 @@
 
 ## Unreleased - test branches
 
+- Default firearm/melee damage to the controlled unit's native attack; retain weapon mode and legacy hero alias.
+- Double weapon prices; retain ammo pack prices. Increase default rune ammo rewards to 40%.
+- Display current unit-scaled damage, firearm cadence and magazine/reserve limits in buy previews.
+- Add per-firearm MaxReserve (0..100000), shared by purchases, free refills and runes, with surplus clamping on F8.
+- Add optional native attack-speed firearm cadence (disabled by default), and optional native movement-speed scaling with a configurable reference.
+- Reject unavailable native spell requests before dispatch without interrupting active channels; show DotA Shrapnel map-owned charges and reject empty-charge requests.
+
 - Fixed Avatar/morph crashes caused by masking a retained native attack target; the walking motor now blocks pursuit safely.
 
 - Fix idle FPS movement through the separate native walking motor, preserving speed modifiers,
