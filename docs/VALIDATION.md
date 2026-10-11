@@ -12,7 +12,11 @@ columns do not fall back into the four spell controls. Synthetic regressions rep
 five-entry lists, missing metadata, passive gaps, extra/hidden columns and learned replacements.
 The unchanged caster/aim suites pass. A private harness using the actual owned map tables now resolves
 the requested hero's four slots in button order, with the primary first and ultimate fourth.
-This data-level check does not claim a cast in the user's running match; that game remains untouched.
+A user-approved disposable native map puts Blizzard fifth behind ultimate/stats and reproduces the
+list ordering with the ordinary DLL. Z resolves it to the first slot; its native order 852089 finishes
+with mana consumed, and a screenshot shows the spell effect. Assertions filter by the disposable PID
+to exclude previous log sessions. The test process closes and its INI is restored byte-exact.
+This verifies the mapping and native cast path; the user's DotA match itself was not driven.
 
 ## Configurable keyboard and first-person spells (test branch, 2026-10-11)
 
@@ -31,7 +35,7 @@ Bolt/Thunder Clap/Avatar slots. Native logs show mana costs of 75/90/150 with re
 samples, cooldown/insufficient-mana rejection and Q replacing C via live F8 reload. The initial
 native run revealed Bash's misleading accepted no-op order; stock passive button metadata now
 rejects that slot before dispatch, with an added regression. Blizzard's order was accepted but
-interrupted by subsequent input in this session; full sustained channel verification remains pending.
+interrupted by subsequent input in that run; the later five-entry-list test above verifies a full channel.
 The private game closed normally and its INI was restored exactly. No campaign save was used.
 
 Automatic slots use stock/overlaid archive tables rather than arbitrary map object modifications;
