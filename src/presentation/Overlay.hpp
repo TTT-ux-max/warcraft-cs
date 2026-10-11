@@ -3,11 +3,14 @@
 #include "GunMesh.hpp"
 #include "../application/ShooterController.hpp"
 #include "SkyView.hpp"
+#include "HealthBarRenderer.hpp"
+class NativeMinimap;
 
 class Overlay {
 public:
     void Configure(const char* root) { root_ = root; }
-    void Draw(HDC dc, const ShooterController& controller);
+    void Draw(HDC dc, const ShooterController& controller,NativeMinimap& minimap,const std::vector<UnitHealthBar>& bars,
+        const WorldLabelView& barView,float nearPlane,float farPlane);
     void ContextDeleted(HGLRC context);
     void RefreshAfterFocus() { refreshPending_ = true; }
 private:
@@ -22,6 +25,7 @@ private:
     GLuint font_ = 0;
     GLuint statusFont_ = 0;
     int statusFontSize_ = 0;
+    int hintGlyphWidth_ = 12;
     HGLRC context_ = nullptr;
     bool refreshPending_ = false;
     DWORD lastDiagnostic_ = 0;

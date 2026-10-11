@@ -2,13 +2,13 @@
 #include "../platform/WarcraftApi.hpp"
 #include "../input/LookAngles.hpp"
 #include "../platform/MapCameraGuard.hpp"
-#include "FpsProjection.hpp"
 #include <algorithm>
 #include <cmath>
 
-void FirstPersonCamera::Update(float eyeX, float eyeY, float eyeZ, float yaw, float pitch, float fov) const {
+void FirstPersonCamera::Update(float eyeX, float eyeY, float eyeZ, float yaw, float pitch, float fov, float farClip) const {
     constexpr float radians = 0.01745329252f;
-    float zero = 0, distance = 100, farZ = FpsProjection::WorldFarClip;
+    // The caller supplies the validated draw distance; map/cinematic cameras keep their native fields.
+    float zero = 0, distance = 100, farZ = farClip;
     // The same normalized angles drive camera fields, movement and weapon rays after any number of full turns.
     float angle = LookAngles::Normalize(pitch), rotation = LookAngles::Normalize(yaw);
     // Cancel Warcraft's terrain contribution, rather than treating ZOFFSET as eye height.

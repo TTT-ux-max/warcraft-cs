@@ -1,7 +1,7 @@
 - Added Half-Life-style air strafing and accelerating bunnyhops.
 - Added jumping over low objects and gravity-driven cliff falls.
 - Added configurable movement settings and held-Space autojump.
-- Added V to show or hide your speed in CS units per second.
+- Added P to show or hide your speed in CS units per second.
 - Added N to disable or restore fog of war in offline FPS.
 - Fixed F6 and mod controls after campaign movies.
 - Improved hip-fire and sniper crosshair drawing.
@@ -13,3 +13,16 @@
 - Fixed compact English update changes in both launchers.
 - Removed basic movement, reload, jump, crouch and melee HUD hints.
 - Updated installation, troubleshooting and support documentation.
+- Added an FPS minimap with native terrain, fog and unit markers.
+- Added M to toggle the minimap and configurable minimap size.
+- Added K to toggle ally and enemy health bars together.
+- Added first-person spell casting with Z, X, C and V.
+- Added configurable shortcuts and custom-map ability mappings.
+- Fixed the first spell slot for heroes with extra custom abilities.
+- Fixed automatic enemy pursuit and retaliatory attacks in FPS.
+- Preserved spell channeling while blocking native pursuit orders.
+- Improved FPS pacing with a configurable 144 FPS default.
+- Changed the default configurable draw distance to 15000.
+- Fixed near-ground transparency with the extended draw distance.
+- Fixed distant tree blocking and walking off cliffs.
+- Improved compact HUD hints with wrapping and configured key labels.

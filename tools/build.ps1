@@ -32,9 +32,19 @@ $sources += '"' + (Join-Path $modRoot 'src/platform/DiagnosticLog.cpp') + '"'
 
 # World obstacle adapters supply movement with height-aware volumes from the active map's own models.
 # The native fog adapter owns FPS visibility overrides and restores the map when FPS ends.
+# Native minimap capture is a render adapter, independent of gameplay/map fog overrides.
+$sources += '"' + (Join-Path $modRoot 'src/platform/NativeMinimap.cpp') + '"'
 $sources += '"' + (Join-Path $modRoot 'src/platform/NativeFogOfWar.cpp') + '"'
 # Window/input recovery is a platform adapter shared by ordinary and opt-in test builds.
 $sources += '"' + (Join-Path $modRoot 'src/platform/GameWindowInput.cpp') + '"'
+# Presentation pacing and the guarded 1.26a demand operand belong to the native adapter.
+$sources += '"' + (Join-Path $modRoot 'src/platform/NativeFrameRate.cpp') + '"'
+# The FPS camera limit is restored through native generation keys when its map/camera disappears.
+$sources += '"' + (Join-Path $modRoot 'src/platform/NativeCameraFarClip.cpp') + '"'
+# Keep native health sampling separate from depth-tested presentation.
+$sources += @('platform/UnitHealthBars.cpp','presentation/HealthBarRenderer.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
+# Keyboard metadata and native spell targeting/order ownership are separate from the application coordinator.
+$sources += @('input/ShortcutBindings.cpp','config/HeroSpellSlots.cpp','platform/NativeSpellSlots.cpp','platform/SpellAim.cpp','platform/SpellCaster.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 $sources += '"' + (Join-Path $modRoot 'src/platform/MovementObstacles.cpp') + '"'
 # Shop access is native-world policy; inventory prices/navigation remain independently testable.
 $sources += @('economy/BuyAccess.cpp','presentation/BuyMenuView.cpp','presentation/SkyView.cpp','platform/MapEnvironment.cpp','platform/NativeSky.cpp','platform/NativeFloatingText.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }

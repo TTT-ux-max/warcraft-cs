@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include "CameraClipChannel.hpp"
 
 namespace wc3 {
 // Independent native visibility switches, used only by the offline FPS override adapter.
@@ -14,6 +15,8 @@ extern int (__cdecl* GetTerrainCliffLevel)(float*,float*);
 using Handle = uint32_t;
 using Bits = uint32_t;
 float Real(Bits bits);
+CameraClipChannel FarClipChannel();
+float* FarClipMaximum(uint32_t index,uint32_t serial);
 bool Bind(HMODULE game);
 void Log(const char* format, ...);
 void Trace(const char* format, ...);

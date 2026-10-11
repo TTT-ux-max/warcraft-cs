@@ -54,6 +54,16 @@ These are deterministic physics measurements, not a native-game performance or s
 Conservative model boxes can reject narrow passages or irregular props. Native walkable bridge decks
 remain the surface authority rather than the box surrounding the complete bridge mesh.
 
+The tree-collision test branch replaces canopy-sized standing extents with decoded trunk bounds,
+reusing the shooting mesh parser. Native tree pathing and solid-trunk contact remain enforced;
+unknown/unreadable geometry retains the conservative native pathing fallback.
+
+The ledge-recovery test branch probes a full 128-unit native terrain cell in eight directions:
+the blocked lower rim may extend beyond the former half-cell probe. Higher terrain is still rejected
+before cliff-pathing exceptions. Existing solid overlap permits only retreat toward the nearest
+expanded footprint face, including the trailing native pathing samples; entering another solid or
+moving deeper into the current solid remains blocked.
+
 Independent checks: `tools/test-movement.ps1`, `tools/test-warcraft-collision.ps1`,
 `tools/test-gameplay-settings.ps1` and `tools/test-gameplay-config.ps1`.
 The opt-in `tools/build.ps1 -TestMovement` includes `tests/MovementScene.cpp`, which accepts explicit

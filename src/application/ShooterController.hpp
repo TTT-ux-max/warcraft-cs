@@ -24,8 +24,10 @@
 #include "../inventory/AmmoRecovery.hpp"
 #include "../inventory/ItemPickup.hpp"
 #include "../squad/SquadController.hpp"
+#include "../platform/SpellCaster.hpp"
 #include <string>
 #include <vector>
+#include <chrono>
 
 class ShooterController {
 public:
@@ -56,7 +58,16 @@ public:
     void RequestSpeedToggle() { speedToggleRequested_=true; }
     // Fog changes follow the same input-to-simulation mailbox as the speed display.
     void RequestFogToggle() { fogToggleRequested_=true; }
+    // Queue one switch for both teams; save preferences only on the game thread.
+    void RequestHealthBarToggle() { healthBarToggleRequested_=true; }
+    // Spell and interruption taps are executed on the game thread, never inside WindowProc.
+    void RequestSpell(int slot) { spellRequested_=slot; }
+    void RequestSpellCancel() { spellCancelRequested_=true; }
+    std::string Shortcut(ShortcutAction action) const {return ShortcutBindings::Label(settings_.shortcuts.Key(action));}
     bool SpeedVisible() const { return showSpeed_; }
+    // Input queues the toggle; only the simulation tick changes the HUD preference.
+    void RequestMinimapToggle() { minimapToggleRequested_=true; }
+    bool MinimapVisible() const { return showMinimap_; }
     float DisplaySpeed() const { return movement_.Speed()/MovementPhysics::worldScale; }
     // Buy-menu events are consumed on Warcraft's simulation thread, never inside WindowProc.
     void RequestBuyToggle() { buyToggleRequested_=true; }
@@ -116,6 +127,8 @@ public:
 private:
     bool Pressed(int key);
     bool Down(int key) const;
+    bool Down(ShortcutAction action) const {return Down(settings_.shortcuts.Key(action));}
+    bool Pressed(ShortcutAction action) {return Pressed(settings_.shortcuts.Key(action));}
     void Toggle();
     void Disable(bool restoreCamera);
     void AimAndMove(float dt);
@@ -128,6 +141,7 @@ private:
     void RefillAmmo(bool grantAll=false);
     void PickupItem();
     void ReloadSettings();
+    void ToggleHealthBars();
     void ResetLoadout();
     void Buy(int slot,bool ammunition);
     void UpdateBuyMenu();
@@ -152,12 +166,19 @@ private:
     bool toggleRequested_ = false, menuRequested_ = false, refillRequested_ = false, allWeaponsRequested_=false;
     bool itemRequested_=false,settingsRequested_=false,itemNearby_=false;
     bool speedToggleRequested_=false,showSpeed_=false;
+    bool minimapToggleRequested_=false,showMinimap_=true;
     bool fogToggleRequested_=false,fogOfWarDisabled_=false;
+    bool healthBarToggleRequested_=false;
+    int spellRequested_=-1;
+    bool spellCancelRequested_=false;
+    SpellCaster spells_;
     int squadRequested_=0;
     bool keys_[256] = {};
     int weapon_ = 0, ammo_[WeaponSlots::Count] = {}, reserve_[WeaponSlots::Count] = {};
     float yaw_ = 0, pitch_ = 0, health_ = 0;
-    DWORD tick_ = 0, lastShot_ = 0, reloadEnd_ = 0, animationTick_ = 0;
+    // Movement needs a finer clock than GetTickCount's ~16ms steps once rendering exceeds 64 FPS.
+    std::chrono::steady_clock::time_point tick_{};
+    DWORD lastShot_ = 0, reloadEnd_ = 0, animationTick_ = 0;
     std::string root_, animation_ = "idle";
     MeleeAttack meleeAttack_ = MeleeAttack::Select(WeaponSlots::Knife, false);
     WeaponRecoil recoil_;

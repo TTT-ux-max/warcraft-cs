@@ -1,9 +1,13 @@
 #include "PluginRuntime.hpp"
 #include "../input/InputDispatcher.hpp"
 #include "../platform/NativeFloatingText.hpp"
+#include "../platform/NativeMinimap.hpp"
 #include "../platform/WarcraftApi.hpp"
 #include "../platform/DiagnosticLog.hpp"
 #include "../platform/GameWindowInput.hpp"
+#include "../platform/NativeFrameRate.hpp"
+#include "../platform/NativeCameraFarClip.hpp"
+#include "../platform/UnitHealthBars.hpp"
 #include "../application/ShooterController.hpp"
 #include "../presentation/Overlay.hpp"
 #include "../presentation/ReticleDiagnostics.hpp"
@@ -37,6 +41,13 @@
 
 static ShooterController controller;
 static Overlay overlay;
+static NativeFrameRate frameRate;
+static NativeCameraFarClip cameraFarClip;
+static UnitHealthBars healthBars;
+static WorldLabelView healthBarView;
+static float healthNear=8,healthFar=15000;
+static float healthVerticalFov=85,healthAspect=1;
+static NativeMinimap minimap;
 static bool healthy = true;
 static DWORD lastWorld = 0;
 static char root[MAX_PATH];
@@ -103,12 +114,13 @@ static void ObserveMap(uintptr_t ui) {
     if (mapUI == ui) return;
     // A real UI unload/replacement marks map boundaries; a rendering pause is only a focus pause.
     controller.ResetMap(); mapUI = ui;
+    healthBars.Reset();healthBarView.active=false; // Native models/snapshots belong to the current map.
     if (ui) healthy = true;
     wc3::Log("Map lifecycle: %s ui=%08X", ui ? "loaded" : "unloaded", ui);
 }
 static BOOL WINAPI DeleteContextHook(HGLRC context) {
     BOOL result = originalDeleteContext(context);
-    if (result) overlay.ContextDeleted(context);
+    if (result) {overlay.ContextDeleted(context);minimap.ContextDeleted(context);}
     return result;
 }
 static void __cdecl InterfaceHook(BOOL show, float* duration) {
@@ -118,7 +130,10 @@ static void __cdecl InterfaceHook(BOOL show, float* duration) {
 }
 static void SafeTick(uintptr_t ui) {
     // Disable the extension on a native fault, leaving the game callback intact.
-    __try { controller.Tick(ui); }
+    __try {
+        controller.Tick(ui);
+        healthBars.Update(controller.ViewActor(),controller.Settings().healthBars);
+    }
     __except (EXCEPTION_EXECUTE_HANDLER) {
         healthy = false; wc3::LogError("Controller fault %08X; disabled", GetExceptionCode());
         // A diagnostic/native failure must never keep FPS input or camera ownership locked over an exit dialog.
@@ -131,6 +146,8 @@ static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
     lastWorld = now;
     // RenderWorld's this pointer is not CGameUI; query the real UI for cinematic flags.
     uintptr_t gameUI = CurrentUI(); ObserveMap(gameUI);
+    // Lift the native channel ceiling before the FPS camera writes its validated distance.
+    cameraFarClip.Update(healthy && controller.Visible());
     if (healthy && gameUI) SafeTick(gameUI);
 #ifdef WCS_FLOATING_TEXT_TEST
     if (healthy && gameUI) FloatingTextScene::Tick(controller,gameBase,root);
@@ -167,10 +184,15 @@ static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
         labelView.maximumDistance=controller.Settings().floatingTextDistance;
     }
     NativeFloatingText::SetView(labelView);
+    healthBarView=labelView;healthBarView.maximumDistance=controller.Settings().healthBars.distance;
+    healthBarView.verticalFov=healthVerticalFov;healthBarView.aspect=healthAspect;
     // Suppress only the controlled actor during world drawing; menus, portraits and RTS still render it.
     ActorRenderFilter::Begin(healthy ? controller.ViewActor() : 0);
     int result = originalWorld(ui, unused);
     ActorRenderFilter::End();
+    // Crop the native map after the world pass without altering Warcraft's UI layout.
+    RECT client={};if (windowInput.Window()) GetClientRect(windowInput.Window(),&client);
+    minimap.BeginFrame(gameUI,client.right,client.bottom,healthy && controller.Visible() && controller.MinimapVisible());
     nativeUIPhase = true;
     return result;
 }
@@ -190,20 +212,46 @@ static void __fastcall UIHook(uintptr_t frame, uintptr_t unused) {
 }
 static void APIENTRY DrawElementsHook(GLenum mode, GLsizei count, GLenum type, const void* indices) {
     // Warcraft batches the console after world rendering, including cinematic backing textures.
-    if (healthy && nativeUIPhase && !overlayPass && controller.Visible() && GetTickCount() - lastWorld < 500) return;
+    if (healthy && nativeUIPhase && !overlayPass && controller.Visible() && GetTickCount() - lastWorld < 500) {
+        minimap.Submit(mode,count,type,indices,originalDrawElements);return;
+    }
     originalDrawElements(mode, count, type, indices);
 }
 static void __fastcall PerspectiveHook(uintptr_t output, uintptr_t unused, float fov, float aspect, float nearZ, float farZ) {
-    // Projection precedes world batching, so scope by the FPS camera's configured far distance.
-    // Keep native FOV/aspect and portrait projection unchanged.
-    nearZ=FpsProjection::NearPlane(healthy && controller.Visible() && GetTickCount()-lastWorld<500,nearZ,farZ);
+    bool fps=healthy && controller.Visible() && GetTickCount()-lastWorld<500;
+    // Native limits/interpolation can differ from the requested INI value. Scope near clipping by
+    // the actual world-camera field so the fallback also keeps nearby ground when a limit cannot be lifted.
+    float cameraFar=fps ? wc3::Real(wc3::GetCameraField(1)) : farZ;
+    float originalNear=nearZ;
+    nearZ=FpsProjection::NearPlane(fps,nearZ,farZ,cameraFar);
+    if(fps && std::abs(farZ-cameraFar)<.01f) {
+        // Actual world projection keeps bar depth/FOV valid during scope and native distance clamping.
+        healthNear=nearZ;healthFar=farZ;
+    }
+    static DWORD projectionLog=0;
+    if(fps && std::abs(farZ-cameraFar)<.01f && DiagnosticLog::Due(projectionLog))
+        wc3::Trace("world projection requestedFar=%.1f cameraFar=%.1f projectionFar=%.1f near=%.1f->%.1f",
+            controller.Settings().render.drawDistance,cameraFar,farZ,originalNear,nearZ);
     originalPerspective(output, unused, fov, aspect, nearZ, farZ);
+    if(fps && std::abs(farZ-cameraFar)<.01f) {
+        // Warcraft derives vertical FOV from its diagonal field. Read actual matrix scale, not the INI angle.
+        const float* matrix=reinterpret_cast<const float*>(output);
+        if(std::isfinite(matrix[0]) && std::isfinite(matrix[5]) && matrix[0]>0 && matrix[5]>0) {
+            healthVerticalFov=2*std::atan(1/matrix[5])/.01745329252f;healthAspect=matrix[5]/matrix[0];
+            healthBarView.verticalFov=healthVerticalFov;healthBarView.aspect=healthAspect;
+        }
+    }
 }
 static BOOL WINAPI SwapHook(HDC dc, UINT planes) {
+    // F8's validated snapshot drives the client cap; gameplay continues to use elapsed real time.
+    frameRate.Configure(controller.Settings().render.maxFPS);
+    frameRate.Pace();
     static DWORD previous = 0;
     static unsigned frames = 0;
     ++frames;
     ObserveMap(CurrentUI());
+    // Menus, cinematics, faults and F6 release the camera limit even without another world batch.
+    cameraFarClip.Update(healthy && controller.Visible());
     HWND window = WindowFromDC(dc);
     // Recheck the real render window after films: Warcraft may replace it or reset its input procedure.
     if (windowInput.Observe(window)) {
@@ -211,7 +259,9 @@ static BOOL WINAPI SwapHook(HDC dc, UINT planes) {
         overlay.RefreshAfterFocus();
     }
     overlayPass = true;
-    if (healthy && GetTickCount() - lastWorld < 500) overlay.Draw(dc, controller);
+    // Restore captured minimap pixels before the overlay reads world depth for health bars.
+    minimap.FinishFrame();
+    if (healthy && GetTickCount() - lastWorld < 500) overlay.Draw(dc,controller,minimap,healthBars.Items(),healthBarView,healthNear,healthFar);
     // The reticle cannot reach its draw entry while native recovery or stale world frames suppress the overlay.
     else ReticleDiagnostics::Skip(healthy ? "world-frame-stale" : "controller-fault", 0, 0, GetTickCount() - lastWorld);
     overlayPass = false; nativeUIPhase = false;
@@ -260,6 +310,7 @@ static DWORD WINAPI Initialize(void*) {
         wc3::Log("World render signature mismatch: no hooks installed"); return 0;
     }
     controller.Configure(root, base); overlay.Configure(root);
+    frameRate.Install(base);
     if (MH_Initialize() != MH_OK) { wc3::Log("MinHook initialization failed"); return 0; }
     // Map timers may request RTS camera presets repeatedly; live FPS owns those native camera writes.
     MapCameraGuard::Install(base, []() { return healthy && controller.BlocksMapCamera(); }, Hook);
