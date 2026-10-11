@@ -30,7 +30,7 @@ native/optional CS skies, bridge movement and corrected FPS rendering. Earlier c
 - WASD, jumping, crouching, acceleration, friction and weapon movement speeds inspired by CS.
 - Half-Life-style air strafing and held-Space bunnyhops; jump over low solids and fall from cliffs.
 - V toggles a horizontal speed counter; N toggles offline FPS fog and the unexplored mask.
-- K toggles green ally health bars; L toggles red enemy health bars. Each choice is saved in the INI.
+- K toggles ally (green) and enemy (red) health bars together and saves the choice in the INI.
 - Filled crosshair geometry and automatic control recovery after native campaign movies.
 - Classic AK/M4 and USP/AWP punch calculations, recoil recovery and burst behavior.
 - Primary and secondary melee attacks, locally imported CS sounds and a blood-free hit indicator.
@@ -260,9 +260,10 @@ Edit it and press F8 in FPS.
   the map's captured fog/mask settings; returning to FPS reapplies the session choice. Updates preserve
   custom values. Sword and secondary-melee shortcuts are omitted from the HUD; their controls remain.
 - Health bars use `[Interface] ShowAllyHealthBars=false`, `ShowEnemyHealthBars=false` and
-  `HealthBarDistance=2000` (Warcraft units, 0..15000; zero hides bars). K/L save independent choices;
-  F8 reloads file edits. Bars exclude your controlled actor, dead/hidden/transported units, fog-hidden
-  targets and passive neutrals. Opaque world depth occludes bars; RTS keeps its native health display.
+  `HealthBarDistance=2000` (Warcraft units, 0..15000; zero hides bars). K toggles and saves both teams;
+  a mixed saved state first enables both. F8 reloads file edits. Bars exclude your controlled actor,
+  dead/hidden/transported units, fog-hidden targets and passive neutrals. Opaque world depth occludes
+  bars; RTS keeps its native health display.
 - `[Interface] FloatingTextDistance=1200` limits native world labels to the FPS camera view and distance
   in Warcraft units. Set `0` to hide world labels and press F8; RTS, harvesting and screen-space map text keep native behavior.
 

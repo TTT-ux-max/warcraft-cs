@@ -57,8 +57,8 @@ public:
     void RequestSpeedToggle() { speedToggleRequested_=true; }
     // Fog changes follow the same input-to-simulation mailbox as the speed display.
     void RequestFogToggle() { fogToggleRequested_=true; }
-    // Queue independent team-bar switches; save preferences only on the game thread.
-    void RequestHealthBarToggle(bool allies) { if(allies) allyHealthToggle_=true;else enemyHealthToggle_=true; }
+    // Queue one switch for both teams; save preferences only on the game thread.
+    void RequestHealthBarToggle() { healthBarToggleRequested_=true; }
     bool SpeedVisible() const { return showSpeed_; }
     float DisplaySpeed() const { return movement_.Speed()/MovementPhysics::worldScale; }
     // Buy-menu events are consumed on Warcraft's simulation thread, never inside WindowProc.
@@ -131,7 +131,7 @@ private:
     void RefillAmmo(bool grantAll=false);
     void PickupItem();
     void ReloadSettings();
-    void ToggleHealthBar(bool allies);
+    void ToggleHealthBars();
     void ResetLoadout();
     void Buy(int slot,bool ammunition);
     void UpdateBuyMenu();
@@ -157,7 +157,7 @@ private:
     bool itemRequested_=false,settingsRequested_=false,itemNearby_=false;
     bool speedToggleRequested_=false,showSpeed_=false;
     bool fogToggleRequested_=false,fogOfWarDisabled_=false;
-    bool allyHealthToggle_=false,enemyHealthToggle_=false;
+    bool healthBarToggleRequested_=false;
     int squadRequested_=0;
     bool keys_[256] = {};
     int weapon_ = 0, ammo_[WeaponSlots::Count] = {}, reserve_[WeaponSlots::Count] = {};

@@ -5,7 +5,7 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window, UINT message, WPARAM
     // Record mod controls only: never log WM_CHAR, pasted text or unrelated desktop keystrokes.
     bool controlKey = key == VK_F6 || (healthy && controller_.Visible() &&
         (key == 'W' || key == 'A' || key == 'S' || key == 'D' || key == 'R' || key == 'B' ||
-         key == 'E' || key == 'H' || key == 'O' || key == 'J' || key == 'V' || key == 'N' || key == 'K' || key == 'L' || key == VK_SPACE || key == VK_CONTROL ||
+         key == 'E' || key == 'H' || key == 'O' || key == 'J' || key == 'V' || key == 'N' || key == 'K' || key == VK_SPACE || key == VK_CONTROL ||
          key == VK_SHIFT || key == VK_ESCAPE || key == VK_OEM_PERIOD ||
          (key >= '0' && key <= '9') || (key >= VK_F7 && key <= VK_F10)));
     if (controlKey && (message == WM_KEYUP || ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN) && !(data & (1L << 30)))))
@@ -31,12 +31,12 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window, UINT message, WPARAM
     }
     // Consume FPS inputs so Warcraft does not also issue RTS orders or select units.
     if (healthy && controller_.Visible()) {
-        // One option press toggles once; repeats/releases must not flip or save it again.
-        if ((key=='V' || key=='N' || key=='K' || key=='L') && (message==WM_KEYDOWN || message==WM_KEYUP)) {
+        // K switches both health-bar teams; repeats/releases must not flip or save options again.
+        if ((key=='V' || key=='N' || key=='K') && (message==WM_KEYDOWN || message==WM_KEYUP)) {
             if (message==WM_KEYDOWN && !(data&(1L<<30))) {
                 if (key=='V') controller_.RequestSpeedToggle();
                 else if(key=='N') controller_.RequestFogToggle();
-                else controller_.RequestHealthBarToggle(key=='K');
+                else controller_.RequestHealthBarToggle();
             }
             return 0;
         }

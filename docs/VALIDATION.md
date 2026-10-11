@@ -1,6 +1,15 @@
 # Validation of the 0.1.0 source baseline
 
-## Allied/enemy health bars (test branch, 2026-10-11)
+## Shared health-bar shortcut (test branch, 2026-10-11)
+
+K now switches both teams together. The production settings toggle is checked for all four old
+saved team combinations: mixed/off states enable both, both-on disables both, and a second press
+reverses that shared state without changing distance. Both existing INI keys remain compatible
+with loading and migration. The sampler and hidden WGL rendering checks pass, as do gameplay
+configuration/migration checks and the ordinary Player build. The earlier native session below
+verifies rendering; native input was not driven again for this shortcut-only follow-up.
+
+## Allied/enemy health bars (initial two-key test, 2026-10-11)
 
 The production native sampler in a synthetic world filters controlled/dead/hidden/transported,
 fog-hidden and passive-neutral units, applies independent team switches, preserves actual health

@@ -37,6 +37,13 @@ BOOL (__cdecl* IsUnitEnemy)(Handle,Handle)=[](Handle h,Handle)->BOOL {return h!=
 namespace SpriteTransform {bool Read(uintptr_t,ModelTransform&) {return false;}}
 namespace ModelBounds {bool Load(std::string,Bounds3&,TreeTrunkMesh*) {return false;}}
 int main() {
+    // Older INIs can have mixed preferences; one press must show both, then hide both.
+    for(int mask=0;mask<4;++mask) {
+        HealthBarSettings toggle;toggle.allies=(mask&1)!=0;toggle.enemies=(mask&2)!=0;
+        toggle.ToggleAll();assert(toggle.allies== (mask!=3) && toggle.enemies== (mask!=3));
+        toggle.ToggleAll();assert(toggle.allies== (mask==3) && toggle.enemies== (mask==3));
+        assert(toggle.distance==2000);
+    }
     UnitHealthBars bars;HealthBarSettings settings;
     bars.Update(1,settings);assert(bars.Items().empty() && created==0);
     settings.allies=true;bars.Update(1,settings);assert(bars.Items().size()==2);
@@ -45,5 +52,5 @@ int main() {
     assert(building);settings.allies=false;settings.enemies=true;bars.Update(1,settings);assert(bars.Items().size()==1 && !bars.Items()[0].ally);
     settings.allies=true;bars.Update(1,settings);assert(bars.Items().size()==3);
     bars.Update(0,settings);assert(bars.Items().empty());settings.distance=0;bars.Update(1,settings);assert(bars.Items().empty());
-    bars.Reset();assert(created==destroyed);std::puts("Health bar team/visibility/life filtering, anchors and group cleanup passed.");
+    bars.Reset();assert(created==destroyed);std::puts("Health bar combined toggle, team/visibility/life filtering, anchors and group cleanup passed.");
 }

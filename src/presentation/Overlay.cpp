@@ -171,7 +171,8 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,const std::vector
     // Show the independent release key beside both recruitment policies.
     char squad[128];sprintf_s(squad,"H: FIGHT | O: FOLLOW | J: RELEASE | SQUAD %u %s",unsigned(controller.SquadCount()),controller.SquadCount() ? (controller.SquadPassive() ? "FOLLOW" : "COMBAT") : "");
     Text(25,88,squad);
-    Text(25,146,"K: ALLY HP | L: ENEMY HP");
+    // One shared shortcut controls both colored team bars.
+    Text(25,146,"K: HEALTH BARS");
     // Keep mod-specific shortcuts; familiar movement, reload, jump and crouch need no permanent tutorial.
     Text(25, 30, "Warcraft CS by Yazgul | F6: RTS | B: BUY | .: AMMO | V: SPEED | N: FOG");
     char economy[96];sprintf_s(economy,"GOLD %d | B: BUY | .: AMMO | F7: FREE AMMO | F9: ALL WEAPONS",controller.Gold());Text(25,117,economy);

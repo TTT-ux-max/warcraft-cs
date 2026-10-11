@@ -1,7 +1,7 @@
 # Diagnostic logging
 
-Health bars log the validated allied/enemy switches and distance, K/L toggles and whether the INI
-save succeeded. Sampled records report native candidate and submitted-bar counts. Submission is
+Health bars log the validated allied/enemy switches and distance, the shared K toggle and whether
+each INI key save succeeded. Sampled records report native candidate and submitted-bar counts. Submission is
 not proof of visible pixels: world depth may correctly occlude a submitted bar.
 
 Ground-clipping test builds log native far-limit signature verification, FPS channel ceiling changes
