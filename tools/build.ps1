@@ -32,6 +32,8 @@ $sources += '"' + (Join-Path $modRoot 'src/platform/DiagnosticLog.cpp') + '"'
 
 # World obstacle adapters supply movement with height-aware volumes from the active map's own models.
 # The native fog adapter owns FPS visibility overrides and restores the map when FPS ends.
+# Native minimap capture is a render adapter, independent of gameplay/map fog overrides.
+$sources += '"' + (Join-Path $modRoot 'src/platform/NativeMinimap.cpp') + '"'
 $sources += '"' + (Join-Path $modRoot 'src/platform/NativeFogOfWar.cpp') + '"'
 # Window/input recovery is a platform adapter shared by ordinary and opt-in test builds.
 $sources += '"' + (Join-Path $modRoot 'src/platform/GameWindowInput.cpp') + '"'

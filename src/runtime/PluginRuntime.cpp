@@ -1,6 +1,7 @@
 #include "PluginRuntime.hpp"
 #include "../input/InputDispatcher.hpp"
 #include "../platform/NativeFloatingText.hpp"
+#include "../platform/NativeMinimap.hpp"
 #include "../platform/WarcraftApi.hpp"
 #include "../platform/DiagnosticLog.hpp"
 #include "../platform/GameWindowInput.hpp"
@@ -37,6 +38,7 @@
 
 static ShooterController controller;
 static Overlay overlay;
+static NativeMinimap minimap;
 static bool healthy = true;
 static DWORD lastWorld = 0;
 static char root[MAX_PATH];
@@ -108,7 +110,7 @@ static void ObserveMap(uintptr_t ui) {
 }
 static BOOL WINAPI DeleteContextHook(HGLRC context) {
     BOOL result = originalDeleteContext(context);
-    if (result) overlay.ContextDeleted(context);
+    if (result) {overlay.ContextDeleted(context);minimap.ContextDeleted(context);}
     return result;
 }
 static void __cdecl InterfaceHook(BOOL show, float* duration) {
@@ -171,6 +173,9 @@ static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
     ActorRenderFilter::Begin(healthy ? controller.ViewActor() : 0);
     int result = originalWorld(ui, unused);
     ActorRenderFilter::End();
+    // Crop the native map after the world pass without altering Warcraft's UI layout.
+    RECT client={};if (windowInput.Window()) GetClientRect(windowInput.Window(),&client);
+    minimap.BeginFrame(gameUI,client.right,client.bottom,healthy && controller.Visible() && controller.MinimapVisible());
     nativeUIPhase = true;
     return result;
 }
@@ -190,7 +195,9 @@ static void __fastcall UIHook(uintptr_t frame, uintptr_t unused) {
 }
 static void APIENTRY DrawElementsHook(GLenum mode, GLsizei count, GLenum type, const void* indices) {
     // Warcraft batches the console after world rendering, including cinematic backing textures.
-    if (healthy && nativeUIPhase && !overlayPass && controller.Visible() && GetTickCount() - lastWorld < 500) return;
+    if (healthy && nativeUIPhase && !overlayPass && controller.Visible() && GetTickCount() - lastWorld < 500) {
+        minimap.Submit(mode,count,type,indices,originalDrawElements);return;
+    }
     originalDrawElements(mode, count, type, indices);
 }
 static void __fastcall PerspectiveHook(uintptr_t output, uintptr_t unused, float fov, float aspect, float nearZ, float farZ) {
@@ -211,7 +218,8 @@ static BOOL WINAPI SwapHook(HDC dc, UINT planes) {
         overlay.RefreshAfterFocus();
     }
     overlayPass = true;
-    if (healthy && GetTickCount() - lastWorld < 500) overlay.Draw(dc, controller);
+    minimap.FinishFrame();
+    if (healthy && GetTickCount() - lastWorld < 500) overlay.Draw(dc, controller, minimap);
     // The reticle cannot reach its draw entry while native recovery or stale world frames suppress the overlay.
     else ReticleDiagnostics::Skip(healthy ? "world-frame-stale" : "controller-fault", 0, 0, GetTickCount() - lastWorld);
     overlayPass = false; nativeUIPhase = false;

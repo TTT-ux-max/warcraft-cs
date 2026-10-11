@@ -51,6 +51,13 @@ sweeps the player footprint against terrain, native bridge decks and solid model
 `MovementObstacles`. The obstacle adapter owns model/type caches and clears them on map changes.
 `GameplaySettings` loads movement tuning; the controller applies that snapshot on startup and F8.
 
+`NativeMinimap` filters projected native map batches and crops them into a context-owned texture, restores the world
+under the original map location, and composites the result after the FPS scope/weapon pass. It changes
+neither frame anchors nor map bounds/fog rules. `MinimapLayout` shares the new rectangle with `HudHints`
+so compact shortcut rows wrap before it. M follows the existing input mailbox; configuration supplies
+startup/F8 visibility and bounded size. Leaving FPS uses the unchanged native RTS map.
+Non-map console/portrait batches are rejected; rectangular level letterboxing stays black.
+
 The optional speed counter uses the same boundaries: `InputDispatcher` queues a V press,
 `ShooterController` owns session visibility and exposes horizontal speed in CS units, and `Overlay`
 draws the counter above status notices. `GameplaySettings` supplies the startup/F8 preference;

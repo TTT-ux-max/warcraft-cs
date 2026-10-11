@@ -140,6 +140,21 @@ int main() {
     assert(settings.logging.detailed && settings.logging.intervalMs==1000 && settings.logging.maxFileMB==8 && settings.logging.archiveCount==3);
     DeleteFileA(path.c_str());
     // Visibility settings reject malformed values and bound work to the world camera's range.
+    // Minimap preferences use the real INI parser and remain safe across repeated F8 snapshots.
+    const PercentCase sizes[]={{"10",10},{"25.5",25.5f},{"-5",10},{"200",40},{"nan",22},{"inf",22},{"",22},{"bad",22}};
+    for (const auto& test : sizes) {
+        {std::ofstream file(path);file<<"[Interface]\nMinimapSizePercent="<<test.value<<"\n";}
+        assert(GameplaySettings::Load(path).minimapSizePercent==test.expected);
+    }
+    for (const char* value : {"true","1","TRUE","broken","","nan"}) {
+        WritePrivateProfileStringA("Interface","ShowMinimap",value,path.c_str());
+        assert(GameplaySettings::Load(path).showMinimap);
+    }
+    for (const char* value : {"false","0","FALSE"}) {
+        WritePrivateProfileStringA("Interface","ShowMinimap",value,path.c_str());
+        assert(!GameplaySettings::Load(path).showMinimap);
+    }
+    DeleteFileA(path.c_str());assert(GameplaySettings::Load(path).showMinimap);
     const PercentCase distances[]={{"0",0},{"900",900},{"-10",0},{"99999",5000},{"nan",1200},{"broken",1200}};
     for (const auto& test : distances) {
         const auto sample=path+std::to_string(++index);

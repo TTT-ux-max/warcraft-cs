@@ -48,6 +48,19 @@ foreach ($preference in @('true','false')) {
     if ((Get-FileHash -LiteralPath $speedConfig).Hash -ne $speedBefore) { throw 'Speed migration is not idempotent.' }
 }
 if (!$text.Contains('ShowSpeed=false')) { throw 'Legacy config lacks the default speed counter key.' }
+if (!$text.Contains('ShowMinimap=true') -or !$text.Contains('MinimapSizePercent=22')) {throw 'Legacy config lacks minimap defaults.'}
+# Preserve explicit map visibility/size through migration and an idempotent second update.
+$mapConfig=Join-Path $folder 'custom-minimap.ini'
+@('[Interface]','ShowMinimap=false','MinimapSizePercent=31','ShowSpeed=true') | Set-Content -LiteralPath $mapConfig -Encoding ascii
+Update-GameplayConfig $template $mapConfig
+$mapText=Get-Content -LiteralPath $mapConfig -Raw
+foreach ($setting in @('ShowMinimap=false','MinimapSizePercent=31','ShowSpeed=true')) {
+    if (!$mapText.Contains($setting)) {throw "Minimap migration lost preference: $setting"}
+}
+if ([regex]::Matches($mapText,'(?m)^\[Interface\]').Count -ne 1) {throw 'Minimap migration duplicated Interface.'}
+$mapHash=(Get-FileHash -LiteralPath $mapConfig).Hash
+Update-GameplayConfig $template $mapConfig
+if ((Get-FileHash -LiteralPath $mapConfig).Hash -ne $mapHash) {throw 'Minimap migration is not idempotent.'}
 if (!$text.Contains('DisableFogOfWar=false')) { throw 'Legacy config lacks the default fog override key.' }
 # Movement upgrades retain personal jump tuning and add missing siblings exactly once.
 $customMovement=Join-Path $folder 'custom-movement.ini'

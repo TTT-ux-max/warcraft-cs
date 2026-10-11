@@ -1,5 +1,26 @@
 # Validation of the 0.1.0 source baseline
 
+## FPS minimap and compact HUD (feature branch, 2026-10-11)
+
+An ordinary build in the private disposable WarcraftCS-Bunnyhop-Test map displayed the native map
+terrain and markers at the top-right. M hid/restored it; an AWP scope retained the map; F6 restored
+the original bottom-left RTS minimap. F8 loaded `ShowMinimap=false` and size 31, M showed the larger
+map, and F8 restored true/22. Resizing and minimizing/restoring retained the map, weapon and aiming mark.
+The top hints appeared in three compact rows. Config was restored after testing, and saves/config/runtime
+were backed up before launch. No controller faults or reported GL errors occurred. Full campaigns and
+custom maps that relocate/hide their native minimap have not been exhaustively tested.
+The final production build was also checked in a separate BootyBay match: rectangular terrain and
+native markers remained visible, letterboxing was black, N changed native fog, M/F8 toggled/restored
+the map, an AWP scope retained it, and F6 restored RTS. Test sessions exited through Warcraft's own menus.
+
+Portable tests cover square screen bounds, narrow-window hint wrapping, real INI parsing, bounded/invalid
+sizes, missing/invalid visibility defaults and preservation/idempotence of upgrades. A hidden synthetic
+Win32/OpenGL context verifies native crop/display/hidden state and pixel-exact restoration of the world
+under the original map, using alternating pixel stripes. Native minimap GL verification is separate from
+`test-all.ps1`; run `tools/test-native-minimap.ps1` on Windows with a usable OpenGL context.
+That GL oracle also rejects a synthetic full-console batch, accepts native map edge overscan and
+checks that rectangular terrain leaves black letterboxing rather than revealing racial console art.
+
 ## 0.7.0 release consolidation (2026-10-10)
 
 All completed feature tips are ancestors of the consolidated release; the old crosshair patch is

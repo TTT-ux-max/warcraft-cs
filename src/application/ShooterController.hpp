@@ -57,6 +57,9 @@ public:
     // Fog changes follow the same input-to-simulation mailbox as the speed display.
     void RequestFogToggle() { fogToggleRequested_=true; }
     bool SpeedVisible() const { return showSpeed_; }
+    // Input queues the toggle; only the simulation tick changes the HUD preference.
+    void RequestMinimapToggle() { minimapToggleRequested_=true; }
+    bool MinimapVisible() const { return showMinimap_; }
     float DisplaySpeed() const { return movement_.Speed()/MovementPhysics::worldScale; }
     // Buy-menu events are consumed on Warcraft's simulation thread, never inside WindowProc.
     void RequestBuyToggle() { buyToggleRequested_=true; }
@@ -152,6 +155,7 @@ private:
     bool toggleRequested_ = false, menuRequested_ = false, refillRequested_ = false, allWeaponsRequested_=false;
     bool itemRequested_=false,settingsRequested_=false,itemNearby_=false;
     bool speedToggleRequested_=false,showSpeed_=false;
+    bool minimapToggleRequested_=false,showMinimap_=true;
     bool fogToggleRequested_=false,fogOfWarDisabled_=false;
     int squadRequested_=0;
     bool keys_[256] = {};

@@ -30,6 +30,7 @@ native/optional CS skies, bridge movement and corrected FPS rendering. Earlier c
 - WASD, jumping, crouching, acceleration, friction and weapon movement speeds inspired by CS.
 - Half-Life-style air strafing and held-Space bunnyhops; jump over low solids and fall from cliffs.
 - V toggles a horizontal speed counter; N toggles offline FPS fog and the unexplored mask.
+- M toggles a native minimap in the FPS top-right corner; its size and startup visibility are configurable.
 - Filled crosshair geometry and automatic control recovery after native campaign movies.
 - Classic AK/M4 and USP/AWP punch calculations, recoil recovery and burst behavior.
 - Primary and secondary melee attacks, locally imported CS sounds and a blood-free hit indicator.
@@ -183,6 +184,7 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | H / O / J | Your units: follow and fight / follow without attacking / release squad |
 | F8 | Reload settings |
 | V | Show/hide horizontal speed in CS units/s |
+| M | Show/hide the FPS minimap |
 | N | Disable/restore fog of war while in FPS |
 
 ## Configuration
@@ -246,6 +248,13 @@ Edit it and press F8 in FPS.
   the session, including across F6 switches; startup/F8 restores the INI value (`true`/`false`, also `1`/`0`).
   The counter uses CS/GoldSrc units/s, matching `MaxBunnySpeed`; vertical jump/fall velocity is excluded.
   Updates add missing keys and preserve custom values. The HUD omits basic WASD/reload/jump/crouch hints.
+- `[Interface] ShowMinimap=true` shows Warcraft's native minimap in the FPS top-right corner.
+  **M** toggles it for the session, including across F6 switches; startup/F8 restores the saved preference
+  (`true`/`false`, also `1`/`0`). Terrain, fog of war and native markers follow the current map's visibility.
+  `MinimapSizePercent=22` sets the square's side to 22% of window height (10..40, fractional values allowed).
+  F8 applies size changes live; missing/invalid values use the defaults and updates preserve custom values.
+  The FPS minimap is a display; use RTS for map clicks/orders. Native RTS layout and campaign bounds stay intact.
+  Top hints use three compact groups and wrap before the minimap; gold appears beside health/ammunition.
 - `[Interface] DisableFogOfWar=false` keeps map visibility by default (`true`/`false`, also `1`/`0`).
   Set `true` or press N in offline FPS to remove both explored fog and the unexplored black mask.
   N changes only the session; startup/F8 loads the saved preference. F6, menus and cinematics restore

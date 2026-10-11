@@ -148,8 +148,8 @@ void ShooterController::Disable(bool restoreCamera) {
     meleeContact_ = meleeReady_ = 0; recoil_.Reset();
     audio_.Stop(); stepDistance_ = 0;
     hits_.Clear(); refillRequested_ = false; allWeaponsRequested_=false; refillTick_ = 0;
-    // Discard pending V without losing the session's chosen display visibility.
-    itemRequested_=settingsRequested_=itemNearby_=speedToggleRequested_=false;squadRequested_=0;
+    // Discard pending display taps without losing the session's chosen visibility.
+    itemRequested_=settingsRequested_=itemNearby_=speedToggleRequested_=minimapToggleRequested_=false;squadRequested_=0;
     movement_.Stop();
     weaponWheel_.Reset(); // A partial notch must not survive leaving FPS.
     status_ = {};
@@ -173,7 +173,7 @@ void ShooterController::ResetMap() {
     std::fill(std::begin(keys_), std::end(keys_), false); lastShot_ = 0;
     audio_.Stop(); stepDistance_ = 0; reloadEnd_ = 0;
     menuRequested_ = false;
-    itemRequested_=settingsRequested_=itemNearby_=speedToggleRequested_=false;squadRequested_=0;ammoRecovery_.Reset();
+    itemRequested_=settingsRequested_=itemNearby_=speedToggleRequested_=minimapToggleRequested_=false;squadRequested_=0;ammoRecovery_.Reset();
     hits_.Clear(); refillRequested_ = false; allWeaponsRequested_=false; refillTick_ = 0; fixtureTarget_ = 0; blastFixtures_.clear();
     ResetLoadout();
 }
@@ -318,8 +318,10 @@ void ShooterController::SwitchWeapon(int slot) {
 void ShooterController::ReloadSettings() {
     // Replace one complete snapshot; stale fractional credit must not survive a percentage/scope change.
     settings_=GameplaySettings::Load(root_+"\\WarcraftCS.ini");
-    // F8 restores the saved preference; V is a session switch and never rewrites the player's INI.
+    // F8 restores saved display preferences; V/M are session switches and never rewrite the INI.
     showSpeed_=settings_.showSpeed;
+    showMinimap_=settings_.showMinimap;
+    wc3::Log("Minimap configured visible=%d sizePercent=%.1f",showMinimap_,settings_.minimapSizePercent);
     fogOfWarDisabled_=settings_.disableFogOfWar;
     wc3::Log("Fog of war configured disabled=%d",fogOfWarDisabled_);
     wc3::Log("Speed display configured visible=%d units=CS",showSpeed_);
@@ -537,11 +539,16 @@ void ShooterController::Tick(uintptr_t ui) {
     nativeSky_.Update(ui_,Visible() && settings_.nativeSky && !settings_.csSky,mapTileset_);
     nativeFog_.Update(Visible() && fogOfWarDisabled_);
     // A queued display tap cannot take effect after FPS is suspended or left.
-    if (!active_ || suspended_) { mouseLook_.Reset();weaponWheel_.Reset();itemRequested_=false;squadRequested_=0;speedToggleRequested_=fogToggleRequested_=false;return; }
+    if (!active_ || suspended_) { mouseLook_.Reset();weaponWheel_.Reset();itemRequested_=false;squadRequested_=0;speedToggleRequested_=fogToggleRequested_=minimapToggleRequested_=false;return; }
     if (settingsRequested_) { settingsRequested_=false;ReloadSettings(); }
     if (speedToggleRequested_) {
         speedToggleRequested_=false;showSpeed_=!showSpeed_;
         wc3::Log("Speed display toggled visible=%d units=CS",showSpeed_);
+    }
+    // One M press changes visibility without editing the player's persisted configuration.
+    if (minimapToggleRequested_) {
+        minimapToggleRequested_=false;showMinimap_=!showMinimap_;
+        wc3::Log("Minimap toggled visible=%d",showMinimap_);
     }
     if (fogToggleRequested_) {
         fogToggleRequested_=false;fogOfWarDisabled_=!fogOfWarDisabled_;

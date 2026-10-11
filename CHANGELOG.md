@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Add a native Warcraft minimap in the top-right corner of FPS, including terrain, fog and native markers; M toggles its session visibility.
+- Keep rectangular-map letterboxing black and restore the world beneath the original RTS map pixel for pixel; leaving FPS retains Warcraft's normal minimap layout.
+- Add `[Interface] ShowMinimap=true` and `MinimapSizePercent=22` (10..40% of window height), validated defaults, live F8 reload and preservation during config upgrades.
+- Compact the top shortcut hints into three groups, wrap them before the minimap on narrow windows, remove duplicate buy/ammo hints and move gold beside health/ammunition.
+
 ## 0.7.0 — 2026-10-10
 
 - Restore F6 and other mod controls after native campaign movies replace Warcraft's window; also recover a known native input-procedure reset and log attachment/destruction/recovery.
