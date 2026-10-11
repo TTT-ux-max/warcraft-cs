@@ -27,6 +27,8 @@ struct GameplaySettings {
     bool scaleFireRateFromAttackSpeed=false;
     // Weapon contacts use the controlled unit's native attack effects; F8 may opt out.
     bool enableAttackEffects=true;
+    // Nonphysical invulnerable effect units cannot shield enemies; F8 can restore legacy ray selection.
+    bool ignorePassableInvulnerableObjects=true;
     // Ordinary AWP damage is the default; instant finishing remains an explicit player opt-in.
     bool awpOneShot = false;
     // One percentage covers owned/allied units and buildings across firearms, melee and C4.

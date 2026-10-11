@@ -464,6 +464,12 @@ Firearms use their configured FPS range even on a melee hero. After the ray veri
 and terrain, only that contact's native impact range check is extended to its target distance.
 The hero's ordinary RTS range and native passive restrictions remain unchanged.
 
+`[Combat] IgnorePassableInvulnerableObjects=true` lets weapon rays continue through Locust effect
+units (including DotA Broodmother webs) and invulnerable noncolliding dummy units. Physical
+invulnerable units, heroes, buildings, terrain and destructable gates still intercept rays.
+Set it to `false` (or `0`) and press F8 to restore legacy selection; `true`/`1` enable the filter.
+Missing, empty or malformed values use `true`. Updates add the key while preserving custom values.
+
 Set `EnableAttackEffects=false` and press F8 to disable this attack-effect path. Direct damage keeps
 the unit's attack type and armor multiplier; map scripts listening to all damage can still run.
 Missing/empty/invalid values enable the feature; `true`/`false` and `1`/`0` are accepted. Updates add

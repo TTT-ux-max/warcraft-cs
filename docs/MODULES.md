@@ -154,3 +154,8 @@ Ordinary RTS, unrelated components, secondary attack ranges and preparation keep
 restores the original component only while the same actor still owns it. A handled miss never causes
 a second direct-damage hit. `ShooterController` selects this path after contact/friendly scaling; C4,
 destructables, explicit legacy AWP finishing and disabled/unavailable effects use the direct path.
+
+`WeaponTargetFilter` reads native Locust, immunity and live collision facts for confirmed ray
+candidates. The controller applies its configurable policy before selecting the nearest unit;
+skipped effects never shorten the ray. Unit type IDs and model filenames are not special-cased.
+Unknown collision facts remain opaque; heroes, structures and physical immune units retain collision.

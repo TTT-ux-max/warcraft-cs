@@ -339,6 +339,15 @@ int main() {
     assert(!GameplaySettings::Load(path).enableAttackEffects);
     WritePrivateProfileStringA("Combat","EnableAttackEffects","true",path.c_str());
     assert(GameplaySettings::Load(path).enableAttackEffects);DeleteFileA(path.c_str());
+    // The object filter follows the same validated on/off and live reload contract as native passives.
+    for(auto value : {"true","1","false","0","broken","","nan"}) {
+        {std::ofstream file(path);file<<"[Combat]\nIgnorePassableInvulnerableObjects="<<value<<"\n";}
+        assert(GameplaySettings::Load(path).ignorePassableInvulnerableObjects==(strcmp(value,"false")!=0 && strcmp(value,"0")!=0));
+    }
+    WritePrivateProfileStringA("Combat","IgnorePassableInvulnerableObjects","false",path.c_str());
+    assert(!GameplaySettings::Load(path).ignorePassableInvulnerableObjects);
+    WritePrivateProfileStringA("Combat","IgnorePassableInvulnerableObjects","true",path.c_str());
+    assert(GameplaySettings::Load(path).ignorePassableInvulnerableObjects);DeleteFileA(path.c_str());
     // Real INI reload can restore the purchase cap; malformed values keep unlimited purchases enabled.
     for(auto value : {"true","1","false","0","broken","","nan"}) {
         {std::ofstream file(path);file<<"[Loadout]\nUnlimitedBombPurchases="<<value<<"\n";}

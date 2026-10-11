@@ -52,3 +52,5 @@
 - Removed C4 from the default starting inventory.
 - Preserved F7 C4 grants and added unlimited repeat C4 purchases.
 - Fixed firearm hits failing beyond the hero's native attack range with weapon passives enabled.
+- Fixed Broodmother webs and nonphysical invulnerable effect units blocking weapon hits.
+- Added a configurable pass-through filter for nonphysical weapon obstacles.

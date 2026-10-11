@@ -659,3 +659,25 @@ Synthetic checks cover unchanged range before/after impact, other components/sec
 nearby contacts retaining larger native range, invalid distances, native misses without double
 damage and actor removal during callbacks. Combat, hitbox, spell, pursuit and walking regression
 suites pass. Private fixtures restore their DLL/config and close only their own process.
+
+### Nonphysical weapon obstacles (2026-10-12)
+
+The user's log identifies Broodmother's WebTarget model (o003) intercepting USP/knife contacts
+while remaining at300HP. In an approved disposable DotA scene, a revealed native web reproduces
+this with the filter disabled: the target behind it stays at684HP/254mana. F8 enables the filter;
+AK47/M4A1/USP/AWP hit the target at600 and apply learned Mana Break (254->214mana). Ordinary guns
+leave607.7HP; AWP leaves495.3HP. The actor stays atXY0/0 with order0. A GPU capture confirms the
+web remains rendered while the weapon ray skips it.
+
+An invulnerable colliding footman intercepts the ray and stays at420HP; the target behind it is
+untouched. SetUnitPathing(false) clears the live collision mask: the same type becomes transparent.
+An invulnerable hero remains opaque even with pathing disabled. Nearby knife damage still works.
+Synthetic classification checks protect vulnerable units, heroes, structures, positive collisions
+and unknown/malformed geometry. Real INI parsing, F8 transitions and repeated custom-value
+migrations pass; migration runs under both PowerShell7 and Windows PowerShell5.1. Hitbox and
+native attack adapter regressions pass. Ordinary DLLs exclude the opt-in scene commands.
+
+Fresh Locust units are absent from native range enumeration; the fixture uses the native map-style
+hide/show lifecycle to reproduce the user's enumerable web. An initial nearby-knife assertion
+incorrectly required a skip log for a web outside that ray, although target HP/mana already decreased.
+The corrected oracle checks the actual nearby contact outcome. Private DLL/config files are restored.

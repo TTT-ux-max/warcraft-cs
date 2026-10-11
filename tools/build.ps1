@@ -24,6 +24,7 @@ $sources += @('config/GameplaySettings.cpp','inventory/ItemPickup.cpp','squad/Sq
 $sources += '"' + (Join-Path $modRoot 'src/platform/NativeMovementGuard.cpp') + '"'
 # Attack-effect dispatch is isolated from controller input and native pursuit suppression.
 $sources += '"' + (Join-Path $modRoot 'src/platform/NativeWeaponAttack.cpp') + '"'
+$sources += '"' + (Join-Path $modRoot 'src/platform/WeaponTargetFilter.cpp') + '"'
 # Tree narrow-phase geometry is decoded independently of native widget enumeration and the controller.
 $sources += '"' + (Join-Path $modRoot 'src/geometry/TreeTrunkMesh.cpp') + '"'
 # Shared filled aiming geometry is compiled into both ordinary Player builds and scope rendering.

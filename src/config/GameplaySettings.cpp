@@ -23,6 +23,10 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     auto attackEffects=text("Combat","EnableAttackEffects","true");
     if(!_stricmp(attackEffects.c_str(),"false") || attackEffects=="0")result.enableAttackEffects=false;
     else if(_stricmp(attackEffects.c_str(),"true") && attackEffects!="1")wc3::Log("Invalid Combat.EnableAttackEffects; using true");
+    // Restore legacy object interception only on an explicit opt-out; malformed preferences keep the fix enabled.
+    auto transparent=text("Combat","IgnorePassableInvulnerableObjects","true");
+    if(!_stricmp(transparent.c_str(),"false") || transparent=="0")result.ignorePassableInvulnerableObjects=false;
+    else if(_stricmp(transparent.c_str(),"true") && transparent!="1")wc3::Log("Invalid Combat.IgnorePassableInvulnerableObjects; using true");
     // Bound diagnostic frequency/storage at the existing INI boundary, including malformed legacy values.
     auto detailed = text("Logging", "Detailed", "true");
     if (!_stricmp(detailed.c_str(), "false") || detailed == "0") result.logging.detailed = false;

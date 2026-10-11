@@ -2,6 +2,11 @@
 
 ## Unreleased - test branches
 
+- Fix bullets and melee contacts being intercepted by nonphysical effect units such as Broodmother
+  webs. `[Combat] IgnorePassableInvulnerableObjects=true` skips Locust units and invulnerable
+  noncolliding dummies; heroes, structures and physical immune bodies still block shots.
+  F8 reloads the switch; updates preserve custom values. Log skipped ray contacts.
+
 - Fix confirmed firearm hits being rejected beyond the hero's native attack range when passives
   are enabled. Scope the native range check to the verified FPS contact; retain ordinary RTS range,
   weapon/terrain ray limits, native passive eligibility and evasion handling. Log contact distance.

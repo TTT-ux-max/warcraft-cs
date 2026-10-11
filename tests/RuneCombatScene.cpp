@@ -1,6 +1,7 @@
 #include "RuneCombatScene.hpp"
 #include "BackgroundGameplay.hpp"
 #include "../src/platform/NativeSpellSlots.hpp"
+#include "../src/platform/WeaponTargetFilter.hpp"
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -37,7 +38,7 @@ void Buttons(uintptr_t base) {
 void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const char* root) {
     static std::vector<wc3::Handle> items;
     static std::vector<wc3::Handle> party;
-    static wc3::Handle enemy=0;static DWORD check=0,observeUntil=0;
+    static wc3::Handle enemy=0,blocker=0;static DWORD check=0,observeUntil=0;
     if ((!controller.Visible() && !BackgroundGameplay::Enabled()) || GetTickCount()-check<250) return;
     check=GetTickCount();auto unit=controller.TestUnit();
     std::string path=std::string(root)+"\\test-gameplay.request";
@@ -66,6 +67,29 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
         else if(BackgroundGameplay::Enabled() && command=="strike") {
             // Aim/target creation uses the existing private request; this exercises production contact damage.
             int slot=2;input>>slot;controller.TestStrike(slot);
+        }
+        else if(BackgroundGameplay::Enabled() && command=="blocker") {
+            // A separate disposable effect/physical body tests the production nearest-hit selection.
+            if(blocker && wc3::GetUnitTypeId(blocker))wc3::RemoveUnit(blocker);blocker=0;
+            std::string raw;float distance=150,fly=-1;int invulnerable=1,pathing=1,owner=12,reveal=0;input>>raw>>distance>>fly>>invulnerable>>pathing>>owner>>reveal;
+            if(raw.size()==4) {
+                int id=(raw[0]<<24)|(raw[1]<<16)|(raw[2]<<8)|raw[3];float facing=180;
+                float x=wc3::Real(wc3::GetUnitX(unit))+distance,y=wc3::Real(wc3::GetUnitY(unit));
+                blocker=wc3::CreateUnit(wc3::Player(owner>=0 && owner<=15 ? owner : 12),id,&x,&y,&facing);wc3::PauseUnit(blocker,TRUE);
+                using Switch=void (__cdecl*)(wc3::Handle,BOOL);
+                reinterpret_cast<Switch>(base+0x3C72F0)(blocker,invulnerable!=0);
+                reinterpret_cast<Switch>(base+0x3C5FA0)(blocker,pathing!=0);
+                if(fly>=0) {
+                    using Height=void (__cdecl*)(wc3::Handle,float*,float*);float rate=0;
+                    reinterpret_cast<Height>(base+0x3C5C60)(blocker,&fly,&rate);
+                }
+                // Map hide/show lifecycles can make a Locust effect enumerable without removing its ability.
+                // Reproduce that visible state in this fixture rather than altering the production group query.
+                if(reveal) {reinterpret_cast<Switch>(base+0x3CE730)(blocker,FALSE);reinterpret_cast<Switch>(base+0x3CE730)(blocker,TRUE);}
+                wc3::Log("fixture blocker unit=%08X type=%08X locust=%d transparent=%d fly=%.1f hp=%.1f visible=%d owner=%d",blocker,id,
+                    wc3::GetUnitAbilityLevel(blocker,0x416C6F63),WeaponTargetFilter::PassThrough(blocker,base),
+                    wc3::Real(wc3::GetUnitFlyHeight(blocker)),wc3::Real(wc3::GetUnitState(blocker,0)),wc3::IsUnitVisible(blocker,wc3::GetLocalPlayer()),owner);
+            }
         }
         else if(BackgroundGameplay::Enabled() && command=="passive") {
             // Stock abilities are supplied by the disposable map, never bundled with the mod.

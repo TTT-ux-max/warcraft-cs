@@ -7,6 +7,7 @@
 #include "../input/LookAngles.hpp"
 #include "../platform/FpsCombatGuard.hpp"
 #include "../platform/NativeWeaponAttack.hpp"
+#include "../platform/WeaponTargetFilter.hpp"
 #include "../economy/BuyAccess.hpp"
 #include "../presentation/BuyMenuLayout.hpp"
 #include "../platform/MapEnvironment.hpp"
@@ -395,6 +396,7 @@ void ShooterController::ReloadSettings() {
         settings_.heroDamage ? "hero" : "weapon",settings_.awpOneShot,settings_.runePickupRadius,settings_.friendlyFirePercent);
     // Distinguish a stored preference from the finishing rule actually active in this damage mode.
     wc3::Log("Attack effects enabled=%d AWP finishing active=%d",settings_.enableAttackEffects,settings_.FinishingAWP(WeaponSlots::AWP));
+    wc3::Log("Pass-through effect objects enabled=%d",settings_.ignorePassableInvulnerableObjects);
     // Log the validated snapshot, including prices/sky choices, rather than arbitrary raw INI contents.
     wc3::Trace("settings loadoutAll=%d bombs=%d/%d unlimitedBombPurchases=%d buyAccess=%d buyRadius=%.1f shops=%s csVolume=%.1f floatingText=%.1f squadRadius=%.1f follow=%.1f leash=%.1f maxUnits=%d csSky=%d nativeSky=%d defaultSky=%s",
         settings_.startAllWeapons, settings_.startBombs, settings_.maxBombs,settings_.unlimitedBombPurchases,int(settings_.buyAccess), settings_.buyRadius,
@@ -481,6 +483,11 @@ void ShooterController::Strike() {
         float origin[] = {x, y, z}, direction[] = {vx, vy, vz}, entry = 0;
         float padding = weapon_ == WeaponSlots::Sword ? 28.0f : 0;
         if (hitboxes_.Intersect(candidate, origin, direction, nearest, entry, padding)) {
+            // Skip native nonphysical effects without shortening the ray before the enemy behind them.
+            if(settings_.ignorePassableInvulnerableObjects && WeaponTargetFilter::PassThrough(candidate,gameBase_)) {
+                wc3::Log("shot pass-through unit=%08X type=%08X entry=%.1f",candidate,wc3::GetUnitTypeId(candidate),entry);
+                continue;
+            }
             nearest = entry; target = candidate;
         }
     }

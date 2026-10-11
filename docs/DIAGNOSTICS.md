@@ -136,3 +136,7 @@ Native contacts also record center-to-center `distance`. Confirmed FPS contacts 
 synchronous native impact range check to that distance; the production ray enforces weapon range
 and terrain first. Ordinary RTS attack range is unchanged. `substituted=0` can still represent a
 native cancellation or miss; it must not trigger a second direct-damage event.
+
+Settings record `Pass-through effect objects enabled`. Each intersected unit skipped by the
+nonphysical-object policy records `shot pass-through unit/type/entry`; the final `shot` still names
+the actual nearest physical target. The filter does not make immune bodies damageable.
