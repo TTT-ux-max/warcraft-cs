@@ -44,6 +44,10 @@ int main(int argc,char** argv) {
     Bounds3 standing={{-100,-100,0},{100,100,240}};
     auto bytes=Fixture();TreeTrunkMesh trunk;trunk.Load("Tree.mdx",bytes,standing);
     Require(trunk.IsTree() && trunk.TriangleCount()==12,"Only the tall root-connected trunk must remain");
+    Bounds3 movement;
+    Require(trunk.Bounds(movement) && movement.minimum[0]==-10 && movement.maximum[0]==10 &&
+        movement.minimum[1]==-10 && movement.maximum[1]==10 && movement.maximum[2]==200,
+        "Movement extents must exclude the wide canopy and death stump");
     float origin[]={-300,60,96},direction[]={1,0,0},entry=0;
     Require(IntersectBounds(standing,origin,direction,500,entry),"Original canopy box must reproduce the false blocker");
     Require(!trunk.Intersect(origin,direction,500,entry),"Enemy beside the trunk must not be blocked by the canopy box");
@@ -63,6 +67,9 @@ int main(int argc,char** argv) {
     Require(renamed.IsTree() && renamed.TriangleCount()==12,"EatTree animation identifies renamed tree imports");
     auto corrupt=bytes;corrupt.resize(corrupt.size()-1);trunk.Load("Tree.mdx",corrupt,standing);
     Require(trunk.IsTree() && !trunk.Intersect(localOrigin,localDirection,500,entry),"Malformed tree must never fall back to a canopy box");
+    Require(!trunk.Bounds(movement),"Malformed tree must not supply broad movement extents");
+    renamed.Load("NotVegetation.mdx",{},standing);
+    Require(!renamed.Bounds(movement),"Non-tree models must not acquire tree movement extents");
     // Optional owner-only assets verify the parser against real files without committing their contents.
     for (int i=1;i<argc;++i) {
         std::ifstream file(argv[i],std::ios::binary);std::vector<unsigned char> owned((std::istreambuf_iterator<char>(file)),{});
@@ -75,6 +82,8 @@ int main(int argc,char** argv) {
         }
         trunk.Load(argv[i],owned,standing);
         Require(bounds && trunk.IsTree() && trunk.TriangleCount()>0,"Owned stock tree must have decoded trunk geometry");
+        Require(trunk.Bounds(movement) && movement.maximum[0]-movement.minimum[0]<standing.maximum[0]-standing.minimum[0],
+            "Owned tree movement must shrink the canopy-sized extents");
         std::printf("PASS owned tree trunk geometry: %u triangles\n",unsigned(trunk.TriangleCount()));
     }
     std::puts("PASS tree canopy/stump exclusion, direct trunk hits, nearest-target ordering, double-sided picking, scale and corrupt model rejection");

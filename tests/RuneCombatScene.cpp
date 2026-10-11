@@ -1,4 +1,5 @@
 #include "RuneCombatScene.hpp"
+#include "BackgroundGameplay.hpp"
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -7,13 +8,18 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
     static std::vector<wc3::Handle> items;
     static std::vector<wc3::Handle> party;
     static wc3::Handle enemy=0;static DWORD check=0,observeUntil=0;
-    if (!controller.Visible() || GetTickCount()-check<250) return;
+    if ((!controller.Visible() && !BackgroundGameplay::Enabled()) || GetTickCount()-check<250) return;
     check=GetTickCount();auto unit=controller.TestUnit();
     std::string path=std::string(root)+"\\test-gameplay.request";
     if (GetFileAttributesA(path.c_str())!=INVALID_FILE_ATTRIBUTES) {
         std::ifstream file(path);std::string line;std::getline(file,line);file.close();DeleteFileA(path.c_str());
         std::istringstream input(line);std::string command;input>>command;
-        if (command=="hero" || command=="creep") {
+        // The background oracle uses the same controller mailboxes without sending desktop input.
+        if(BackgroundGameplay::Enabled() && command=="toggle")controller.RequestToggle();
+        else if(BackgroundGameplay::Enabled() && command=="spell") {int slot=0;input>>slot;controller.RequestSpell(slot-1);}
+        else if(BackgroundGameplay::Enabled() && command=="bars")controller.RequestHealthBarToggle();
+        else if(BackgroundGameplay::Enabled() && command=="minimap")controller.RequestMinimapToggle();
+        else if (command=="hero" || command=="creep") {
             // A native hero has an inventory, unlike an unupgraded starting worker.
             // Move the private actor away from the starting workers so squad membership has an exact oracle.
             float x=wc3::Real(wc3::GetUnitX(unit))-1000,y=wc3::Real(wc3::GetUnitY(unit)),facing=0;
@@ -63,7 +69,9 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
                 wc3::Log("fixture item=%08X type=%08X category=%d x=%.1f y=%.1f",item,id,wc3::GetItemType(item),x,y);
             }
         } else if (command=="enemy") {
-            float x=wc3::Real(wc3::GetUnitX(unit))+100,y=wc3::Real(wc3::GetUnitY(unit)),facing=180;
+            // A distant attacker reproduces pursuit as well as close retaliation in the disposable scene.
+            float distance=100;input>>distance;
+            float x=wc3::Real(wc3::GetUnitX(unit))+distance,y=wc3::Real(wc3::GetUnitY(unit)),facing=180;
             enemy=wc3::CreateUnit(wc3::Player(12),0x68666F6F,&x,&y,&facing);
             using Order=BOOL (__cdecl*)(wc3::Handle,int,wc3::Handle);
             auto order=reinterpret_cast<Order>(base+0x3C89D0);

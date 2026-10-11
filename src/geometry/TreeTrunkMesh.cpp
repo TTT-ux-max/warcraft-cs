@@ -98,3 +98,19 @@ bool TreeTrunkMesh::Intersect(const float* origin,const float* direction,float l
     }
     return hit;
 }
+bool TreeTrunkMesh::Bounds(Bounds3& result) const {
+    if (!tree_ || triangles_.empty()) return false;
+    Bounds3 bounds;
+    for (int axis=0;axis<3;++axis) {
+        bounds.minimum[axis]=std::numeric_limits<float>::max();
+        bounds.maximum[axis]=std::numeric_limits<float>::lowest();
+    }
+    // Movement uses the same standing trunk components as shots, excluding canopy cards and death stumps.
+    for (const auto& triangle:triangles_) for (const auto& point:triangle.vertices)
+        for (int axis=0;axis<3;++axis) {
+            bounds.minimum[axis]=std::min(bounds.minimum[axis],point[axis]);
+            bounds.maximum[axis]=std::max(bounds.maximum[axis],point[axis]);
+        }
+    for (int axis=0;axis<3;++axis) if (bounds.maximum[axis]<=bounds.minimum[axis]) return false;
+    result=bounds;return true;
+}
