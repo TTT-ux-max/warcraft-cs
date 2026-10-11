@@ -1,4 +1,5 @@
 #include "SquadController.hpp"
+#include "SquadFormation.hpp"
 #include "../platform/FpsCombatGuard.hpp"
 #include <algorithm>
 #include <cmath>
@@ -31,7 +32,7 @@ void SquadController::Capture(wc3::Handle leader,bool passive,const GameplaySett
     for (auto& m:members_) { wc3::IssueImmediateOrderById(m.unit,Stop);m.orderTick=0; }
     wc3::Log("squad capture mode=%s count=%u radius=%.1f",passive_ ? "follow" : "combat",unsigned(members_.size()),radius);
 }
-void SquadController::Tick(wc3::Handle leader,const GameplaySettings& settings,DWORD now,bool travel) {
+void SquadController::Tick(wc3::Handle leader,const GameplaySettings& settings,DWORD now,bool travel,float yaw,float vx,float vy) {
     wc3::Handle owner=wc3::GetLocalPlayer();
     members_.erase(std::remove_if(members_.begin(),members_.end(),[&](const Member& m) { return !Valid(m,owner) || m.unit==leader; }),members_.end());
     float x=wc3::Real(wc3::GetUnitX(leader)),y=wc3::Real(wc3::GetUnitY(leader));
@@ -42,20 +43,23 @@ void SquadController::Tick(wc3::Handle leader,const GameplaySettings& settings,D
         if (passive_) FpsCombatGuard::CancelAttacks(m.unit);
         // Transport/script hiding suspends travel to stale leader coordinates, while passive followers still avoid attacks.
         if (!travel) continue;
-        if (now-m.orderTick<300) continue;
+        if (now-m.orderTick<settings.squadOrderIntervalMs) continue;
         float ux=wc3::Real(wc3::GetUnitX(m.unit)),uy=wc3::Real(wc3::GetUnitY(m.unit));
         float distance=std::hypot(ux-x,uy-y);
-        float angle=float(i)*2.39996323f,ring=settings.squadFollowDistance+float(i/8)*60;
-        float tx=x+std::cos(angle)*ring,ty=y+std::sin(angle)*ring;
+        auto destination=SquadFormation::Destination(i,x,y,ux,uy,yaw,vx,vy,settings.squadFollowDistance,
+            settings.squadClearance,settings.squadYieldAhead,settings.squadRearFormation,settings.squadYield);
+        float tx=destination.x,ty=destination.y;
         float targetDelta=std::hypot(tx-m.targetX,ty-m.targetY);int order=wc3::GetUnitCurrentOrder(m.unit);
         // Combat attack-move lets units acquire enemies naturally. An active fight is kept until the leash is exceeded.
         bool fighting=!passive_ && FpsCombatGuard::HasAttackTarget(m.unit);
-        if (fighting && distance<settings.squadLeash) continue;
-        bool outside=std::hypot(tx-ux,ty-uy)>90;
-        if (outside && (!m.orderTick || targetDelta>75 || order!=(passive_ ? Move : Attack) || distance>settings.squadLeash)) {
-            BOOL accepted=wc3::IssuePointOrderById(m.unit,passive_ ? Move : Attack,&tx,&ty);
-            m.targetX=tx;m.targetY=ty;m.orderTick=now;
-            wc3::Log("squad order unit=%08X mode=%s accepted=%d x=%.1f y=%.1f",m.unit,passive_ ? "follow" : "combat",accepted,tx,ty);
+        if (fighting && distance<settings.squadLeash && !destination.yielding) continue;
+        int travelOrder=passive_ || destination.yielding ? Move : Attack;
+        bool outside=std::hypot(tx-ux,ty-uy)>(destination.yielding ? 20.f : 60.f);
+        if (outside && (!m.orderTick || targetDelta>40 || m.yielding!=destination.yielding || order!=travelOrder || distance>settings.squadLeash)) {
+            // Yielding uses Move even in combat mode so an attack-move cannot immediately reacquire in the corridor.
+            BOOL accepted=wc3::IssuePointOrderById(m.unit,travelOrder,&tx,&ty);
+            m.targetX=tx;m.targetY=ty;m.orderTick=now;m.yielding=destination.yielding;
+            wc3::Log("squad order unit=%08X mode=%s yielding=%d accepted=%d x=%.1f y=%.1f",m.unit,passive_ ? "follow" : "combat",destination.yielding,accepted,tx,ty);
         }
     }
 }
