@@ -8,6 +8,9 @@
 #include "../economy/BuyAccess.hpp"
 #include "../presentation/BuyMenuLayout.hpp"
 #include "../platform/MapEnvironment.hpp"
+#ifdef WCS_GAMEPLAY_TEST
+#include "../../tests/BackgroundGameplay.hpp"
+#endif
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -95,7 +98,13 @@ void ShooterController::UpdateBuyMenu() {
     if (wasBuying && !Buying()) { mouseLook_.Reset();suppressFire_=true; }
     buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;
 }
-bool ShooterController::Down(int key) const { return key>0 && key<256 && (GetAsyncKeyState(key) & 0x8000) != 0; }
+bool ShooterController::Down(int key) const {
+#ifdef WCS_GAMEPLAY_TEST
+    // Background fixtures must never interpret keys typed into the user's other applications.
+    if(BackgroundGameplay::Enabled())return false;
+#endif
+    return key>0 && key<256 && (GetAsyncKeyState(key) & 0x8000) != 0;
+}
 bool ShooterController::Pressed(int key) { if(key<=0 || key>=256)return false;bool down = Down(key), rising = down && !keys_[key]; keys_[key] = down; return rising; }
 const char* ShooterController::Sequence(const char* name) const {
     // The exported M4/USP body is unsilenced, so pose and shot sound must agree.
@@ -209,7 +218,11 @@ void ShooterController::AimAndMove(float dt) {
     if (status_.contained || status_.hidden) { mouseLook_.Reset();movement_.Stop(); stepDistance_ = 0; return; }
     // Mouse capture occurs only in the foreground and only after the player enables FPS.
     float dx=0,dy=0;
-    if (Buying()) mouseLook_.Reset();else mouseLook_.Sample(dx,dy);
+    bool sampleMouse=!Buying();
+#ifdef WCS_GAMEPLAY_TEST
+    if(BackgroundGameplay::Enabled())sampleMouse=false;
+#endif
+    if (!sampleMouse) mouseLook_.Reset();else mouseLook_.Sample(dx,dy);
     if (!status_.incapacitated && !Buying()) {
         float sensitivity = scopeLevel_ == 2 ? 0.009f : Scoped() ? 0.035f : 0.14f;
         LookAngles::Apply(yaw_,pitch_,dx,dy,sensitivity);
@@ -533,7 +546,11 @@ void ShooterController::Tick(uintptr_t ui) {
     tick_=frameTime;
     DWORD foregroundPid = 0; GetWindowThreadProcessId(GetForegroundWindow(), &foregroundPid);
     if (bombs_.Tick(audio_) && Visible()) hits_.Record();
-    if (foregroundPid != GetCurrentProcessId()) {
+    bool requireForeground=true;
+#ifdef WCS_GAMEPLAY_TEST
+    requireForeground=!BackgroundGameplay::Enabled();
+#endif
+    if (requireForeground && foregroundPid != GetCurrentProcessId()) {
         // Drop background packets; refocusing establishes a fresh cursor anchor without a view jump.
         mouseLook_.Reset();
         weaponWheel_.Reset();

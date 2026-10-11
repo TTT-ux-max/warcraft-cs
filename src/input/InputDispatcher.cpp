@@ -1,7 +1,16 @@
 #include "InputDispatcher.hpp"
+#ifdef WCS_GAMEPLAY_TEST
+#include "../../tests/BackgroundGameplay.hpp"
+#endif
 #include "../application/ShooterController.hpp"
 
 std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM key,LPARAM data,bool healthy) {
+#ifdef WCS_GAMEPLAY_TEST
+    // A background oracle accepts only its file mailbox, including when its window briefly becomes active.
+    if(BackgroundGameplay::Enabled() && (message==WM_INPUT ||
+        (message>=WM_KEYFIRST && message<=WM_KEYLAST) || (message>=WM_MOUSEFIRST && message<=WM_MOUSELAST)))
+        return message==WM_INPUT ? DefWindowProcA(window,message,key,data) : 0;
+#endif
     const auto& bindings=controller_.Settings().shortcuts;
     auto match=[&](ShortcutAction action) {return bindings.Matches(action,int(key));};
     bool down=message==WM_KEYDOWN || message==WM_SYSKEYDOWN;

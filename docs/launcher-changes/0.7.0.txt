@@ -29,3 +29,4 @@
 - Added bottom-right spell icons with configured shortcut labels.
 - Added live native spell cooldowns and passive/unlearned indicators.
 - Added configurable spell panel visibility and icon size.
+- Fixed gradual enemy approach from lingering native attack targets.

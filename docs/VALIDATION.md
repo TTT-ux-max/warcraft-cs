@@ -545,7 +545,17 @@ its RGB order. Four privately extracted stock icons decode at 64x64 and match in
 inspection. Real INI parsing tests cover HUD defaults, malformed values, bounds and reload;
 PowerShell 7/5.1 migrations preserve visibility/size preferences and remain idempotent.
 
-The x86 fixture DLL builds. Interactive verification is pending: the separate Warcraft copy
-displays "Warcraft III was unable to initialize" while the user's existing game remains open.
-Only the two owned test processes were closed, and their private DLL/config snapshots were restored.
-The new private map retains normal acquisition range, unlike the earlier pursuit fixture.
+The separate owned 1.26a map now verifies the guard with normal acquisition range, incoming enemy
+attacks and repeated scripted chase orders. All 22 enemy telemetry samples retain XY=(2.7,0.1)
+while hero HP decreases from 1375 to 1358.8; enemy HP stays 420. The four actual 64x64 map/game
+icons render alongside the native minimap and shared ally/enemy bars, and the minimap switch works.
+First-slot Blizzard (listed fifth in this map) completes as native order 852089. The actual timer
+samples decrease 5.38, 4.28, 3.20, 2.10, 1.00, 0.00 seconds; the screenshot shows 3.6s beneath its
+darkened icon. No controller fault or GL error appears. The private DLL/INI are restored and the
+owned test process closes. The earlier failed launches did not touch the user's game or saves.
+
+The opt-in `-TestGameplay` fixture can use `WCS_BACKGROUND_TEST=1` in its child process environment
+to verify the real game without taking desktop input. It disables keyboard/mouse reads and input
+dispatch, allows background game-thread updates and accepts toggle/spell/bars/minimap mailbox
+commands. The successful trial includes 21 FPS summaries with focus=0. Ordinary builds exclude
+this switch and all gameplay fixture commands; their focus/input behavior remains unchanged.
