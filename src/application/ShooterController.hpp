@@ -53,6 +53,8 @@ public:
     bool BlocksPassiveAttack(uintptr_t attack) const { return Visible() && squad_.BlocksAttack(attack); }
     size_t SquadCount() const { return squad_.Count(); }
     bool SquadPassive() const { return squad_.Passive(); }
+    // Explicit spell approach/channeling may use the native motor; idle FPS never does.
+    bool NativeCastMovement() const { return Visible() && spells_.Active(); }
     void RequestSettingsReload() { settingsRequested_=true; }
     // Queue the display switch for the simulation thread, like the other FPS controls.
     void RequestSpeedToggle() { speedToggleRequested_=true; }

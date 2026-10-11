@@ -30,3 +30,9 @@
 - Added live native spell cooldowns and passive/unlearned indicators.
 - Added configurable spell panel visibility and icon size.
 - Fixed gradual enemy approach from lingering native attack targets.
+- Fixed idle hero movement caused by the native walking motor.
+- Added rear squad formations and sideways yielding to the player.
+- Added configurable squad clearance and response settings.
+- Fixed custom-map spell slots and live ability replacement icons.
+- Added native toggle icons, mana states and radial spell cooldowns.
+- Fixed native target handling during Avatar and other transformations.

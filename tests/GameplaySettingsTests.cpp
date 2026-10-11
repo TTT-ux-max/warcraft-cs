@@ -294,5 +294,14 @@ int main() {
     movement.Step(MovementStrafeInput(movement,6),1.f/60,250);
     assert(movement.Speed()<=450.01f);
     DeleteFileA(path.c_str());
+    // New squad parameters use the real INI boundary; live snapshots clamp invalid distances/refresh rates.
+    {std::ofstream file(path);file<<"[Squad]\nRearFormation=false\nYieldToPlayer=0\nPlayerClearance=9999\nYieldAheadDistance=2\nOrderIntervalMs=0\n";}
+    settings=GameplaySettings::Load(path);
+    assert(!settings.squadRearFormation && !settings.squadYield && settings.squadClearance==300 && settings.squadYieldAhead==300 && settings.squadOrderIntervalMs==50);
+    {std::ofstream file(path);file<<"[Squad]\nRearFormation=broken\nYieldToPlayer=nan\nPlayerClearance=nan\nYieldAheadDistance=inf\nOrderIntervalMs=bad\n";}
+    settings=GameplaySettings::Load(path);
+    assert(settings.squadRearFormation && settings.squadYield && settings.squadClearance==100 && settings.squadYieldAhead==350 && settings.squadOrderIntervalMs==150);
+    WritePrivateProfileStringA("Squad","PlayerClearance","160",path.c_str());
+    assert(GameplaySettings::Load(path).squadClearance==160);DeleteFileA(path.c_str());
     return 0;
 }

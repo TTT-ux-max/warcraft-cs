@@ -99,7 +99,22 @@ FPS attack guards log validated hook installation for native validation/dispatch
 map orders. Bounded `FPS blocked native attack` traces identify rejection phases; existing cancellation
 records still report cleanup of a lingering native target. Spell components keep their own diagnostics.
 
-`FPS native attack target guard installed` reports the additional native target hook. Sampled
+`FPS native attack target lookup installed` reports the forwarding native target hook. Sampled
 `spell HUD slot` records include rawcode, learned level, passive status, timer support, live remaining
 seconds and Art path. `Spell icon loaded` reports archive decode/upload success, dimensions and path
 once per map/context cache entry. A missing/unsupported icon remains an empty framed slot.
+
+The native walking guard separately reports verified/installed motor interception and bounded
+`FPS blocked native walking` records with the caller offset. An idle actor may previously drift
+with order=0 and mod speed=0; compare successive XY samples rather than relying on orders alone.
+The stats getter and explicitly owned spell approach retain native speed; no persistent speed/root
+field is modified. Squad order records include `yielding`, accepted native result and destination.
+
+Spell HUD samples additionally report total cooldown, matched native command button, mana shortage
+and disabled state. Actor-level definitions supply cost/duration when an unavailable button drops
+its native object reference. A remaining timer is always read from Warcraft's simulation clock.
+Live command art and the current actor's ability chain account for toggles and map replacements.
+
+The target lookup preserves its native return value: Warcraft's morph/combat update dereferences
+retained targets without a null check. Suppression belongs to order dispatch and the walking motor;
+fabricating a null target can crash a transformation such as Avatar.

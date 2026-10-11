@@ -21,6 +21,7 @@ $sources = @('platform/WarcraftApi.cpp', 'input/MouseLook.cpp', 'movement/Moveme
 # Native spell fixtures are opt-in and are excluded from the installed normal build.
 # Item pickup and temporary native squad policies remain independent of shooter input/rendering.
 $sources += @('config/GameplaySettings.cpp','inventory/ItemPickup.cpp','squad/SquadController.cpp','platform/FpsCombatGuard.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
+$sources += '"' + (Join-Path $modRoot 'src/platform/NativeMovementGuard.cpp') + '"'
 # Tree narrow-phase geometry is decoded independently of native widget enumeration and the controller.
 $sources += '"' + (Join-Path $modRoot 'src/geometry/TreeTrunkMesh.cpp') + '"'
 # Shared filled aiming geometry is compiled into both ordinary Player builds and scope rendering.
@@ -45,6 +46,8 @@ $sources += '"' + (Join-Path $modRoot 'src/platform/NativeCameraFarClip.cpp') + 
 $sources += @('platform/UnitHealthBars.cpp','presentation/HealthBarRenderer.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 # Spell state comes from native timers; owned archive icons are decoded/uploaded by separate presentation adapters.
 $sources += @('platform/NativeAbilityInfo.cpp','platform/SpellIconImage.cpp','presentation/SpellHudView.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
+$sources += '"' + (Join-Path $modRoot 'src/platform/NativeAbilitySlots.cpp') + '"'
+$sources += '"' + (Join-Path $modRoot 'src/platform/NativeCommandCard.cpp') + '"'
 # Keyboard metadata and native spell targeting/order ownership are separate from the application coordinator.
 $sources += @('input/ShortcutBindings.cpp','config/HeroSpellSlots.cpp','platform/NativeSpellSlots.cpp','platform/SpellAim.cpp','platform/SpellCaster.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 $sources += '"' + (Join-Path $modRoot 'src/platform/MovementObstacles.cpp') + '"'

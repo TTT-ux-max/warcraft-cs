@@ -42,6 +42,9 @@ struct GameplaySettings {
     float csVolumePercent=100;
     // Recruitment and spacing are configurable without rewriting map data or unit ownership.
     float squadRadius=600,squadFollowDistance=180,squadLeash=900;
+    bool squadRearFormation=true,squadYield=true;
+    float squadClearance=100,squadYieldAhead=350;
+    unsigned squadOrderIntervalMs=150;
     int squadMaxUnits=24;
     // Gold economy and loadout are per-map; reloading settings cannot mint another starting kit.
     bool startAllWeapons=false;

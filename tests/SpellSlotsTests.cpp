@@ -38,6 +38,10 @@ int main() {
     slots.LoadPositions("[B004]\nResearchbuttonpos=0,0\n");
     spells=slots.ForUnit(HeroSpellSlots::Rawcode("H001"),[](int id){return id==HeroSpellSlots::Rawcode("B001");});
     assert(spells[0]==HeroSpellSlots::Rawcode("B001"));
+    // Attribute bonus lives on a separate research row; a relative passive import still stays inert.
+    slots.LoadPositions("[B005]\nResearchbuttonpos=0,1\nArt=PassiveButtons\\BTNStats.blp\n");
+    assert(slots.Passive(HeroSpellSlots::Rawcode("B005")));
+    spells=slots.ForUnit(HeroSpellSlots::Rawcode("H001"));assert(spells[0]!=HeroSpellSlots::Rawcode("B005"));
     slots.LoadUnits("broken");assert((slots.ForUnit(HeroSpellSlots::Rawcode("H000"))==std::array<int,4>{}));
     std::puts("PASS shortcut parsing/conflicts/swaps and owned-table hero spell slot metadata.");
 }

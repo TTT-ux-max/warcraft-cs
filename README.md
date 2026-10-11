@@ -264,6 +264,11 @@ Edit it and press F8 in FPS.
   firearms, both melee attacks and C4 (including its planter). Range: 0вЂ“100; 0 disables allied damage,
   100 applies full damage. Press F8 to reload; C4 retains the settings from when it was planted.
 - `[Squad] RecruitRadius`, `MaxUnits`, `FollowDistance` and `CombatLeash` control squad behavior.
+  `RearFormation=true` keeps destinations behind the player. `YieldToPlayer=true` sends followers
+  left/right before they rejoin when they enter your travel corridor. `PlayerClearance=100` (60..300)
+  and `YieldAheadDistance=350` (clearance..1000) are Warcraft units. `OrderIntervalMs=150` (50..1000)
+  controls response frequency. All reload with F8 and survive launcher updates; native pathfinding
+  still governs travel around obstacles.
 - `[Loadout] Mode=melee` starts each map with a loaded USP, knife, sword and C4; `Mode=all` grants all weapons
   with their initial ammunition. `BombCount=20` sets starting charges; `MaxBombs=100` caps carried
   charges (0вЂ“1000). F6/F8 and changing the controlled unit never grant another starting kit.
@@ -296,6 +301,10 @@ Edit it and press F8 in FPS.
   adds the live remaining cooldown. `SpellIconSizePercent=7` controls icon size (4..14% of window height).
   Art comes from your current map/game. `LV0` marks an unlearned spell, `PASS` a passive,
   `EMPTY` an unmapped slot, and `?` an unsupported native timer. Rejected casts do not start a fake timer.
+    Icons follow the current native command button (including toggle art), skill level and replacement
+    abilities. A native cooldown sweep/countdown updates after casts/resets; insufficient mana tints
+    active skills blue and shows `NO MANA`, while disabled skills dim. Other selected units and the
+    research submenu cannot overwrite the controlled hero's icons.
   F8 reloads these settings and shortcuts; updates preserve custom values.
   **M** toggles it for the session, including across F6 switches; startup/F8 restores the saved preference
   (`true`/`false`, also `1`/`0`). Terrain, fog of war and native markers follow the current map's visibility.

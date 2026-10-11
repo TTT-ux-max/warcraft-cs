@@ -126,6 +126,15 @@ and delegates JPEG/PNG to Windows WIC. `SpellHudView` owns context/map-specific 
 while `SpellHudLayout` bounds the bottom-right row independently of the engine. No game art is packaged.
 The controller samples state on the game thread; rendering keeps no native ability pointer.
 
+`NativeMovementGuard` intercepts the actor's native walking motor without writing unit speed/root
+counters. The native stats call path, explicit spell approach, other units and RTS remain native.
+`SquadFormation` computes rear slots and side escape waypoints independently of Warcraft;
+`SquadController` issues bounded native travel orders and retains pathfinding/ownership checks.
+`NativeAbilitySlots` samples the live ability chain; `NativeAbilityInfo` reads object-editor research
+positions/art even for unlearned skills. `NativeCommandCard` matches actual actor-owned ability
+objects before reading current art and mana costs. `SpellCooldownWedge` supplies bounded radial
+geometry from native remaining/default cooldown values.
+
 The combined FPS overlay draws health bars against retained world depth before the weapon pass,
 then composites the captured native minimap and wraps shortcut hints using the current bindings.
 NativeMinimap prevents native map batches from writing world depth; ShortcutBindings owns its M

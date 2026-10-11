@@ -5,7 +5,7 @@ $vc=& 'C:/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe' -la
 $environment=Join-Path $vc 'VC/Auxiliary/Build/vcvars32.bat'
 # Real production modules run with synthetic tables/orders/worlds, without game files or keyboard focus.
 # Attack dispatch regressions also verify that spell components keep their native validation path.
-$cases=@(@('SpellSlotsTests','config/HeroSpellSlots.cpp','input/ShortcutBindings.cpp'),@('SpellCasterTests','platform/SpellCaster.cpp'),@('SpellAimTests','platform/SpellAim.cpp'),@('FpsCombatGuardTests','platform/FpsCombatGuard.cpp'))
+$cases=@(@('SpellSlotsTests','config/HeroSpellSlots.cpp','input/ShortcutBindings.cpp'),@('SpellCasterTests','platform/SpellCaster.cpp'),@('SpellAimTests','platform/SpellAim.cpp'),@('FpsCombatGuardTests','platform/FpsCombatGuard.cpp'),@('NativeMovementGuardTests','platform/NativeMovementGuard.cpp'),@('SquadFormationTests'))
 $commands=@('@echo off',('call "'+$environment+'" >nul'),'if errorlevel 1 exit /b 1')
 foreach($case in $cases) {
     $sources=@('"'+(Join-Path $root ('tests/'+$case[0]+'.cpp'))+'"')

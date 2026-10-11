@@ -8,6 +8,13 @@ int HeroSpellSlots::Rawcode(const std::string& text) {
     if(text.size()!=4)return 0;
     unsigned result=0;for(unsigned char c:text)result=(result<<8)|c;return int(result);
 }
+void HeroSpellSlots::Presentation(int ability,int column,int row,const std::string& icon) {
+    // Engine-resolved object-editor overrides fill metadata missing from SLK/AbilityFunc text.
+    positions_[ability]=row==0 ? column : -1;
+    if(icon.empty())return;icons_[ability]=icon;
+    auto lower=icon;for(auto& c:lower)c=char(std::tolower(static_cast<unsigned char>(c)));
+    if(lower.find("passivebuttons\\")!=std::string::npos)passive_.insert(ability);else passive_.erase(ability);
+}
 void HeroSpellSlots::LoadUnits(const std::string& slk) {
     // SYLK cells inherit X/Y coordinates; select named columns rather than assuming table widths.
     units_.clear();int x=1,y=1,idColumn=0,listColumn=0;
@@ -47,12 +54,16 @@ void HeroSpellSlots::LoadPositions(const std::string& text) {
             icons_[id]=icon;
             // Stock passive buttons can expose a native order ID that accepts a no-op; keep their slots inert.
             auto art=line.substr(4);for(auto& c:art)c=char(std::tolower(static_cast<unsigned char>(c)));
-            if(art.find("\\passivebuttons\\")!=std::string::npos)passive_.insert(id);else passive_.erase(id);
+            if(art.find("passivebuttons\\")!=std::string::npos)passive_.insert(id);else passive_.erase(id);
         }
         if(id && line.rfind("Researchbuttonpos=",0)==0) {
             const char* first=line.c_str()+18;char* end=nullptr;long column=std::strtol(first,&end,10);
             // Remember extra/hidden columns too; they must not fall back into the four spell controls.
-            if(end!=first && *end==',' && column>=-16 && column<16)positions_[id]=int(column);
+            if(end!=first && *end==',' && column>=-16 && column<16) {
+                char* rowEnd=nullptr;long row=std::strtol(end+1,&rowEnd,10);
+                // DotA's attribute bonus is column zero on the second research row, not the first skill.
+                if(rowEnd!=end+1)positions_[id]=row==0 ? int(column) : -1;
+            }
         }
     }
 }

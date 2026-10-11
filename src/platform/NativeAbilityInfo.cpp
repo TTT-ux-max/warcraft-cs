@@ -20,7 +20,18 @@ bool Timer(uintptr_t at) {
         Text(type+8)==".?AVCAgentTimer@@";
 }
 }
-void NativeAbilityInfo::Read(uintptr_t ability,SpellHudSlot& slot) {
+bool NativeAbilityInfo::Definition(uintptr_t base,int ability,int& column,int& row,std::string& icon) {
+    if(!base || !ability)return false;
+    const unsigned char signature[]={0x51,0x53,0x8B,0xD9,0x57};
+    if(std::memcmp(reinterpret_cast<void*>(base+0x32C8E0),signature,sizeof(signature)))return false;
+    using UI=uintptr_t (__thiscall*)(int);
+    uintptr_t ui=reinterpret_cast<UI>(base+0x32C8E0)(ability),items=0,art=0;unsigned count=0;
+    if(!Load(ui+0x60,column) || !Load(ui+0x64,row) || column<-16 || column>16 || row<-16 || row>16)return false;
+    // Native definitions include war3map.w3a and runtime changes even for skills not yet learned.
+    if(Load(ui+0xB0,count) && count>0 && count<=100 && Load(ui+0xB4,items) && Load(items,art))icon=Text(art);
+    return true;
+}
+void NativeAbilityInfo::Read(uintptr_t ability,SpellHudSlot& slot,float mana) {
     if(!ability)return;
     uintptr_t data=0,ui=0,items=0,art=0;unsigned levels=0;
     // The native per-level Art array includes custom object editor/runtime overrides.
@@ -29,8 +40,19 @@ void NativeAbilityInfo::Read(uintptr_t ability,SpellHudSlot& slot) {
         Load(items+sizeof(uintptr_t)*size_t(std::clamp(slot.level,1,int(levels))-1),art)) {
         auto icon=Text(art);if(!icon.empty())slot.icon=icon;
     }
+    // Disabled buttons can lose their ability reference; retain the actor's native level costs as a fallback.
+    unsigned count=0;uintptr_t definitions=0;
+    if(slot.level>0 && Load(data+0x50,count) && count>0 && count<=100 && unsigned(slot.level)<=count && Load(data+0x54,definitions)) {
+        uintptr_t current=definitions+size_t(slot.level-1)*0x68;int cost=0;float cooldown=0;
+        if(Load(current+0x10,cost) && cost>=0 && cost<=1000000 && std::isfinite(mana) && mana>=0)slot.noMana=float(cost)>mana+.01f;
+        if(Load(current+0x14,cooldown) && std::isfinite(cooldown) && cooldown>0 && cooldown<=86400)slot.cooldownTotal=cooldown;
+    }
     uintptr_t running=0,clock=0;
     if(!Timer(ability+0xD0))return;
+    // The native current-level cooldown supports Warcraft's radial progress, including runtime overrides.
+    float total=0;int disabled=0;
+    if(Load(ability+0xB4,total) && std::isfinite(total) && total>0 && total<=86400)slot.cooldownTotal=total;
+    if(Load(ability+0x40,disabled) && disabled>=0 && disabled<100000)slot.disabled=disabled>0;
     slot.cooldownKnown=true;slot.cooldown=0;
     if(!Load(ability+0xDC,running)) {slot.cooldownKnown=false;return;}
     if(!running)return;

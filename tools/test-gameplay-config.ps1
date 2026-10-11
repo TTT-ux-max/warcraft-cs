@@ -149,3 +149,15 @@ foreach($section in @('Shortcuts','Spells')) {
 $shortcutsBefore=(Get-FileHash -LiteralPath $customShortcuts).Hash
 Update-GameplayConfig $template $customShortcuts
 if((Get-FileHash -LiteralPath $customShortcuts).Hash -ne $shortcutsBefore) {throw 'Shortcut/spell migration is not idempotent.'}
+# Preserve custom squad preferences and insert the new rear/yield settings once in the existing section.
+$customSquad=Join-Path $folder 'custom-squad.ini'
+@('[Squad]','FollowDistance=240','RearFormation=false','PlayerClearance=160','OrderIntervalMs=250') | Set-Content -LiteralPath $customSquad -Encoding ascii
+Update-GameplayConfig $template $customSquad
+$squadText=Get-Content -LiteralPath $customSquad -Raw
+foreach($setting in @('FollowDistance=240','RearFormation=false','PlayerClearance=160','OrderIntervalMs=250','YieldToPlayer=true','YieldAheadDistance=350')) {
+    if(!$squadText.Contains($setting)){throw "Squad migration lost preference/default: $setting"}
+}
+if([regex]::Matches($squadText,'(?m)^\[Squad\]').Count -ne 1){throw 'Duplicate squad section.'}
+$squadBefore=(Get-FileHash -LiteralPath $customSquad).Hash
+Update-GameplayConfig $template $customSquad
+if((Get-FileHash -LiteralPath $customSquad).Hash -ne $squadBefore){throw 'Squad migration is not idempotent.'}

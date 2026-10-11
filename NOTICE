@@ -145,6 +145,10 @@ Native ability Art/CAgentTimer layout facts were checked against YDWE's publishe
 AbilityState adapter; bounded memory reads are independently implemented here.
 BLP1 palette/JPEG layout facts were checked against mdx-m3-viewer's format parser.
 No YDWE code, decoder library or Blizzard artwork is embedded or redistributed.
+Native command-card/ability-definition layout facts were cross-checked against MemHackAPI and
+independently verified in the owner's 1.26a engine. The bounded readers, motor hook and formation
+policy are project-authored; no MemHackAPI implementation or game content is redistributed.
+https://github.com/UnryzeC/MemHackAPI
 https://github.com/actboy168/YDWE/blob/master/Development/Plugin/Warcraft3/yd_jass_api/AbilityState.cpp
 https://github.com/flowtsohg/mdx-m3-viewer/blob/master/src/parsers/blp/image.ts
 

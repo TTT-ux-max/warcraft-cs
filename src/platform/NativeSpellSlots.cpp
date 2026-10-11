@@ -1,7 +1,10 @@
 #include "NativeSpellSlots.hpp"
 #include "NativeAbilityInfo.hpp"
+#include "NativeAbilitySlots.hpp"
+#include "NativeCommandCard.hpp"
 #include "NativeArchive.hpp"
 #include <cstring>
+#include <cctype>
 
 namespace {
 std::string ArchiveText(const char* path) {
@@ -18,17 +21,31 @@ void NativeSpellSlots::Configure(uintptr_t base) {
     verified_=!memcmp(reinterpret_cast<void*>(base+0x787D0),signature,sizeof(signature));
     wc3::Log("Native spell ability lookup verified=%d",verified_);
 }
-int NativeSpellSlots::Ability(wc3::Handle unit,int slot,const SpellSettings& settings,bool diagnostics) {
-    if(slot<0 || slot>=4)return 0;
+std::array<int,4> NativeSpellSlots::Resolve(wc3::Handle unit) {
     if(!loaded_) {
         loaded_=true;slots_.LoadUnits(ArchiveText("Units\\UnitAbilities.slk"));
         for(const char* race:{"Human","Orc","Undead","NightElf","Neutral"}) {
             std::string path="Units\\"+std::string(race)+"AbilityFunc.txt";slots_.LoadPositions(ArchiveText(path.c_str()));
         }
     }
-    // Load passive metadata for configured rawcodes as well as automatically selected hero slots.
+    int type=wc3::GetUnitTypeId(unit);
+    if(verified_)for(int id:slots_.Declared(type)) {
+        int column=0,row=0;std::string icon;
+        if(NativeAbilityInfo::Definition(base_,id,column,row,icon))slots_.Presentation(id,column,row,icon);
+    }
+    auto resolved=slots_.ForUnit(type,[&](int ability){return wc3::GetUnitAbilityLevel(unit,ability)>0;});
+    // DotA replaces research placeholders with other live rawcodes; casting and HUD share this current mapping.
+    if(verified_) {
+        auto live=NativeAbilitySlots::Read(base_,wc3::UnitObject(unit));
+        for(int i=0;i<4;++i)if(live[i] && wc3::GetUnitAbilityLevel(unit,live[i])>0)resolved[i]=live[i];
+    }
+    return resolved;
+}
+int NativeSpellSlots::Ability(wc3::Handle unit,int slot,const SpellSettings& settings,bool diagnostics) {
+    if(slot<0 || slot>=4)return 0;
+    auto resolved=Resolve(unit);
+    // Explicit player rawcodes take precedence over the shared live mapping.
     if(!settings.ability[slot].empty())return HeroSpellSlots::Rawcode(settings.ability[slot]);
-    auto resolved=slots_.ForUnit(wc3::GetUnitTypeId(unit),[&](int ability){return wc3::GetUnitAbilityLevel(unit,ability)>0;});
     if(diagnostics)wc3::Log("Hero spell slots unit=%08X type=%08X resolved=%08X,%08X,%08X,%08X requestedSlot=%d",
         unit,wc3::GetUnitTypeId(unit),resolved[0],resolved[1],resolved[2],resolved[3],slot+1);
     return resolved[slot];
@@ -52,12 +69,21 @@ uintptr_t NativeSpellSlots::Object(wc3::Handle unit,int ability) const {
 }
 SpellHudSlots NativeSpellSlots::Snapshot(wc3::Handle unit,const SpellSettings& settings) {
     SpellHudSlots result={};if(!unit)return result;
+    auto resolved=Resolve(unit);
     // Sample all learned/passive gaps using the very same mapping consumed by spell casting.
+    using GetUI=uintptr_t (__fastcall*)(int,int);
+    uintptr_t ui=verified_ ? reinterpret_cast<GetUI>(base_+0x300710)(0,0) : 0;
+    float mana=wc3::Real(wc3::GetUnitState(unit,2));
     for(int i=0;i<4;++i) {
-        auto& slot=result[i];slot.ability=Ability(unit,i,settings,false);
+        auto& slot=result[i];slot.ability=settings.ability[i].empty() ? resolved[i] : HeroSpellSlots::Rawcode(settings.ability[i]);
         if(!slot.ability)continue;
         slot.level=wc3::GetUnitAbilityLevel(unit,slot.ability);slot.passive=slots_.Passive(slot.ability);
-        slot.icon=slots_.Icon(slot.ability);NativeAbilityInfo::Read(Object(unit,slot.ability),slot);
+        uintptr_t object=Object(unit,slot.ability);
+        slot.icon=slots_.Icon(slot.ability);NativeAbilityInfo::Read(object,slot,mana);
+        NativeCommandCard::Apply(ui,object,mana,slot);
+        // Runtime replacement abilities can be passive without appearing in the hero's original tables.
+        auto lower=slot.icon;for(auto& c:lower)c=char(std::tolower(static_cast<unsigned char>(c)));
+        if(lower.find("passivebuttons\\")!=std::string::npos)slot.passive=true;
     }
     return result;
 }

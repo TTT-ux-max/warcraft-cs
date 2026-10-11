@@ -1,10 +1,22 @@
 # Changelog
 
-## Unreleased вЂ” test branches
+## Unreleased - test branches
+
+- Fixed Avatar/morph crashes caused by masking a retained native attack target; the walking motor now blocks pursuit safely.
+
+- Fix idle FPS movement through the separate native walking motor, preserving speed modifiers,
+  scripted placement, explicit spell approach, normal units and RTS.
+- Keep recruited followers behind the player and route obstructing allies sideways before rejoining;
+  add configurable rear/yield preferences, clearance, forward corridor and response interval.
+- Resolve object-editor research positions and learned runtime ability replacements; exclude stats
+  on another research row and recognize relative passive icon paths.
+- Refresh spell art from actor-owned native command buttons, add actual mana/disabled states and
+  a radial native cooldown sweep.
+
 
 - Add bottom-right spell icons, configured shortcut labels and live native cooldowns, including passive/unlearned/unsupported states; read owned current-map Art without packaging game assets.
 - Add Interface.ShowSpellIcons, ShowSpellCooldowns and SpellIconSizePercent (4..14% of window height, default 7), live F8 reload and preservation during upgrades.
-- Guard the native basic-attack target getter in FPS so a lingering target cannot feed ordinary AI while the current order reports zero; preserve spell targets and RTS behavior.
+- Preserve native attack target references during morph/combat callbacks; block automatic pursuit through validated order dispatch and the walking motor.
 
 - Fix automatic enemy pursuit in FPS by rejecting native basic-attack validation and retaliation dispatch before chase starts; preserve spell components, ordinary units and RTS control, with bounded rejection diagnostics.
 

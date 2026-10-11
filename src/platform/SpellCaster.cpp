@@ -27,6 +27,8 @@ const char* SpellCaster::Cast(wc3::Handle unit,int slot,const SpellSettings& set
     if(!order) {wc3::Log("Spell unavailable unit=%08X slot=%d ability=%08X reason=passive-or-unsupported",unit,slot+1,ability);return "PASSIVE OR UNSUPPORTED SPELL";}
     Cancel();
     const auto& mode=settings.target[slot];BOOL accepted=FALSE;
+    // Native approach can start synchronously inside IssueOrder; grant cast ownership before that dispatch.
+    unit_=unit;order_=order;requested_=GetTickCount();
     // Auto tries legal target forms only. Native rejection never grants mana or resets cooldowns.
     wc3::Handle target=self || mode=="self" ? unit : aim.target;
     float x=aim.x,y=aim.y;
@@ -35,6 +37,6 @@ const char* SpellCaster::Cast(wc3::Handle unit,int slot,const SpellSettings& set
     if(!accepted && (mode=="immediate" || mode=="auto"))accepted=wc3::IssueImmediateOrderById(unit,order);
     wc3::Log("Spell requested unit=%08X slot=%d ability=%08X order=%d mode=%s target=%08X point=%d x=%.1f y=%.1f accepted=%d mana=%.1f",
         unit,slot+1,ability,order,mode.c_str(),target,aim.point,x,y,accepted,wc3::Real(wc3::GetUnitState(unit,2)));
-    if(!accepted)return "SPELL REJECTED: CHECK TARGET, MANA OR COOLDOWN";
-    unit_=unit;order_=order;requested_=GetTickCount();return "SPELL ORDER ISSUED";
+    if(!accepted) {unit_=0;order_=0;return "SPELL REJECTED: CHECK TARGET, MANA OR COOLDOWN";}
+    return "SPELL ORDER ISSUED";
 }

@@ -14,6 +14,7 @@ public:
     uintptr_t Object(wc3::Handle unit,int ability) const;
     SpellHudSlots Snapshot(wc3::Handle unit,const SpellSettings& settings);
 private:
+    std::array<int,4> Resolve(wc3::Handle unit);
     bool loaded_=false,verified_=false;
     uintptr_t base_=0;
     HeroSpellSlots slots_;

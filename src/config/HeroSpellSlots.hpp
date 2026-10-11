@@ -12,6 +12,8 @@ public:
     void LoadUnits(const std::string& slk);
     void LoadPositions(const std::string& text);
     std::array<int,4> ForUnit(int type,const std::function<bool(int)>& learned={}) const;
+    std::vector<int> Declared(int type) const {auto it=units_.find(type);return it==units_.end() ? std::vector<int>{} : it->second;}
+    void Presentation(int ability,int column,int row,const std::string& icon);
     bool Passive(int ability) const { return passive_.count(ability)!=0; }
     std::string Icon(int ability) const {auto found=icons_.find(ability);return found==icons_.end() ? "" : found->second;}
     static int Rawcode(const std::string& text);

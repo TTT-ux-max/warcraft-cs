@@ -559,3 +559,36 @@ to verify the real game without taking desktop input. It disables keyboard/mouse
 dispatch, allows background game-thread updates and accepts toggle/spell/bars/minimap mailbox
 commands. The successful trial includes 21 FPS summaries with focus=0. Ordinary builds exclude
 this switch and all gameplay fixture commands; their focus/input behavior remains unchanged.
+
+## Native walking, rear squad and live command icons (2026-10-11 test branch)
+
+Native-independent suites passed for the movement hook's real x86 caller ABI, order dispatch,
+research row filtering, live ability replacement/cycle handling, native command matching/art,
+per-level mana/cooldown fallback, radial geometry and squad rear/yield positions across headings.
+Config parsing/reload validates all five new squad keys; migration preserves them under both
+PowerShell 7 and Windows PowerShell 5.1. The broad run's sky conversion encountered sandbox
+system-temp access denial; rerunning the affected buy/sky suite with workspace TEMP/TMP passed.
+
+In an isolated byte-for-byte copy of the user's DotA 6.88f AI, the map's own Anti-Mage (Edem)
+correctly resolves learned A022 first and AEbl second, excluding Aamk stats. Forced native walking
+is intercepted while GetUnitMoveSpeed remains native. Under close enemy attacks, XY stays (0,0)
+as HP decreases 838 to 823.5 and enemy HP stays420. Two recruited followers yield left/right then
+settle behind at (-171.3,77.7) and (-167.8,-78.8). Native mana0 causes NO MANA; native definitions
+supply Blink's12-second total even when unavailable command buttons lose their object reference.
+The original elevated running game was inaccessible; this test used a disposable copy after the
+user saved and closed it. No user save or map was modified.
+
+A stock Avatar test found an unsafe older target hook: the native morph/combat update at+CD86D
+dereferences the target returned by+7C2C0 without checking null. The hook now forwards the native
+reference; attack dispatch and the separate walking motor suppress pursuit. The regression verifies
+retained target identity. Opt-in fixtures and loading-screen input exceptions are excluded from
+ordinary packages. The corrected DotA cast uses the actual ground elevation896 rather than z0. Native Blink moves
+XY from(0,0) to(500,0), consumes mana350 to290.6 and reports remaining11.53 then10.43 of12s.
+The screenshot shows the live radial shade/countdown; the motor guard preserves the teleport.
+The repeated stock oracle passes after removing target fabrication: forced native movement remains
+blocked during enemy damage, front followers yield and settle behind, NO MANA is shown at mana0,
+Avatar transforms without a crash and reports its actual180s cooldown. Its native button retains
+BTNAvatarOn during cooldown, and the FPS panel matches that actual button rather than inventing
+an Off icon. First-slot Blizzard completes and shows an actual decreasing6s cooldown sweep.
+No controller fault or GL error occurs in either successful run; owned processes close and private
+DLL/config are restored. Ordinary packages exclude every opt-in fixture command and loading-screen input exception.

@@ -18,9 +18,9 @@ Range unitRange=nullptr,attackRange=nullptr;
 using Target=uintptr_t (__thiscall*)(uintptr_t);
 Target nativeTarget=nullptr;
 uintptr_t __fastcall AttackTargetHook(uintptr_t attack,uintptr_t) {
-    // Retaliation can retain a target after Stop with order=0. Hide that target from native AI,
-    // while spell components and ordinary units retain their own targets and saved state.
-    return ControlledAttack(attack) ? 0 : nativeTarget(attack);
+    // Morph/combat callbacks dereference an existing target without checking null (1.26a +0xCD86D).
+    // Preserve that native contract; dispatch guards and the separate walking motor prevent pursuit.
+    return nativeTarget(attack);
 }
 using CheckOrder=int (__thiscall*)(uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t);
 using StartOrder=void (__thiscall*)(uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t);
@@ -88,7 +88,7 @@ void FpsCombatGuard::Install(uintptr_t base,wc3::Handle (*actor)(),bool (*unitPr
         wc3::Log("FPS native attack signature mismatch; guard not installed");return;
     }
     targetVerified=hook(reinterpret_cast<void*>(base+0x7C2C0),reinterpret_cast<void*>(AttackTargetHook),reinterpret_cast<void**>(&nativeTarget));
-    wc3::Log("FPS native attack target guard installed=%d",targetVerified);
+    wc3::Log("FPS native attack target lookup installed=%d",targetVerified);
     hook(reinterpret_cast<void*>(base+0x276A00),reinterpret_cast<void*>(UnitRangeHook),reinterpret_cast<void**>(&unitRange));
     hook(reinterpret_cast<void*>(base+0xC6060),reinterpret_cast<void*>(AttackRangeHook),reinterpret_cast<void**>(&attackRange));
     // Both entry points test the attack-disable counter natively; validate their separate x86 argument layouts.
@@ -121,7 +121,7 @@ bool FpsCombatGuard::HasAttackTarget(wc3::Handle unit) {
     // Never call the version-specific target getter if its native signature failed validation.
     if (!targetVerified) return false;
     uintptr_t object=wc3::UnitObject(unit),attack=object ? *reinterpret_cast<uintptr_t*>(object+0x1E8) : 0;
-    // Cleanup observes the original target; the hooked getter masks it only from automatic AI.
+    // Cleanup observes the native target without changing the reference Warcraft owns.
     uintptr_t target=attack ? nativeTarget(attack) : 0;
     return target!=0;
 }

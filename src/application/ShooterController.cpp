@@ -727,8 +727,8 @@ void ShooterController::Tick(uintptr_t ui) {
     if(settings_.showSpellIcons && now-spellHudTick_>=100) {
         spellHudTick_=now;spellHud_=spells_.Snapshot(unit_,settings_.spells);
         if(DiagnosticLog::Due(spellHudLog_))for(int i=0;i<4;++i) {
-            const auto& slot=spellHud_[i];wc3::Trace("spell HUD slot=%d ability=%08X level=%d passive=%d cooldownKnown=%d remaining=%.2f icon=%s",
-                i+1,slot.ability,slot.level,slot.passive,slot.cooldownKnown,slot.cooldown,slot.icon.c_str());
+            const auto& slot=spellHud_[i];wc3::Trace("spell HUD slot=%d ability=%08X level=%d passive=%d cooldownKnown=%d remaining=%.2f total=%.2f command=%d noMana=%d disabled=%d icon=%s",
+                i+1,slot.ability,slot.level,slot.passive,slot.cooldownKnown,slot.cooldown,slot.cooldownTotal,slot.commandKnown,slot.noMana,slot.disabled,slot.icon.c_str());
         }
     }
     // Releasing followers returns native control even when their FPS leader cannot act.
@@ -744,7 +744,7 @@ void ShooterController::Tick(uintptr_t ui) {
         weaponWheel_.Reset();
         // Disabled leaders cannot queue pickup/recruitment for later; existing followers retain their chosen policy.
         itemRequested_=false;squadRequested_=0;
-        squad_.Tick(unit_,settings_,now,!status_.contained && !status_.hidden);
+        squad_.Tick(unit_,settings_,now,!status_.contained && !status_.hidden,yaw_,movement_.VelocityX(),movement_.VelocityY());
         // Consume action edges while disabled, so held reload/scope/switch inputs are not replayed on recovery.
         for(int i=0;i<WeaponSlots::Count;++i)Pressed(ShortcutAction(int(ShortcutAction::Weapon1)+i));
         Pressed(ShortcutAction::Reload);Pressed(VK_LBUTTON);Pressed(VK_RBUTTON);
@@ -762,7 +762,7 @@ void ShooterController::Tick(uintptr_t ui) {
         for (int key='0';key<='9';++key) Pressed(key);
         Pressed(VK_LBUTTON);Pressed(VK_RBUTTON);Pressed(ShortcutAction::Reload);
         if (!status_.contained && !status_.hidden) FpsCombatGuard::CancelOrders(unit_);
-        squad_.Tick(unit_,settings_,now,!status_.contained && !status_.hidden);
+        squad_.Tick(unit_,settings_,now,!status_.contained && !status_.hidden,yaw_,movement_.VelocityX(),movement_.VelocityY());
         movement_.Stop();weaponWheel_.Reset();AimAndMove(dt);Camera();audio_.Tick(now);return;
     }
     // Wheel packets are consumed once; an explicit number key takes precedence in the same frame.
@@ -809,7 +809,7 @@ void ShooterController::Tick(uintptr_t ui) {
         }
         squadRequested_=0;
     }
-    squad_.Tick(unit_,settings_,now,!status_.contained && !status_.hidden);
+    squad_.Tick(unit_,settings_,now,!status_.contained && !status_.hidden,yaw_,movement_.VelocityX(),movement_.VelocityY());
     static DWORD lastItemScan=0;
     if (now-lastItemScan>200) {
         lastItemScan=now;itemNearby_=!status_.incapacitated && !status_.contained && !status_.hidden && itemPickup_.Nearest(unit_,settings_.runePickupRadius)!=0;

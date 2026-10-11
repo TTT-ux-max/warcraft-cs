@@ -130,6 +130,18 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.squadFollowDistance=std::max(80.0f,number("Squad","FollowDistance",180,500));
     result.squadLeash=std::max(result.squadFollowDistance+200,number("Squad","CombatLeash",900,3000));
     result.squadMaxUnits=int(std::max(1.0f,number("Squad","MaxUnits",24,64)));
+    // Rear spacing and path yielding reload with F8 without releasing or teleporting the squad.
+    auto squadSwitch=[&](const char* key) {
+        auto value=text("Squad",key,"true");
+        if(!_stricmp(value.c_str(),"false") || value=="0")return false;
+        if(_stricmp(value.c_str(),"true") && value!="1")wc3::Log("Invalid Squad.%s; using true",key);
+        return true;
+    };
+    result.squadRearFormation=squadSwitch("RearFormation");
+    result.squadYield=squadSwitch("YieldToPlayer");
+    result.squadClearance=std::max(60.f,number("Squad","PlayerClearance",100,300));
+    result.squadYieldAhead=std::max(result.squadClearance,number("Squad","YieldAheadDistance",350,1000));
+    result.squadOrderIntervalMs=unsigned(std::max(50.f,number("Squad","OrderIntervalMs",150,1000)));
     // Restricted modes govern both opening B and every transaction, including the quick-ammo key.
     auto access=text("Buy","Access","anywhere");
     if (!_stricmp(access.c_str(),"friendly")) result.buyAccess=BuyAccess::FriendlyBuildings;

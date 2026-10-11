@@ -66,8 +66,8 @@ int main() {
     for(auto at:{0x3C8E20,0x3C8DA0})std::memcpy(image.data()+at,text,sizeof(text));
     std::memcpy(image.data()+0x3BAD70,convert,sizeof(convert));
     FpsCombatGuard::Install(base,actorGetter,unitPolicy,attackPolicy,Hook);assert(checked && started);
-    // A lingering target at order=0 cannot feed automatic movement; cleanup still observes the original.
-    assert(targetGetter && targetGetter(actorAttack,0)==0 && targetGetter(passiveAttack,0)==0);
+    // Native morph/combat callbacks require a non-null retained target; pursuit is blocked at dispatch/motor.
+    assert(targetGetter && targetGetter(actorAttack,0)==123 && targetGetter(passiveAttack,0)==123);
     assert(targetGetter(13,0)==123 && FpsCombatGuard::HasAttackTarget(1));
     // Neither validation nor direct retaliation dispatch can start the actor's basic attack.
     assert(checked(actorAttack,0,1,2,3,4)==0xDD);started(actorAttack,0,1,2,3,4,5,6,7,8,9,10);

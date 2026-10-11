@@ -1,4 +1,8 @@
 #include "../src/platform/NativeAbilityInfo.hpp"
+#include "../src/platform/NativeCommandCard.hpp"
+#include "../src/platform/NativeAbilitySlots.hpp"
+#include "../src/presentation/SpellCooldownWedge.hpp"
+#include <windows.h>
 #include "../src/platform/SpellIconImage.hpp"
 #include "../src/presentation/SpellHudLayout.hpp"
 #include <array>
@@ -22,6 +26,46 @@ int main() {
     // Read the production pointer chain and simulation clock, including pause, reset and malformed state.
     SpellHudSlot slot;slot.level=2;NativeAbilityInfo::Read(uintptr_t(ability.data()),slot);
     assert(slot.icon==arts[1] && slot.cooldownKnown && slot.cooldown==5);
+    Store(ability.data()+0xB4,10.f);Store(ability.data()+0x40,1);
+    NativeAbilityInfo::Read(uintptr_t(ability.data()),slot);assert(slot.cooldownTotal==10 && slot.disabled);
+    std::array<unsigned char,2*0x68> levelData={};
+    Store(data.data()+0x50,2u);Store(data.data()+0x54,uintptr_t(levelData.data()));
+    Store(levelData.data()+0x68+0x10,75);Store(levelData.data()+0x68+0x14,12.f);Store(ability.data()+0xB4,0.f);
+    slot={};slot.level=2;NativeAbilityInfo::Read(uintptr_t(ability.data()),slot,0);assert(slot.noMana && slot.cooldownTotal==12);
+    NativeAbilityInfo::Read(uintptr_t(ability.data()),slot,100);assert(!slot.noMana);
+    // Native command art changes on toggles; an unrelated selected unit cannot replace this icon.
+    std::array<unsigned char,0x500> gameUI={};std::array<unsigned char,0x180> bar={};
+    std::array<uintptr_t,3> itemRows={};uintptr_t buttonsAt=0;
+    std::array<unsigned char,12*0x1C0> buttons={};std::array<unsigned char,0x6D8> buttonData={};
+    Store(gameUI.data()+0x3C8,uintptr_t(bar.data()));Store(bar.data()+0x154,uintptr_t(itemRows.data()));
+    buttonsAt=uintptr_t(buttons.data());itemRows[2]=uintptr_t(&buttonsAt);
+    Store(buttons.data()+11*0x1C0+0x190,uintptr_t(buttonData.data()));
+    Store(buttonData.data()+4,77);Store(buttonData.data()+0x6D4,uintptr_t(ability.data()));Store(buttonData.data()+0x594,100);
+    strcpy_s(reinterpret_cast<char*>(buttonData.data()+0x5C8),260,"map\\toggle-on.blp");slot.ability=77;
+    assert(NativeCommandCard::Apply(uintptr_t(gameUI.data()),uintptr_t(ability.data()),50,slot) && slot.commandKnown && slot.noMana);
+    assert(slot.icon=="map\\toggle-on.blp");
+    strcpy_s(reinterpret_cast<char*>(buttonData.data()+0x5C8),260,"map\\toggle-off.blp");
+    assert(NativeCommandCard::Apply(uintptr_t(gameUI.data()),uintptr_t(ability.data()),150,slot) && !slot.noMana && slot.icon=="map\\toggle-off.blp");
+    Store(buttonData.data()+0x6D4,uintptr_t(ability.data())+4);
+    assert(!NativeCommandCard::Apply(uintptr_t(gameUI.data()),uintptr_t(ability.data()),0,slot) && slot.icon=="map\\toggle-off.blp");
+    for(float part:{.1f,.25f,.5f,1.f,2.f}) {
+        auto wedge=SpellCooldownWedge(part,1);assert(wedge.size()>2);
+        for(const auto& p:wedge)assert(p[0]>=-.0001f && p[0]<=1.0001f && p[1]>=-.0001f && p[1]<=1.0001f);
+    }
+    assert(SpellCooldownWedge(0,10).empty() && SpellCooldownWedge(NAN,10).empty());
+    // A runtime ability replacement comes from the actor's live list, not the original research rawcode.
+    auto nativeImage=static_cast<unsigned char*>(VirtualAlloc(nullptr,0xA80000,MEM_RESERVE|MEM_COMMIT,PAGE_EXECUTE_READWRITE));assert(nativeImage);
+    const unsigned char resolve[]={0x8B,0x01,0xC3};std::memcpy(nativeImage+0x4786B0,resolve,sizeof(resolve));
+    std::array<unsigned char,0x200> actor={};Store(actor.data()+0x1DC,uintptr_t(ability.data()));
+    Store(ability.data(),uintptr_t(nativeImage)+0x880000);Store(ability.data()+0x34,77);Store(ability.data()+0x24,uint32_t(-1));Store(ability.data()+0x28,uint32_t(-1));
+    Store(ui.data()+0x50,0);Store(ui.data()+0x54,2);Store(ui.data()+0x64,0);
+    auto live=NativeAbilitySlots::Read(uintptr_t(nativeImage),uintptr_t(actor.data()));assert(live[0]==77);
+    Store(ability.data()+0x34,88);live=NativeAbilitySlots::Read(uintptr_t(nativeImage),uintptr_t(actor.data()));assert(live[0]==88);
+    Store(ui.data()+0x64,1);live=NativeAbilitySlots::Read(uintptr_t(nativeImage),uintptr_t(actor.data()));assert(!live[0]);
+    Store(ui.data()+0x64,0);Store(ability.data()+0x24,uintptr_t(ability.data()));Store(ability.data()+0x28,uint32_t(0));
+    live=NativeAbilitySlots::Read(uintptr_t(nativeImage),uintptr_t(actor.data()));assert(live[0]==88); // Corrupt cycles terminate.
+    VirtualFree(nativeImage,0,MEM_RELEASE);
+    Store(ability.data()+0x24,0u);Store(ability.data()+0x28,0u);
     NativeAbilityInfo::Read(uintptr_t(ability.data()),slot);assert(slot.cooldown==5); // No wall-clock ticking during pause.
     Store(clock.data()+0x40,102.5f);NativeAbilityInfo::Read(uintptr_t(ability.data()),slot);assert(slot.cooldown==2.5f);
     Store(clock.data()+0x40,107.f);NativeAbilityInfo::Read(uintptr_t(ability.data()),slot);assert(!slot.cooldown);

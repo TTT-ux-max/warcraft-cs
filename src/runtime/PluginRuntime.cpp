@@ -14,6 +14,7 @@
 #include "../platform/MapCameraGuard.hpp"
 #include "../platform/ActorRenderFilter.hpp"
 #include "../platform/FpsCombatGuard.hpp"
+#include "../platform/NativeMovementGuard.hpp"
 #include "../presentation/FullscreenView.hpp"
 #include "../presentation/FpsProjection.hpp"
 #include <MinHook.h>
@@ -319,6 +320,8 @@ static DWORD WINAPI Initialize(void*) {
     FpsCombatGuard::Install(base, []() { return healthy ? controller.ViewActor() : 0; },
         [](uintptr_t unit) { return healthy && controller.BlocksPassiveUnit(unit); },
         [](uintptr_t attack) { return healthy && controller.BlocksPassiveAttack(attack); }, Hook);
+    NativeMovementGuard::Install(base,[]() { return healthy ? controller.ViewActor() : 0; },
+        []() { return healthy && controller.NativeCastMovement(); },Hook);
     Hook(reinterpret_cast<void*>(base + 0x3BC4D0), reinterpret_cast<void*>(PauseHook), reinterpret_cast<void**>(&originalPause));
     Hook(reinterpret_cast<void*>(wc3::ShowInterface), reinterpret_cast<void*>(InterfaceHook), reinterpret_cast<void**>(&originalInterface));
     if (!Hook(reinterpret_cast<void*>(base + 0x395900), reinterpret_cast<void*>(WorldHook), reinterpret_cast<void**>(&originalWorld))) return 0;

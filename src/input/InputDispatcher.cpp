@@ -6,7 +6,12 @@
 
 std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM key,LPARAM data,bool healthy) {
 #ifdef WCS_GAMEPLAY_TEST
-    // A background oracle accepts only its file mailbox, including when its window briefly becomes active.
+    // A marked isolated loading-screen run may dismiss Warcraft's press-any-key gate before the world exists.
+    char loadKey[2]={};
+    if(BackgroundGameplay::Enabled() && !controller_.Visible() && key==VK_SPACE &&
+        (message==WM_KEYDOWN || message==WM_KEYUP || message==WM_CHAR) &&
+        GetEnvironmentVariableA("WCS_LOAD_KEY",loadKey,2)==1 && loadKey[0]=='1')return std::nullopt;
+    // A background oracle otherwise accepts only its file mailbox, even when its window becomes active.
     if(BackgroundGameplay::Enabled() && (message==WM_INPUT ||
         (message>=WM_KEYFIRST && message<=WM_KEYLAST) || (message>=WM_MOUSEFIRST && message<=WM_MOUSELAST)))
         return message==WM_INPUT ? DefWindowProcA(window,message,key,data) : 0;
