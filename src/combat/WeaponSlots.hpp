@@ -4,6 +4,7 @@
 namespace WeaponSlots {
 constexpr int Count = 7;
 constexpr int Pistol = 2;
+constexpr int AWP = 3;
 constexpr int Knife = 4;
 constexpr int C4 = 5;
 constexpr int Sword = 6;

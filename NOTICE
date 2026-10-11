@@ -44,6 +44,12 @@ ADAPTED MECHANICS AND RESEARCH REFERENCES
    https://github.com/ENAleksey/RenderEdge
    https://github.com/UnryzeC/UjAPI
 
+   First-person spell research also consulted WC3Memory's public ability lookup
+   descriptions, then verified the lookup signature and order getter layout in
+   the owner's 1.26a Game.dll. NativeSpellSlots is original guarded adapter code;
+   no WC3Memory code, game table, disassembly or binary is copied or distributed.
+   https://github.com/DracoL1ch/WC3Memory
+
 4. Valve Half-Life SDK — https://github.com/ValveSoftware/halflife
    Research reference for GoldSrc studio-model layout, animation/event encoding,
    movement and view behavior, including wish-direction projection in PM_AirAccelerate
@@ -135,6 +141,24 @@ https://docs.python.org/3/license.html
 https://visualstudio.microsoft.com/license-terms/
 
 PROVENANCE RULE
+Native ability Art/CAgentTimer layout facts were checked against YDWE's published
+AbilityState adapter; bounded memory reads are independently implemented here.
+BLP1 palette/JPEG layout facts were checked against mdx-m3-viewer's format parser.
+No YDWE code, decoder library or Blizzard artwork is embedded or redistributed.
+Native command-card/ability-definition layout facts were cross-checked against MemHackAPI and
+independently verified in the owner's 1.26a engine. The bounded readers, motor hook and formation
+policy are project-authored; no MemHackAPI implementation or game content is redistributed.
+https://github.com/UnryzeC/MemHackAPI
+https://github.com/actboy168/YDWE/blob/master/Development/Plugin/Warcraft3/yd_jass_api/AbilityState.cpp
+https://github.com/flowtsohg/mdx-m3-viewer/blob/master/src/parsers/blp/image.ts
+
+The 1.26a render-demand operand location was identified using RenderEdge's publicly
+documented FPS-unlock address, then independently checked in the owner's Game.dll.
+NativeFrameRate is project-authored guarded patching/pacing code; no RenderEdge code
+or binary is embedded, linked or redistributed.
+https://github.com/ENAleksey/RenderEdge/blob/master/RenderEdge/Source/GameOffsets.cpp
+https://github.com/ENAleksey/RenderEdge/blob/master/RenderEdge/Source/DllMain.cpp
+
 CS skybox faces are read only from the owner's cstrike/gfx/env TGA files and converted
 locally into private RGBA caches. No Valve sky texture or generated cache is committed,
 embedded or redistributed. The original TGA reader, cache writer and OpenGL sky renderer
@@ -145,3 +169,14 @@ these required notices. All .local data, downloaded dependencies, generated
 forwarders/binaries, private mod logs, game assets, saves and recordings are excluded.
 Version guards target offline Warcraft III 1.26a only; there is no affiliation with
 or endorsement by Blizzard, Valve, SDK/library authors or referenced fan projects.
+
+Native IAS multiplier layout (1.26a attack component +0x1B0) was cross-checked against MemHackAPI.
+Unit scaling and bounded native reads are independently authored here. The Shrapnel charge adapter
+uses identifiers observed in the owner's DotA 6.88f AI and existing unit markers; no map script,
+assets, extracted definitions or game binaries are redistributed.
+
+Native attack preparation/impact/cleanup and attack-component layout were researched using
+DracoL1ch's WC3Memory native entry-point references, then independently disassembled and tested in
+the owner's Warcraft III 1.26a. NativeWeaponAttack is project-authored scoped dispatch and guarded
+base-roll substitution; no WC3Memory implementation or proprietary game code is redistributed.
+https://github.com/DracoL1ch/WC3Memory/blob/master/war3map.j

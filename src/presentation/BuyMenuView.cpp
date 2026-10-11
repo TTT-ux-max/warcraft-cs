@@ -1,4 +1,5 @@
 #include "BuyMenuView.hpp"
+#include "../combat/UnitScaling.hpp"
 #include "BuyMenuLayout.hpp"
 #include <gl/GL.h>
 #include <cstdio>
@@ -55,19 +56,28 @@ void Draw(const ShooterController& controller,int width,int height,HWND window,c
         text(box.detailX,infoY,item->name);infoY+=box.row*.75f;
         sprintf_s(value,": %d GOLD",settings.weaponPrice[previewSlot]);line("PRICE",value);
         sprintf_s(value,": %s",item->caliber);line("CALIBER / TYPE",value);
-        sprintf_s(value,": %d ROUNDS",weapon.magazine);if (!WeaponSlots::Melee(previewSlot) && previewSlot!=WeaponSlots::C4) line("CLIP CAPACITY",value);
-        sprintf_s(value,": %.0f",settings.damage[previewSlot]);line("BASE DAMAGE",value);
-        if (weapon.interval>0 && !WeaponSlots::Melee(previewSlot)) { sprintf_s(value,": %.0f RPM",60/weapon.interval);line("RATE OF FIRE",value); }
+        // Keep magazine/reserve in one row so the existing panel also fits small windows.
+        sprintf_s(value,": %d / %d",weapon.magazine,settings.maxReserve[previewSlot]);
+        if (!WeaponSlots::Melee(previewSlot) && previewSlot!=WeaponSlots::C4) line("CLIP / RESERVE",value);
+        sprintf_s(value,": %.0f",settings.ContactDamage(previewSlot,false,controller.Status().attackDamage));line("BASE DAMAGE",value);
+        if (weapon.interval>0 && !WeaponSlots::Melee(previewSlot)) {
+            // Display the cadence actually used by combat, including the optional native IAS multiplier.
+            float interval=UnitScaling::FireInterval(weapon.interval,settings.scaleFireRateFromAttackSpeed,controller.Status().attackSpeed);
+            sprintf_s(value,": %.0f RPM",60/interval);line("RATE OF FIRE",value);
+        }
         if (!WeaponSlots::Melee(previewSlot)) { sprintf_s(value,": %d GOLD",settings.ammoPrice[previewSlot]);line("AMMO PACK",value); }
         line("INVENTORY",controller.OwnsWeapon(previewSlot) ? ": OWNED" : ": NOT OWNED");
     } else {
         glColor4f(1,.72f,.22f,1);
         text(box.detailX,box.listY+box.row*.45f,"SELECT A CATEGORY");
         text(box.detailX,box.listY+box.row*1.2f,"WEAPONS AND AMMO COST GOLD");
-        text(box.detailX,box.listY+box.row*2.1f,"F7: FREE AMMO REFILL");
-        text(box.detailX,box.listY+box.row*2.85f,"F9: GET ALL WEAPONS FREE");
+        // Display the same reloaded bindings that dispatch these actions.
+        auto refill=controller.Shortcut(ShortcutAction::Refill)+": FREE AMMO REFILL";
+        auto all=controller.Shortcut(ShortcutAction::AllWeapons)+": GET ALL WEAPONS FREE";
+        text(box.detailX,box.listY+box.row*2.1f,refill.c_str());
+        text(box.detailX,box.listY+box.row*2.85f,all.c_str());
     }
-    char money[96];sprintf_s(money,"GOLD: %d   |   B / ESC: CLOSE   |   .: CURRENT AMMO",controller.Gold());
+    char money[160];sprintf_s(money,"GOLD: %d   |   %s / ESC: CLOSE   |   %s: CURRENT AMMO",controller.Gold(),controller.Shortcut(ShortcutAction::Buy).c_str(),controller.Shortcut(ShortcutAction::BuyAmmo).c_str());
     glColor4f(1,.72f,.22f,1);text(box.listX,box.y+box.height*.95f,money);
     // Warcraft's pointer is hidden with its RTS HUD; retain a visible pointer for mouse purchases.
     glColor4f(1,1,1,1);glBegin(GL_TRIANGLES);
