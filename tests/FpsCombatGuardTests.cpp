@@ -16,6 +16,8 @@ using Check=int (__fastcall*)(uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t,
 using Start=void (__fastcall*)(uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t,uintptr_t);
 Check checked=nullptr;
 Start started=nullptr;
+uintptr_t (__fastcall* targetGetter)(uintptr_t,uintptr_t)=nullptr;
+uintptr_t __fastcall NativeTargetGetter(uintptr_t,uintptr_t) {return 123;}
 BOOL (__cdecl* targetOrder)(wc3::Handle,int,wc3::Handle)=nullptr;
 BOOL (__cdecl* pointOrder)(wc3::Handle,int,float*,float*)=nullptr;
 int scriptOrders=0;
@@ -30,7 +32,8 @@ void __fastcall NativeStart(uintptr_t,uintptr_t,uintptr_t a,uintptr_t b,uintptr_
 }
 float* __fastcall NativeRange(uintptr_t,uintptr_t,float* result) {*result=500;return result;}
 bool Hook(void* at,void* detour,void** original) {
-    if(uintptr_t(at)==base+0xC5E30) {checked=reinterpret_cast<Check>(detour);*original=reinterpret_cast<void*>(NativeCheck);}
+    if(uintptr_t(at)==base+0x7C2C0) {targetGetter=reinterpret_cast<decltype(targetGetter)>(detour);*original=reinterpret_cast<void*>(NativeTargetGetter);}
+    else if(uintptr_t(at)==base+0xC5E30) {checked=reinterpret_cast<Check>(detour);*original=reinterpret_cast<void*>(NativeCheck);}
     else if(uintptr_t(at)==base+0xC6210) {started=reinterpret_cast<Start>(detour);*original=reinterpret_cast<void*>(NativeStart);}
     else if(at==reinterpret_cast<void*>(wc3::IssueTargetOrderById)) {targetOrder=reinterpret_cast<decltype(targetOrder)>(detour);*original=reinterpret_cast<void*>(NativeTarget);}
     else if(at==reinterpret_cast<void*>(wc3::IssuePointOrderById)) {pointOrder=reinterpret_cast<decltype(pointOrder)>(detour);*original=reinterpret_cast<void*>(NativePoint);}
@@ -63,6 +66,9 @@ int main() {
     for(auto at:{0x3C8E20,0x3C8DA0})std::memcpy(image.data()+at,text,sizeof(text));
     std::memcpy(image.data()+0x3BAD70,convert,sizeof(convert));
     FpsCombatGuard::Install(base,actorGetter,unitPolicy,attackPolicy,Hook);assert(checked && started);
+    // A lingering target at order=0 cannot feed automatic movement; cleanup still observes the original.
+    assert(targetGetter && targetGetter(actorAttack,0)==0 && targetGetter(passiveAttack,0)==0);
+    assert(targetGetter(13,0)==123 && FpsCombatGuard::HasAttackTarget(1));
     // Neither validation nor direct retaliation dispatch can start the actor's basic attack.
     assert(checked(actorAttack,0,1,2,3,4)==0xDD);started(actorAttack,0,1,2,3,4,5,6,7,8,9,10);
     assert(!checks && !starts);

@@ -26,3 +26,6 @@
 - Fixed near-ground transparency with the extended draw distance.
 - Fixed distant tree blocking and walking off cliffs.
 - Improved compact HUD hints with wrapping and configured key labels.
+- Added bottom-right spell icons with configured shortcut labels.
+- Added live native spell cooldowns and passive/unlearned indicators.
+- Added configurable spell panel visibility and icon size.

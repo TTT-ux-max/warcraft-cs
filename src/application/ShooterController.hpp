@@ -68,6 +68,7 @@ public:
     // Input queues the toggle; only the simulation tick changes the HUD preference.
     void RequestMinimapToggle() { minimapToggleRequested_=true; }
     bool MinimapVisible() const { return showMinimap_; }
+    const SpellHudSlots& SpellHud() const {return spellHud_;}
     float DisplaySpeed() const { return movement_.Speed()/MovementPhysics::worldScale; }
     // Buy-menu events are consumed on Warcraft's simulation thread, never inside WindowProc.
     void RequestBuyToggle() { buyToggleRequested_=true; }
@@ -172,6 +173,8 @@ private:
     int spellRequested_=-1;
     bool spellCancelRequested_=false;
     SpellCaster spells_;
+    SpellHudSlots spellHud_={};
+    DWORD spellHudTick_=0,spellHudLog_=0;
     int squadRequested_=0;
     bool keys_[256] = {};
     int weapon_ = 0, ammo_[WeaponSlots::Count] = {}, reserve_[WeaponSlots::Count] = {};

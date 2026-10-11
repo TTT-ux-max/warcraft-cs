@@ -34,6 +34,7 @@ void Overlay::Text(float x, float y, const char* text, GLuint font) {
     glCallLists(GLsizei(strlen(text)), GL_UNSIGNED_BYTE, text);
 }
 void Overlay::ResetGraphics(bool deleteObjects) {
+    spellHud_.Reset(deleteObjects);
     sky_.Reset(deleteObjects);
     // GPU names belong to one context; never delete old numeric IDs in a replacement context.
     for (int i = 0; i < WeaponSlots::Count; ++i) { guns_[i].Reset(deleteObjects); loaded_[i] = attempted_[i] = false; }
@@ -42,8 +43,10 @@ void Overlay::ResetGraphics(bool deleteObjects) {
     if (deleteObjects) {
         if (font_) glDeleteLists(font_, 96);
         if (statusFont_) glDeleteLists(statusFont_, 96);
+        if (spellFont_) glDeleteLists(spellFont_,96);
     }
     font_ = statusFont_ = 0; statusFontSize_ = 0;
+    spellFont_=0;spellFontSize_=0;
 }
 void Overlay::ContextDeleted(HGLRC context) {
     if (context_ != context) return;
@@ -64,14 +67,16 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
             glGetString(GL_VENDOR), glGetString(GL_RENDERER), glGetString(GL_VERSION), glIsEnabled(GL_LINE_STIPPLE));
     } else if (refreshPending_) {
         // Keep surviving resources: blind deletion after Alt-Tab can touch IDs recycled by the game.
-        bool valid=(!font_ || glIsList(font_)) && (!statusFont_ || glIsList(statusFont_));
-        valid=valid && sky_.Valid();
+        bool valid=(!font_ || glIsList(font_)) && (!statusFont_ || glIsList(statusFont_)) && (!spellFont_ || glIsList(spellFont_));
+        valid=valid && sky_.Valid() && spellHud_.Valid();
         for (int i=0;i<WeaponSlots::Count;++i) if (loaded_[i] && !guns_[i].TexturesValid()) valid=false;
         for (int i=0;i<WeaponSlots::Count;++i) if (previewLoaded_[i] && !buyPreviews_[i].TexturesValid()) valid=false;
         if (!valid) { ResetGraphics(false); wc3::Log("Overlay lost resources forgotten after focus return"); }
         else wc3::Log("Overlay resources retained after focus return");
     }
     refreshPending_ = false;
+    // Imports can keep the same path across maps; reload those textures in the active rendering context.
+    if(spellIconsRefresh_) {spellHud_.Reset(true);spellIconsRefresh_=false;}
     // Preserve every GL state touched so Warcraft's next frame renders normally.
     GLint oldMode; glGetIntegerv(GL_MATRIX_MODE, &oldMode); glPushAttrib(GL_ALL_ATTRIB_BITS);
     HWND window = WindowFromDC(dc); RECT client = {};
@@ -183,6 +188,16 @@ void Overlay::Draw(HDC dc, const ShooterController& controller,NativeMinimap& mi
         for(const auto& row : HudHints::Wrap(group,columns)) {Text(25,hintY,row.c_str());hintY+=23;}
     }
     if (controller.RefillNotice()) Text(statusPad, statusY - statusSize - 16, controller.AmmoMessage(), statusFont_);
+    if(controller.Settings().showSpellIcons && !unavailableView && !controller.Buying()) {
+        std::array<std::string,4> keys;
+        for(int i=0;i<4;++i)keys[i]=key(ShortcutAction(int(ShortcutAction::Spell1)+i));
+        auto layout=SpellHudLayout::Calculate(width,height,controller.Settings().spellIconSizePercent);
+        // Match labels to icon size so READY/countdowns do not overlap neighboring slots after resize.
+        int size=std::clamp(layout.side/3,12,28);
+        if(size!=spellFontSize_) {if(spellFont_)glDeleteLists(spellFont_,96);spellFont_=BitmapFont(dc,size);spellFontSize_=size;}
+        spellHud_.Draw(controller.SpellHud(),keys,layout,controller.Settings().showSpellCooldowns,
+            [&](float x,float y,const char* label){Text(x,y,label,spellFont_);});
+    }
     // Horizontal CS units match MaxBunnySpeed, excluding vertical falling/jumping velocity.
     // Stack above notices/status so the optional counter never covers health or ammunition.
     if (controller.SpeedVisible()) {

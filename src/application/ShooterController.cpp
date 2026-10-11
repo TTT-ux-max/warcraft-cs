@@ -160,6 +160,7 @@ void ShooterController::Disable(bool restoreCamera) {
     wc3::Log("FPS disabled");
 }
 void ShooterController::ResetMap() {
+    spellHud_={};spellHudTick_=spellHudLog_=0; // Forget per-map art and cooldown snapshots with their ability handles.
     spells_.Reset();spellRequested_=-1;spellCancelRequested_=false; // Forget unloaded-map orders without touching stale handles.
     healthBarToggleRequested_=false;
     nativeFog_.Reset();fogToggleRequested_=false; // An unloaded map's fog snapshot must be forgotten.
@@ -705,6 +706,14 @@ void ShooterController::Tick(uintptr_t ui) {
     if (escape || !wc3::GetUnitTypeId(unit_) || wc3::Real(wc3::GetUnitState(unit_, 0)) <= 0.405f) { Disable(true); return; }
     health_ = wc3::Real(wc3::GetUnitState(unit_, 0));
     UpdateStatus();
+    // HUD sampling runs on the game thread and never stores native pointers for the GL overlay.
+    if(settings_.showSpellIcons && now-spellHudTick_>=100) {
+        spellHudTick_=now;spellHud_=spells_.Snapshot(unit_,settings_.spells);
+        if(DiagnosticLog::Due(spellHudLog_))for(int i=0;i<4;++i) {
+            const auto& slot=spellHud_[i];wc3::Trace("spell HUD slot=%d ability=%08X level=%d passive=%d cooldownKnown=%d remaining=%.2f icon=%s",
+                i+1,slot.ability,slot.level,slot.passive,slot.cooldownKnown,slot.cooldown,slot.icon.c_str());
+        }
+    }
     // Releasing followers returns native control even when their FPS leader cannot act.
     if (squadRequested_==3) {
         squad_.Release();squadRequested_=0;ammoMessage_="SQUAD RELEASED";refillTick_=now;

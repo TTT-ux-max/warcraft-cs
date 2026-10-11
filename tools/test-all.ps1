@@ -11,6 +11,7 @@ foreach ($name in @('window-input','fog-of-war','diagnostic-log','native-frame-r
 & (Join-Path $PSScriptRoot 'test-health-bars.ps1')
 # Configurable spell slots and explicit native order ownership need no interactive game input.
 & (Join-Path $PSScriptRoot 'test-spells.ps1')
+& (Join-Path $PSScriptRoot 'test-spell-hud.ps1')
 # Buying/sky decoding are independent of Warcraft and use only synthetic/private-free test inputs.
 & (Join-Path $PSScriptRoot 'test-buy-menu.ps1')
 Write-Output 'All native-independent regression suites passed.'

@@ -104,6 +104,15 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     if (!_stricmp(showMinimap.c_str(),"false") || showMinimap=="0") result.showMinimap=false;
     else if (_stricmp(showMinimap.c_str(),"true") && showMinimap!="1") wc3::Log("Invalid Interface.ShowMinimap; using true");
     result.minimapSizePercent=std::max(10.f,number("Interface","MinimapSizePercent",22,40));
+    // Optional spell HUD settings reload with F8; malformed preferences retain its requested default visibility.
+    auto enabledHud=[&](const char* key) {
+        auto value=text("Interface",key,"true");
+        if(!_stricmp(value.c_str(),"false") || value=="0")return false;
+        if(_stricmp(value.c_str(),"true") && value!="1")wc3::Log("Invalid Interface.%s; using true",key);
+        return true;
+    };
+    result.showSpellIcons=enabledHud("ShowSpellIcons");result.showSpellCooldowns=enabledHud("ShowSpellCooldowns");
+    result.spellIconSizePercent=std::max(4.f,number("Interface","SpellIconSizePercent",7,14));
     // Keep the optional counter hidden for old/invalid configs; accept explicit boolean preferences.
     auto showSpeed=text("Interface","ShowSpeed","false");
     result.showSpeed=!_stricmp(showSpeed.c_str(),"true") || showSpeed=="1";

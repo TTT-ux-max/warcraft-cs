@@ -23,6 +23,10 @@ int main() {
     assert(slots.Passive(HeroSpellSlots::Rawcode("A003")) && !slots.Passive(HeroSpellSlots::Rawcode("A001")));
     slots.LoadPositions("[A003]\nArt=ReplaceableTextures\\CommandButtons\\BTNTest.blp\n");
     assert(!slots.Passive(HeroSpellSlots::Rawcode("A003")));
+    // Preserve unlearned artwork and select the first per-level path without a trailing CR.
+    slots.LoadPositions("[A001]\r\nArt=map\\first.blp,map\\second.blp\r\n");
+    assert(slots.Icon(HeroSpellSlots::Rawcode("A001"))=="map\\first.blp");
+    assert(slots.Icon(123).empty());
     // A custom list starts with ultimate/stats and puts its first button fifth: never truncate that skill.
     slots.LoadUnits("C;X1;Y1;K\"unitAbilID\"\nC;X2;K\"heroAbilList\"\nC;X1;Y2;K\"H001\"\nC;X2;K\"B004,B005,B003,B002,B001\"\n");
     slots.LoadPositions("[B001]\nResearchbuttonpos=0,0\n[B002]\nResearchbuttonpos=1,0\n[B003]\nResearchbuttonpos=2,0\n");

@@ -2,6 +2,10 @@
 
 ## Unreleased вЂ” test branches
 
+- Add bottom-right spell icons, configured shortcut labels and live native cooldowns, including passive/unlearned/unsupported states; read owned current-map Art without packaging game assets.
+- Add Interface.ShowSpellIcons, ShowSpellCooldowns and SpellIconSizePercent (4..14% of window height, default 7), live F8 reload and preservation during upgrades.
+- Guard the native basic-attack target getter in FPS so a lingering target cannot feed ordinary AI while the current order reports zero; preserve spell targets and RTS behavior.
+
 - Fix automatic enemy pursuit in FPS by rejecting native basic-attack validation and retaliation dispatch before chase starts; preserve spell components, ordinary units and RTS control, with bounded rejection diagnostics.
 
 - Fix custom hero spell mapping when the primary ability is fifth/later in the list: prioritize declared research columns, preserve passive slots and prefer learned replacements in duplicate columns; log all four resolved rawcodes.

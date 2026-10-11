@@ -113,7 +113,7 @@ static uintptr_t CurrentUI() {
 static void ObserveMap(uintptr_t ui) {
     if (mapUI == ui) return;
     // A real UI unload/replacement marks map boundaries; a rendering pause is only a focus pause.
-    controller.ResetMap(); mapUI = ui;
+    controller.ResetMap();overlay.MapChanged(); mapUI = ui;
     healthBars.Reset();healthBarView.active=false; // Native models/snapshots belong to the current map.
     if (ui) healthy = true;
     wc3::Log("Map lifecycle: %s ui=%08X", ui ? "loaded" : "unloaded", ui);

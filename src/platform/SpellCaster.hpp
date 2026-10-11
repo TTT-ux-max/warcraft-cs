@@ -10,6 +10,7 @@ public:
     void Cancel();
     bool Active() const {return order_!=0;}
     void Update();
+    SpellHudSlots Snapshot(wc3::Handle unit,const SpellSettings& settings) {return slots_.Snapshot(unit,settings);}
     const char* Cast(wc3::Handle unit,int slot,const SpellSettings& settings,const SpellAim& aim,bool self);
 private:
     NativeSpellSlots slots_;

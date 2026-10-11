@@ -69,10 +69,10 @@ if (!$text.Contains('ShowSpeed=false')) { throw 'Legacy config lacks the default
 if (!$text.Contains('ShowMinimap=true') -or !$text.Contains('MinimapSizePercent=22')) {throw 'Legacy config lacks minimap defaults.'}
 # Preserve explicit map visibility/size through migration and an idempotent second update.
 $mapConfig=Join-Path $folder 'custom-minimap.ini'
-@('[Interface]','ShowMinimap=false','MinimapSizePercent=31','ShowSpeed=true') | Set-Content -LiteralPath $mapConfig -Encoding ascii
+@('[Interface]','ShowMinimap=false','MinimapSizePercent=31','ShowSpeed=true','ShowSpellIcons=false','ShowSpellCooldowns=false','SpellIconSizePercent=11') | Set-Content -LiteralPath $mapConfig -Encoding ascii
 Update-GameplayConfig $template $mapConfig
 $mapText=Get-Content -LiteralPath $mapConfig -Raw
-foreach ($setting in @('ShowMinimap=false','MinimapSizePercent=31','ShowSpeed=true')) {
+foreach ($setting in @('ShowMinimap=false','MinimapSizePercent=31','ShowSpeed=true','ShowSpellIcons=false','ShowSpellCooldowns=false','SpellIconSizePercent=11')) {
     if (!$mapText.Contains($setting)) {throw "Minimap migration lost preference: $setting"}
 }
 if ([regex]::Matches($mapText,'(?m)^\[Interface\]').Count -ne 1) {throw 'Minimap migration duplicated Interface.'}

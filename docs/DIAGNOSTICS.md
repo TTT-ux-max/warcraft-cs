@@ -98,3 +98,8 @@ update older launchers and modules to record them.
 FPS attack guards log validated hook installation for native validation/dispatch and numeric/string
 map orders. Bounded `FPS blocked native attack` traces identify rejection phases; existing cancellation
 records still report cleanup of a lingering native target. Spell components keep their own diagnostics.
+
+`FPS native attack target guard installed` reports the additional native target hook. Sampled
+`spell HUD slot` records include rawcode, learned level, passive status, timer support, live remaining
+seconds and Art path. `Spell icon loaded` reports archive decode/upload success, dimensions and path
+once per map/context cache entry. A missing/unsupported icon remains an empty framed slot.

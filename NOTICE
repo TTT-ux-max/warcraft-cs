@@ -141,6 +141,13 @@ https://docs.python.org/3/license.html
 https://visualstudio.microsoft.com/license-terms/
 
 PROVENANCE RULE
+Native ability Art/CAgentTimer layout facts were checked against YDWE's published
+AbilityState adapter; bounded memory reads are independently implemented here.
+BLP1 palette/JPEG layout facts were checked against mdx-m3-viewer's format parser.
+No YDWE code, decoder library or Blizzard artwork is embedded or redistributed.
+https://github.com/actboy168/YDWE/blob/master/Development/Plugin/Warcraft3/yd_jass_api/AbilityState.cpp
+https://github.com/flowtsohg/mdx-m3-viewer/blob/master/src/parsers/blp/image.ts
+
 The 1.26a render-demand operand location was identified using RenderEdge's publicly
 documented FPS-unlock address, then independently checked in the owner's Game.dll.
 NativeFrameRate is project-authored guarded patching/pacing code; no RenderEdge code

@@ -530,3 +530,22 @@ The native minimap now explicitly preserves world depth for health/sky rendering
 oracle checks exact background restoration, unchanged depth values and restored depth-write state.
 The sky conversion test initially failed because the sandbox's system temporary directory was
 inaccessible; rerunning that suite with a workspace temporary directory passed.
+
+## Stationary FPS and spell HUD (2026-10-11 test branch)
+
+The reported local log shows native order=0/target=1 and advancing XY while mod physics speed=0.
+The additional guard masks the basic-attack target getter for the controlled actor/passive followers;
+cleanup still observes the original target. Synthetic dispatch tests cover this split and preserve
+ordinary units, spell components and immediate RTS restoration.
+
+All native-independent suites pass. HUD regressions read the production native timer/Art pointer
+chains from synthetic structures, including paused simulation time, reset and malformed timers.
+Authored palette/alpha and JPEG data verify bounds and BLP BGR conversion, while ordinary JPEG keeps
+its RGB order. Four privately extracted stock icons decode at 64x64 and match independent color
+inspection. Real INI parsing tests cover HUD defaults, malformed values, bounds and reload;
+PowerShell 7/5.1 migrations preserve visibility/size preferences and remain idempotent.
+
+The x86 fixture DLL builds. Interactive verification is pending: the separate Warcraft copy
+displays "Warcraft III was unable to initialize" while the user's existing game remains open.
+Only the two owned test processes were closed, and their private DLL/config snapshots were restored.
+The new private map retains normal acquisition range, unlike the earlier pursuit fixture.

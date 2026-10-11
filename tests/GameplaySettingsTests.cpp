@@ -222,6 +222,27 @@ int main() {
         assert(!GameplaySettings::Load(path).showMinimap);
     }
     DeleteFileA(path.c_str());assert(GameplaySettings::Load(path).showMinimap);
+    // Spell HUD preferences are re-read by F8 and bound before layout allocates textures.
+    for(const char* option:{"ShowSpellIcons","ShowSpellCooldowns"}) {
+        for(const char* value:{"false","0","FALSE"}) {
+            WritePrivateProfileStringA("Interface",option,value,path.c_str());
+            auto hud=GameplaySettings::Load(path);
+            assert(option[9]=='I' ? !hud.showSpellIcons : !hud.showSpellCooldowns);
+        }
+        for(const char* value:{"true","1","TRUE","broken","","nan"}) {
+            WritePrivateProfileStringA("Interface",option,value,path.c_str());
+            auto hud=GameplaySettings::Load(path);
+            assert(option[9]=='I' ? hud.showSpellIcons : hud.showSpellCooldowns);
+        }
+    }
+    const PercentCase spellSizes[]={{"4",4},{"7.5",7.5f},{"-5",4},{"200",14},{"nan",7},{"inf",7},{"",7},{"bad",7}};
+    for(const auto& test:spellSizes) {
+        WritePrivateProfileStringA("Interface","SpellIconSizePercent",test.value,path.c_str());
+        assert(GameplaySettings::Load(path).spellIconSizePercent==test.expected);
+    }
+    DeleteFileA(path.c_str());
+    auto defaultHud=GameplaySettings::Load(path);
+    assert(defaultHud.showSpellIcons && defaultHud.showSpellCooldowns && defaultHud.spellIconSizePercent==7);
     const PercentCase distances[]={{"0",0},{"900",900},{"-10",0},{"99999",5000},{"nan",1200},{"broken",1200}};
     for (const auto& test : distances) {
         const auto sample=path+std::to_string(++index);

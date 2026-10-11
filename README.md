@@ -33,6 +33,7 @@ native/optional CS skies, bridge movement and corrected FPS rendering. Earlier c
 - Z/X/C/V cast the four learned hero spell slots from first person; keyboard shortcuts are configurable.
 - K toggles ally (green) and enemy (red) health bars together and saves the choice in the INI.
 - **M** toggles the native FPS minimap.
+- The bottom-right spell panel shows the four mapped ability icons, configured keys and native cooldowns.
 - Filled crosshair geometry and automatic control recovery after native campaign movies.
 - Classic AK/M4 and USP/AWP punch calculations, recoil recovery and burst behavior.
 - Primary and secondary melee attacks, locally imported CS sounds and a blood-free hit indicator.
@@ -291,6 +292,11 @@ Edit it and press F8 in FPS.
   The counter uses CS/GoldSrc units/s, matching `MaxBunnySpeed`; vertical jump/fall velocity is excluded.
   Updates add missing keys and preserve custom values. The HUD omits basic WASD/reload/jump/crouch hints.
 - `[Interface] ShowMinimap=true` shows Warcraft's native minimap in the FPS top-right corner.
+- `[Interface] ShowSpellIcons=true` shows four spell icons at the bottom right; `ShowSpellCooldowns=true`
+  adds the live remaining cooldown. `SpellIconSizePercent=7` controls icon size (4..14% of window height).
+  Art comes from your current map/game. `LV0` marks an unlearned spell, `PASS` a passive,
+  `EMPTY` an unmapped slot, and `?` an unsupported native timer. Rejected casts do not start a fake timer.
+  F8 reloads these settings and shortcuts; updates preserve custom values.
   **M** toggles it for the session, including across F6 switches; startup/F8 restores the saved preference
   (`true`/`false`, also `1`/`0`). Terrain, fog of war and native markers follow the current map's visibility.
   `MinimapSizePercent=22` sets the square's side to 22% of window height (10..40, fractional values allowed).

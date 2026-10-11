@@ -43,6 +43,8 @@ $sources += '"' + (Join-Path $modRoot 'src/platform/NativeFrameRate.cpp') + '"'
 $sources += '"' + (Join-Path $modRoot 'src/platform/NativeCameraFarClip.cpp') + '"'
 # Keep native health sampling separate from depth-tested presentation.
 $sources += @('platform/UnitHealthBars.cpp','presentation/HealthBarRenderer.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
+# Spell state comes from native timers; owned archive icons are decoded/uploaded by separate presentation adapters.
+$sources += @('platform/NativeAbilityInfo.cpp','platform/SpellIconImage.cpp','presentation/SpellHudView.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 # Keyboard metadata and native spell targeting/order ownership are separate from the application coordinator.
 $sources += @('input/ShortcutBindings.cpp','config/HeroSpellSlots.cpp','platform/NativeSpellSlots.cpp','platform/SpellAim.cpp','platform/SpellCaster.cpp') | ForEach-Object { '"'+(Join-Path $modRoot "src/$_")+'"' }
 $sources += '"' + (Join-Path $modRoot 'src/platform/MovementObstacles.cpp') + '"'
@@ -123,7 +125,7 @@ $hookCommands=@('@echo off','chcp 65001 >nul',('call "'+$compilerEnvironment+'" 
 Push-Location $hookBuild
 # The working directory owns this fixed filename, avoiding cmd parsing of user-chosen path characters.
 try { & $env:COMSPEC /d /c compile.cmd; if ($LASTEXITCODE) { throw 'MinHook x86 build failed.' } } finally { Pop-Location }
-$compileCommand = 'cl /nologo /LD /MT /std:c++17 /EHsc /W4 /O2 /DWIN32_LEAN_AND_MEAN /DNOMINMAX /FI"' + $metadata + '"' + $testDefine + ' /I"' + $hookRoot + '" ' + ($sources -join ' ') + ' /link /OUT:"' + (Join-Path $OutputDirectory 'WarcraftCS.mix') + '" "' + $hookLibrary + '" user32.lib gdi32.lib opengl32.lib version.lib winmm.lib ole32.lib'
+$compileCommand = 'cl /nologo /LD /MT /std:c++17 /EHsc /W4 /O2 /DWIN32_LEAN_AND_MEAN /DNOMINMAX /FI"' + $metadata + '"' + $testDefine + ' /I"' + $hookRoot + '" ' + ($sources -join ' ') + ' /link /OUT:"' + (Join-Path $OutputDirectory 'WarcraftCS.mix') + '" "' + $hookLibrary + '" user32.lib gdi32.lib opengl32.lib version.lib winmm.lib ole32.lib windowscodecs.lib'
 # A saved batch file avoids nested cmd/PowerShell quoting around Visual Studio paths.
 $buildScript = Join-Path $buildDirectory 'compile.cmd'
 $loaderCommand = 'cl /nologo /LD /MT /O2 /W4 /DWIN32_LEAN_AND_MEAN "' + (Join-Path $modRoot 'src/runtime/MilesLoader.cpp') + '" "' + [System.IO.Path]::ChangeExtension($exports, '.cpp') + '" /link /DEF:"' + $exports + '" /OUT:"' + (Join-Path $OutputDirectory 'Mss32.dll') + '"'

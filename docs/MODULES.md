@@ -119,6 +119,13 @@ learned ability order getters, while `SpellAim` resolves the visible reticle wid
 player interruption; the controller yields its ordinary order cancellation and firing during that
 state. Map reset forgets orders without issuing commands to unloaded handles.
 
+`SpellHudSlot` carries value snapshots of the same four ability slots used by casting.
+`NativeAbilityInfo` safely reads native per-level Art and the verified CAgentTimer simulation clock;
+`NativeArchive` reads bounded current-map-priority archive data. `SpellIconImage` decodes BLP1 palettes
+and delegates JPEG/PNG to Windows WIC. `SpellHudView` owns context/map-specific GL texture caches,
+while `SpellHudLayout` bounds the bottom-right row independently of the engine. No game art is packaged.
+The controller samples state on the game thread; rendering keeps no native ability pointer.
+
 The combined FPS overlay draws health bars against retained world depth before the weapon pass,
 then composites the captured native minimap and wraps shortcut hints using the current bindings.
 NativeMinimap prevents native map batches from writing world depth; ShortcutBindings owns its M

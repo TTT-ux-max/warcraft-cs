@@ -17,7 +17,7 @@ BOOL (__cdecl* IssuePointOrderById)(Handle,int,float*,float*)=[](Handle,int orde
 BOOL (__cdecl* IssueImmediateOrderById)(Handle,int)=[](Handle,int order)->BOOL {
     if(order==851972) {++stops;current=0;return TRUE;}++calls;if(immediateAccepted)current=order;return immediateAccepted;};
 }
-int NativeSpellSlots::Ability(wc3::Handle,int slot,const SpellSettings&) {return slot==3 ? 0 : slot+1;}
+int NativeSpellSlots::Ability(wc3::Handle,int slot,const SpellSettings&,bool) {return slot==3 ? 0 : slot+1;}
 int NativeSpellSlots::Order(wc3::Handle,int ability) {return ability==3 ? 0 : 852095;}
 int main() {
     SpellCaster caster;SpellSettings settings;SpellAim aim;aim.target=7;aim.point=true;aim.x=120;

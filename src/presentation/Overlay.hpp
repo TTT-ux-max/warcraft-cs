@@ -4,6 +4,7 @@
 #include "../application/ShooterController.hpp"
 #include "SkyView.hpp"
 #include "HealthBarRenderer.hpp"
+#include "SpellHudView.hpp"
 class NativeMinimap;
 
 class Overlay {
@@ -13,8 +14,11 @@ public:
         const WorldLabelView& barView,float nearPlane,float farPlane);
     void ContextDeleted(HGLRC context);
     void RefreshAfterFocus() { refreshPending_ = true; }
+    void MapChanged() {spellIconsRefresh_=true;}
 private:
     void ResetGraphics(bool deleteObjects);
+    SpellHudView spellHud_;
+    bool spellIconsRefresh_=false;
     void Text(float x, float y, const char* text, GLuint font = 0);
     void Font(HDC dc, int statusSize);
     std::string root_;
@@ -24,6 +28,8 @@ private:
     bool loaded_[WeaponSlots::Count] = {}, attempted_[WeaponSlots::Count] = {};
     GLuint font_ = 0;
     GLuint statusFont_ = 0;
+    GLuint spellFont_=0;
+    int spellFontSize_=0;
     int statusFontSize_ = 0;
     int hintGlyphWidth_ = 12;
     HGLRC context_ = nullptr;

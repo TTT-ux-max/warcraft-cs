@@ -42,6 +42,9 @@ void HeroSpellSlots::LoadPositions(const std::string& text) {
     while(std::getline(input,line)) {
         if(!line.empty() && line[0]=='[' && line.size()>=6)id=Rawcode(line.substr(1,4));
         if(id && line.rfind("Art=",0)==0) {
+            // Unlearned slots still need their stock/map icon when no live ability object exists yet.
+            auto icon=line.substr(4);icon.resize(icon.find_first_of(",\r\n") == std::string::npos ? icon.size() : icon.find_first_of(",\r\n"));
+            icons_[id]=icon;
             // Stock passive buttons can expose a native order ID that accepts a no-op; keep their slots inert.
             auto art=line.substr(4);for(auto& c:art)c=char(std::tolower(static_cast<unsigned char>(c)));
             if(art.find("\\passivebuttons\\")!=std::string::npos)passive_.insert(id);else passive_.erase(id);
