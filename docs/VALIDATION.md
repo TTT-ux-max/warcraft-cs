@@ -643,3 +643,19 @@ ordinary modules; no retail map, script, native disassembly or log enters source
 
 Final DLL reruns the stock native checks and buy-panel visual inspection. AK preview shows1250gold,
 clip/reserve30/20, native-scaled base damage58 and978RPM from IAS1.63. Text fits the existing panel.
+
+### Native passive contact range regression (2026-10-12)
+
+In an approved disposable DotA Anti-Mage scene, the previous adapter confirms USP ray contacts
+at 600/1200 but consumes no native base roll: HP remains684 and mana254. Contacts at60/300 work.
+The supported engine's impact checks its primary native attack range before rolling base damage.
+
+The corrected adapter scopes that range getter to the confirmed primary FPS contact distance.
+All four firearms (AK47/M4A1/USP/AWP) hit at60/300/600/1200 with learned Mana Break level2 and no
+items: mana254->214, HP684->607.7 for ordinary guns and684->495.3 for AWP. The actor remainsXY0/0
+with order0. Knife cannot contact the target at600. F8 disables passive dispatch and Mana Break.
+
+Synthetic checks cover unchanged range before/after impact, other components/secondary attacks,
+nearby contacts retaining larger native range, invalid distances, native misses without double
+damage and actor removal during callbacks. Combat, hitbox, spell, pursuit and walking regression
+suites pass. Private fixtures restore their DLL/config and close only their own process.

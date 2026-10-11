@@ -51,3 +51,4 @@
 - Improved AWP instant-kill and weapon-effect diagnostics.
 - Removed C4 from the default starting inventory.
 - Preserved F7 C4 grants and added unlimited repeat C4 purchases.
+- Fixed firearm hits failing beyond the hero's native attack range with weapon passives enabled.

@@ -131,3 +131,8 @@ weapon damage mode. Each shot records `finishing` and `effects`. The native cont
 the substituted base and original weapon kind. A native dodge/immune hit is handled without fallback
 damage even when no base roll is consumed. Compare target HP/mana/buffs and attacker HP to establish
 the actual passive effect; a successful dispatch alone does not prove that a chance-based effect proc'd.
+
+Native contacts also record center-to-center `distance`. Confirmed FPS contacts extend only their
+synchronous native impact range check to that distance; the production ray enforces weapon range
+and terrain first. Ordinary RTS attack range is unchanged. `substituted=0` can still represent a
+native cancellation or miss; it must not trigger a second direct-damage event.

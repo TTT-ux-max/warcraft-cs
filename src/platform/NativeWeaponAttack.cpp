@@ -5,10 +5,20 @@
 namespace {
 uintptr_t gameBase=0;
 bool available=false;
-struct Contact {uintptr_t attack;float damage;bool substituted,inImpact;};
+struct Contact {uintptr_t attack;float damage,distance;bool substituted,inImpact;};
 thread_local Contact* contact=nullptr;
 using Roll=float* (__thiscall*)(uintptr_t,float*);
 Roll originalRoll=nullptr;
+using Range=float* (__thiscall*)(uintptr_t,float*,int);
+Range originalRange=nullptr;
+float* __fastcall ContactRange(uintptr_t attack,uintptr_t,float* result,int index) {
+    auto value=originalRange(attack,result,index);
+    // The FPS ray already verified range/terrain. Extend only its synchronous impact check,
+    // preserving the hero's ordinary RTS range and native melee-only passive eligibility.
+    if(contact && contact->inImpact && contact->attack==attack && index==0 && *value<contact->distance)
+        *value=contact->distance;
+    return value;
+}
 float* __fastcall DamageRoll(uintptr_t attack,uintptr_t,float* result) {
     auto value=originalRoll(attack,result);
     // Replace only this contact's base roll; native crits, orbs and damage triggers still process it afterwards.
@@ -20,8 +30,8 @@ float* __fastcall DamageRoll(uintptr_t attack,uintptr_t,float* result) {
 template<class T> bool Read(uintptr_t address,T& value) {
     SIZE_T got=0;return address && ReadProcessMemory(GetCurrentProcess(),reinterpret_cast<void*>(address),&value,sizeof(value),&got) && got==sizeof(value);
 }
-bool Execute(wc3::Handle attacker,wc3::Handle victim,uintptr_t object,uintptr_t attack,uintptr_t target,float damage,int kind) {
-    Contact current={attack,damage,false,false};Contact* previous=contact;
+bool Execute(wc3::Handle attacker,wc3::Handle victim,uintptr_t object,uintptr_t attack,uintptr_t target,float damage,float distance,int kind) {
+    Contact current={attack,damage,distance,false,false};Contact* previous=contact;
     using Impact=void (__thiscall*)(uintptr_t,uintptr_t,int,int,int,int,int);
     using Prepare=void (__thiscall*)(uintptr_t,uintptr_t,float*,float*);
     using Finish=void (__thiscall*)(uintptr_t,uintptr_t);
@@ -62,22 +72,25 @@ void NativeWeaponAttack::Install(uintptr_t base,HookInstaller hook) {
     const unsigned char cleanup[]={0xC2,0x18,0x00};int relative=0;
     const unsigned char prepare[]={0x51,0x57,0x8B,0xF9};
     const unsigned char finish[]={0x8B,0x81,0xE0,0x01,0x00,0x00};
+    const unsigned char range[]={0x56,0x8B,0xF1,0x8B,0x86,0xC0,0x02,0x00,0x00};
     std::memcpy(&relative,reinterpret_cast<void*>(base+0xCF82B),4);
     bool verified=!std::memcmp(reinterpret_cast<void*>(base+0xCF660),impact,sizeof(impact)) &&
         !std::memcmp(reinterpret_cast<void*>(base+0xC6940),roll,sizeof(roll)) &&
         !std::memcmp(reinterpret_cast<void*>(base+0x281580),prepare,sizeof(prepare)) &&
         !std::memcmp(reinterpret_cast<void*>(base+0x276330),finish,sizeof(finish)) &&
+        !std::memcmp(reinterpret_cast<void*>(base+0xC6B30),range,sizeof(range)) &&
         !std::memcmp(reinterpret_cast<void*>(base+0xD0225),cleanup,sizeof(cleanup)) && 0xCF82F+relative==0xC6940;
-    available=verified && hook(reinterpret_cast<void*>(base+0xC6940),reinterpret_cast<void*>(DamageRoll),reinterpret_cast<void**>(&originalRoll));
+    available=verified && hook(reinterpret_cast<void*>(base+0xC6940),reinterpret_cast<void*>(DamageRoll),reinterpret_cast<void**>(&originalRoll)) &&
+        hook(reinterpret_cast<void*>(base+0xC6B30),reinterpret_cast<void*>(ContactRange),reinterpret_cast<void**>(&originalRange));
     wc3::Log("Native weapon attack effects verified=%d installed=%d",verified,available);
 }
-bool NativeWeaponAttack::Apply(wc3::Handle attacker,wc3::Handle target,float damage) {
-    if(!available || contact || !std::isfinite(damage) || damage<=0)return false;
+bool NativeWeaponAttack::Apply(wc3::Handle attacker,wc3::Handle target,float damage,float contactDistance) {
+    if(!available || contact || !std::isfinite(damage) || damage<=0 || !std::isfinite(contactDistance) || contactDistance<0)return false;
     uintptr_t object=wc3::UnitObject(attacker),victim=wc3::UnitObject(target),attack=0;int kind=0;
     if(!object || !victim || !Read(object+0x1E8,attack) || !Read(attack+0xDC,kind) || kind<1 || kind>8)return false;
     // Once the pipeline has run, even an evaded/immune hit is handled: never add a fallback second hit.
-    bool substituted=Execute(attacker,target,object,attack,victim,damage,kind);
-    wc3::Log("Weapon attack effects attacker=%08X target=%08X base=%.1f substituted=%d nativeKind=%d",attacker,target,damage,substituted,kind);
+    bool substituted=Execute(attacker,target,object,attack,victim,damage,contactDistance,kind);
+    wc3::Log("Weapon attack effects attacker=%08X target=%08X base=%.1f substituted=%d nativeKind=%d distance=%.1f",attacker,target,damage,substituted,kind,contactDistance);
     return true;
 }
 int NativeWeaponAttack::AttackType(wc3::Handle attacker) {

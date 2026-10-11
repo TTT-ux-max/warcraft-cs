@@ -2,6 +2,10 @@
 
 ## Unreleased - test branches
 
+- Fix confirmed firearm hits being rejected beyond the hero's native attack range when passives
+  are enabled. Scope the native range check to the verified FPS contact; retain ordinary RTS range,
+  weapon/terrain ray limits, native passive eligibility and evasion handling. Log contact distance.
+
 - Remove C4 from the default starting inventory (`[Loadout] BombCount=0`). A positive count or
   explicit all-weapons mode opts into ownership. F7 grants/refills C4 and F9 still grants every weapon.
   Allow unlimited repeat C4 purchases by default (`UnlimitedBombPurchases=true`); MaxBombs retains

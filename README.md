@@ -460,6 +460,10 @@ and orb priority. Incompatible orb effects do not become stackable; map-specific
 still depend on the map's implementation. No basic attack/chase order or extra weapon projectile
 is issued. C4 explosions and destructable hits retain direct damage.
 
+Firearms use their configured FPS range even on a melee hero. After the ray verifies the target
+and terrain, only that contact's native impact range check is extended to its target distance.
+The hero's ordinary RTS range and native passive restrictions remain unchanged.
+
 Set `EnableAttackEffects=false` and press F8 to disable this attack-effect path. Direct damage keeps
 the unit's attack type and armor multiplier; map scripts listening to all damage can still run.
 Missing/empty/invalid values enable the feature; `true`/`false` and `1`/`0` are accepted. Updates add

@@ -509,8 +509,9 @@ void ShooterController::Strike() {
         if (settings_.heroDamage) wc3::Log("hero damage attack=%.1f multiplier=%.2f base=%.1f",attack,settings_.heroMultiplier[weapon_],baseDamage);
         // Confirmed weapon hits dispatch one native attack, including the map's attack effects, without pursuit.
         // C4/destructables and explicit finishing retain their own policies; zero friendly damage causes no events.
+        // Native impact compares unit centers; the ray has already enforced the weapon's surface range.
         bool effects=damage>0 && !destructable && !lethal && settings_.enableAttackEffects &&
-            NativeWeaponAttack::Apply(unit_,target,damage);
+            NativeWeaponAttack::Apply(unit_,target,damage,std::hypot(wc3::Real(wc3::GetUnitX(target))-x,wc3::Real(wc3::GetUnitY(target))-y));
         if(damage>0 && !effects)wc3::UnitDamageTarget(unit_,target,&damage,FALSE,TRUE,
             destructable || lethal ? 0 : NativeWeaponAttack::AttackType(unit_),lethal ? 26 : 4,0);
         if (lethal && wc3::Real(wc3::GetUnitState(target, 0)) > 0.405f) wc3::KillUnit(target);
