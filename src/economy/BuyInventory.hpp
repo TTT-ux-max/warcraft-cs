@@ -2,6 +2,7 @@
 #include "../config/GameplaySettings.hpp"
 #include <array>
 #include <algorithm>
+#include <limits>
 
 // Pure inventory transactions: callers debit native gold only after a useful purchase succeeds.
 class BuyInventory {
@@ -9,17 +10,20 @@ public:
     std::array<bool,WeaponSlots::Count> owned{};
     void Reset(const GameplaySettings& settings,int* ammo,int* reserve,const int* magazines,const int* reserves) {
         for (int i=0;i<WeaponSlots::Count;++i) {
-            owned[i]=settings.startAllWeapons || WeaponSlots::Melee(i) || i==WeaponSlots::C4 || i==WeaponSlots::Pistol;
+            // C4 enters the starting kit only through an explicit bomb count or the all-weapons option.
+            owned[i]=settings.startAllWeapons || WeaponSlots::Melee(i) || i==WeaponSlots::Pistol ||
+                (i==WeaponSlots::C4 && settings.startBombs>0);
             ammo[i]=owned[i] ? (i==WeaponSlots::C4 ? settings.startBombs : magazines[i]) : 0;
             reserve[i]=owned[i] ? reserves[i] : 0;
         }
     }
-    // Free grants/refills share capacity rules without altering the player's gold or planted C4 timers.
+    // F7 grants/refills C4; F9 also unlocks other weapons. Neither changes gold or planted timers.
     void Refill(const GameplaySettings& settings,int* ammo,int* reserve,const int* magazines,const int* reserves,bool grantAll=false) {
         for (int i=0;i<WeaponSlots::Count;++i) {
-            if (grantAll) owned[i]=true;
+            if (grantAll || i==WeaponSlots::C4) owned[i]=true;
             if (!owned[i]) continue;
-            ammo[i]=i==WeaponSlots::C4 ? settings.maxBombs : magazines[i];reserve[i]=reserves[i];
+            // Refilling must never discard paid bombs above the configured free-refill amount.
+            ammo[i]=i==WeaponSlots::C4 ? std::max(ammo[i],settings.maxBombs) : magazines[i];reserve[i]=reserves[i];
         }
     }
     int Next(int current,int steps) const {
@@ -38,7 +42,9 @@ public:
         bool bomb=slot==WeaponSlots::C4;
         if (ammunition && (WeaponSlots::Melee(slot) || !owned[slot])) return Result::NotOwned;
         if (!ammunition && owned[slot] && !bomb) return Result::AlreadyOwned;
-        if (bomb && ammo>=settings.maxBombs) return Result::Full;
+        // The optional gameplay cap does not limit ordinary repeat purchases; guard storage overflow separately.
+        if (bomb && ((!settings.unlimitedBombPurchases && ammo>=settings.maxBombs) ||
+            ammo==std::numeric_limits<int>::max())) return Result::Full;
         if (ammunition && !bomb && reserve>=reserveCapacity) return Result::Full;
         int cost=ammunition ? settings.ammoPrice[slot] : settings.weaponPrice[slot];
         if (gold<cost) return Result::NoGold;

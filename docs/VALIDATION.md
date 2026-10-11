@@ -1,5 +1,164 @@
 # Validation of the 0.1.0 source baseline
 
+## FPS native pursuit rejection (test branch, 2026-10-11)
+
+The guard rejects the controlled basic-attack component at native validation/dispatch and intercepts
+map target/point attack orders, covering numeric and string entry points. Smart unit pursuit is blocked;
+smart item pickup and spell order IDs remain native. Synthetic x86 adapter tests verify argument
+forwarding, passive policy, other actors/spell components and immediate RTS release. Host signatures
+are validated before the new hooks are installed; spell slot/caster/aim regressions pass.
+
+An approved opt-in native scene first exposed one chase step from an explicit map attack command.
+After guarding map orders too, a distant enemy attack was accepted while the actor attack was rejected.
+All sampled actor positions stayed at the pre-order baseline while hostile damage continued, and
+the enemy stayed at 420 HP. The same map runs repeated string target/point attack requests; Blizzard
+then completed natively with mana consumed. Both screenshots were inspected; no controller fault
+was logged. The disposable process closed and its INI was restored byte-exact. Test scene telemetry
+is opt-in and excluded from the normal Player DLL; this does not claim driving the user's DotA match.
+
+## Custom hero lists beyond four entries (test branch, 2026-10-11)
+
+The reported installed-game log resolved the first slot to an absent/unlearned rawcode. Inspection
+of the owner's DotA 6.88f AI tables reproduced the cause: a five-entry hero list starts with the
+ultimate/stats while the primary ability is fifth. The old four-entry truncation discarded it, and
+an unknown list-order fallback also occupied columns before declared UI metadata was considered.
+The production parser now reads the full list, applies declared columns first, fits unknown entries
+into remaining slots and prefers learned replacements within a declared column. Explicit extra/hidden
+columns do not fall back into the four spell controls. Synthetic regressions reproduce reordered
+five-entry lists, missing metadata, passive gaps, extra/hidden columns and learned replacements.
+The unchanged caster/aim suites pass. A private harness using the actual owned map tables now resolves
+the requested hero's four slots in button order, with the primary first and ultimate fourth.
+A user-approved disposable native map puts Blizzard fifth behind ultimate/stats and reproduces the
+list ordering with the ordinary DLL. Z resolves it to the first slot; its native order 852089 finishes
+with mana consumed, and a screenshot shows the spell effect. Assertions filter by the disposable PID
+to exclude previous log sessions. The test process closes and its INI is restored byte-exact.
+This verifies the mapping and native cast path; the user's DotA match itself was not driven.
+
+## Configurable keyboard and first-person spells (test branch, 2026-10-11)
+
+Production shortcut parsing validates unique layouts atomically, permits swaps and disabled actions,
+and preserves F6 as a recovery key. Real INI tests cover custom spell/pickup/speed keys, conflicting
+layouts, bounded aiming distance, rawcodes/target modes and strictly validated discrete order IDs.
+Synthetic owned-table metadata verifies SYLK coordinate inheritance, research-column order and
+passive slot preservation. Spell order tests cover unit/point/immediate/self forms, rejection,
+unlearned/passive slots, native completion, explicit interruption and unloaded-map reset. Reticle
+world tests cover nearest visible living widgets, terrain, hidden/loaded/dead filtering, destructable
+occlusion and balanced groups. The independent suites, buying regressions, actual XAudio2 gain and
+INI migration in PowerShell 7/Windows PowerShell 5.1 pass. The ordinary x86 Player build passes.
+
+The user-approved disposable native map verifies the 1.26a lookup signature and automatic Storm
+Bolt/Thunder Clap/Avatar slots. Native logs show mana costs of 75/90/150 with regeneration between
+samples, cooldown/insufficient-mana rejection and Q replacing C via live F8 reload. The initial
+native run revealed Bash's misleading accepted no-op order; stock passive button metadata now
+rejects that slot before dispatch, with an added regression. Blizzard's order was accepted but
+interrupted by subsequent input in that run; the later five-entry-list test above verifies a full channel.
+The private game closed normally and its INI was restored exactly. No campaign save was used.
+
+Automatic slots use stock/overlaid archive tables rather than arbitrary map object modifications;
+custom heroes/edited ability lists can use documented ability/order/target overrides. Native costs,
+legal target restrictions and cast ranges remain enforced by Warcraft. Multiplayer is not tested.
+
+## Shared health-bar shortcut (test branch, 2026-10-11)
+
+K now switches both teams together. The production settings toggle is checked for all four old
+saved team combinations: mixed/off states enable both, both-on disables both, and a second press
+reverses that shared state without changing distance. Both existing INI keys remain compatible
+with loading and migration. The sampler and hidden WGL rendering checks pass, as do gameplay
+configuration/migration checks and the ordinary Player build. The earlier native session below
+verifies rendering; native input was not driven again for this shortcut-only follow-up.
+
+## Allied/enemy health bars (initial two-key test, 2026-10-11)
+
+The production native sampler in a synthetic world filters controlled/dead/hidden/transported,
+fog-hidden and passive-neutral units, applies independent team switches, preserves actual health
+fractions, computes fallback model tops and balances group creation/destruction. A hidden native
+WGL window exercises actual green/red pixels, full/half fill, scope projection, behind-camera/range
+culling, nearer-depth occlusion and GL-state restoration. The full independent suite passes.
+Real INI loading covers legacy/empty/malformed/mixed-case/numeric switches, independent team reload
+and finite bounded 0..15000 distance. Migration in PowerShell 7 and Windows PowerShell 5.1 preserves
+custom switches/distance and remains idempotent. The ordinary x86 Player build also passes.
+
+With user-approved focus, the disposable map has a damaged ally, enemy and enemy behind a scaled
+castle, plus hidden/dead fixtures. Native captures show green/red bars above rendered model tops;
+the damaged ally has a partial fill and the full-health replacement hostile target has a full fill.
+The castle occludes its rear target's bar. K removes only the ally bar; L subsequently removes the
+enemy bar. F8 logs both saved switches, then the independently saved false/true state. No controller
+fault or GL error occurs. The scene starts with a native placement offset, so the test steps back
+from the castle and uses an explicit private paused-target request after the first enemy dies.
+Normal Exit closes the game, no test process remains, and the private INI snapshot is restored.
+No user installation or campaign save is changed; full campaign/multiplayer testing is not claimed.
+
+## Ground clipping and the native far-channel ceiling (test branch, 2026-10-11)
+
+Inspection of the owner's supported Game.dll shows the camera controller's FARZ wrapper at +114
+initialized with a 100..10000 range. Both scalar writes and evaluations clamp through the channel's
++80/+84 bounds. Comparing native far=10000 with requested far=15000 skips the old near correction
+and leaves a 100-unit plane in front of an eye only 96 units above the ground. Earlier field stubs
+did not emulate that native bound; the earlier 15000 tests prove parameter plumbing, not native reach.
+
+The production platform owner now changes only the active FPS channel's ceiling to 20000 and restores
+it through native generation keys. Tests reproduce the 15000/10000 failure, verify the live-field near
+fallback, 15000 acceptance, untouched portrait projection, repeated updates, camera replacement,
+stale generations and foreign limit preservation. The complete independent wrapper and ordinary
+x86 runtime build pass. Native getter/resolver/scalar-limit signatures gate the layout; failure retains
+the stock channel and the near correction still matches the actual camera field.
+
+A private owned map with a 257x257 flat terrain, a player and a castle at 13000 was rebuilt; all 15
+archive members round-trip exactly. With the user's save/close and input approval, the ordinary
+Player DLL runs in the disposable Warcraft copy. Native signatures verify, the FPS channel ceiling
+rises from 10000 to 20000, and the requested/live/projection far values settle at 15000. The initial
+10000 transition also receives near=8, covering the fallback. A horizontal capture shows the castle
+at 13000; the maximum downward pitch of -65 degrees shows continuous textured ground below the
+96-unit eye, including during movement. F6 releases FPS and logs restoration of the stock 10000
+ceiling. No controller fault or GL error occurs. The test game closes normally and its private INI
+backup is restored. User installation files and campaign saves are untouched; this is a flat-map
+ground/projection check, not a full campaign or ledge-collision validation.
+
+## Draw-distance default 15000 (test branch, 2026-10-10)
+
+The default settings snapshot, missing/malformed INI fallback and fresh-install template now use
+15000 Warcraft units. Existing settings-loader and real camera/projection tests pass, including
+explicit 15000 far clip and F8 snapshot reload. Configuration migration preserves custom distances
+and uses the new default for missing keys. The owner's installed INI was backed up privately and
+changed only from DrawDistance=10000 to 15000; F8 or restart is required to apply that file change.
+No input was sent to the running campaign for this parameter adjustment.
+
+## Ledge and stuck-position recovery (test branch, 2026-10-10)
+
+The production collision regression reproduces a blocked lower rim extending beyond the old
+64-unit cliff probe; the old implementation stops after landing, while the full-cell probe crosses
+the rim, falls and lands. A separate existing-trunk-overlap trial retreats through its native
+footprint even when native placement would relocate it, and rejects movement deeper into the trunk.
+Existing uphill-cliff, bridge, shallow-water, unknown-flat-blocker and swept thin-wall checks pass.
+The complete independent native wrapper passes; the final retreat change passes the targeted
+production collision suite. Runtime rejection telemetry uses the existing bounded detailed logger.
+
+A read-only capture of the user's running game shows the actor at a shoreline cliff; the old
+module does not log rejection reasons, so this alone cannot identify its exact blocking sample.
+A separate owned cliff map is prepared for native verification. Live gameplay verification is
+pending user permission to save/close the campaign and temporarily hand over input; no campaign
+state, save or installed DLL was changed during diagnosis.
+## FPS minimap and compact HUD (feature branch, 2026-10-11)
+
+An ordinary build in the private disposable WarcraftCS-Bunnyhop-Test map displayed the native map
+terrain and markers at the top-right. M hid/restored it; an AWP scope retained the map; F6 restored
+the original bottom-left RTS minimap. F8 loaded `ShowMinimap=false` and size 31, M showed the larger
+map, and F8 restored true/22. Resizing and minimizing/restoring retained the map, weapon and aiming mark.
+The top hints appeared in three compact rows. Config was restored after testing, and saves/config/runtime
+were backed up before launch. No controller faults or reported GL errors occurred. Full campaigns and
+custom maps that relocate/hide their native minimap have not been exhaustively tested.
+The final production build was also checked in a separate BootyBay match: rectangular terrain and
+native markers remained visible, letterboxing was black, N changed native fog, M/F8 toggled/restored
+the map, an AWP scope retained it, and F6 restored RTS. Test sessions exited through Warcraft's own menus.
+
+Portable tests cover square screen bounds, narrow-window hint wrapping, real INI parsing, bounded/invalid
+sizes, missing/invalid visibility defaults and preservation/idempotence of upgrades. A hidden synthetic
+Win32/OpenGL context verifies native crop/display/hidden state and pixel-exact restoration of the world
+under the original map, using alternating pixel stripes. Native minimap GL verification is separate from
+`test-all.ps1`; run `tools/test-native-minimap.ps1` on Windows with a usable OpenGL context.
+That GL oracle also rejects a synthetic full-console batch, accepts native map edge overscan and
+checks that rectangular terrain leaves black letterboxing rather than revealing racial console art.
+
 ## 0.7.0 release consolidation (2026-10-10)
 
 All completed feature tips are ancestors of the consolidated release; the old crosshair patch is
@@ -264,7 +423,7 @@ machine remains unverified; Developer mode reused installed tools in the integra
 ## Configurable allied damage
 
 `Damage.FriendlyFirePercent` defaults to the previous 50%, accepts fractional values,
-and clamps to 0–100. Real INI tests cover missing keys, 0/25/100/12.5, out-of-range
+and clamps to 0вЂ“100. Real INI tests cover missing keys, 0/25/100/12.5, out-of-range
 values and malformed/NaN input. Damage oracles cover firearms, heavy melee, C4,
 hero-mode attack scaling, enemy damage independence and allied AWP finishing protection.
 Zero allied damage skips the native damage call to avoid damage-trigger side effects.
@@ -319,3 +478,168 @@ the current vertical velocity. Migration preserves older custom bonuses and adds
 The opt-in native scene includes separate `strafe` and straight `hop` trials. This revision's
 real-game verification remains pending because the user's Warcraft process is active; no campaign
 or running module is replaced. Measurements above are independent physics results only.
+
+## Tree movement bounds (test branch)
+
+The active client's log identifies AshenCanopyTree0 with standing visual extents approximately
+427 by 425 Warcraft units. Privately decoding the owner's model yields 24 trunk triangles and
+local trunk extents approximately 37 by 43 units. No extracted model is committed or packaged.
+
+Tree-mesh regressions check exclusion of canopy cards and death stumps, invalid geometry,
+and the narrower bounds of that owned model. The production swept-collision test reproduces
+immobility inside the old canopy box, verifies passage beside the decoded trunk, and retains
+blocking on a direct approach. Adapter checks cover separate unit/destructable model caches
+and map reset, preventing tree animation names on units from changing their movement bounds.
+All independent native suites pass. Interactive tree-corridor verification remains pending;
+the original diagnosis was read-only while the user's campaign was open, without touching its saves.
+
+## Configurable frame rate and draw distance (test branch)
+
+The owner's 1.26.0.6401 Game.dll confirms the render-completion demand-bit instruction identified
+through RenderEdge's published address. The adapter validates the surrounding opcode bytes before
+changing one in-memory operand; it does not patch game files or alter simulation time. A synthetic
+executable-memory oracle covers enable/disable/reload, unexpected instruction refusal and real
+Windows high-resolution waiting (30 intervals at 120 FPS take at least 0.25 seconds).
+
+Real INI tests cover missing/empty/malformed/non-finite values, native mode, 30вЂ“360 FPS clamping,
+3000вЂ“20000-unit distance clamping and reload. Migration in PowerShell 7 and Windows PowerShell 5.1
+preserves explicit caps/distances and remains idempotent. Production camera-field writes and
+near-plane selection pass for 3000/5000/10000/15000/20000 while preserving portrait/RTS projection.
+All independent native suites and the ordinary x86 build pass. With user-approved focus, a disposable
+flat Warcraft map contains a player and a scaled castle at x=6500. In one ordinary Player session,
+F8 changes MaxFPS/DrawDistance from 144/10000 to 0/5000 and back. Stable native-mode samples are
+approximately 62вЂ“65 frames/s; the extended FPS world view is approximately 99вЂ“103 frames/s, with the
+RTS view approximately 136вЂ“138. These are scene-specific measurements, not a promise of 144 FPS.
+Matched captures at the same player position show the castle absent at 5000 and present at 10000.
+The reticle and nearby terrain remain visible; a one-second W input moves the player normally.
+No controller fault or GL error appears in this trial. The test exits normally, restores its private
+INI snapshot and leaves no test process; user installations/campaign saves are untouched.
+
+## Combined FPS test build (2026-10-11)
+
+The feature/add-combined-fps-test branch combines the current first-person spell/health/rendering/
+movement/pursuit fixes with the native minimap branch. The public VERSION remains 0.7.0; this is a
+private test package. Minimap=M participates in the same configurable layout as HealthBars=K,
+Speed=P and Spell1..4=Z/X/C/V, and the compact HUD resolves labels from that layout.
+
+All native-independent regression suites passed, including the actual WGL health bar and minimap
+checks, spell ownership/pursuit guard and config parsing. The combined config regression verifies
+shared display preferences, a remapped minimap key and safe fallback for a minimap/spell collision.
+Config migration preserves custom minimap, health, spell and keyboard values and is idempotent.
+The native minimap now explicitly preserves world depth for health/sky rendering; the hidden WGL
+oracle checks exact background restoration, unchanged depth values and restored depth-write state.
+The sky conversion test initially failed because the sandbox's system temporary directory was
+inaccessible; rerunning that suite with a workspace temporary directory passed.
+
+## Stationary FPS and spell HUD (2026-10-11 test branch)
+
+The reported local log shows native order=0/target=1 and advancing XY while mod physics speed=0.
+The additional guard masks the basic-attack target getter for the controlled actor/passive followers;
+cleanup still observes the original target. Synthetic dispatch tests cover this split and preserve
+ordinary units, spell components and immediate RTS restoration.
+
+All native-independent suites pass. HUD regressions read the production native timer/Art pointer
+chains from synthetic structures, including paused simulation time, reset and malformed timers.
+Authored palette/alpha and JPEG data verify bounds and BLP BGR conversion, while ordinary JPEG keeps
+its RGB order. Four privately extracted stock icons decode at 64x64 and match independent color
+inspection. Real INI parsing tests cover HUD defaults, malformed values, bounds and reload;
+PowerShell 7/5.1 migrations preserve visibility/size preferences and remain idempotent.
+
+The separate owned 1.26a map now verifies the guard with normal acquisition range, incoming enemy
+attacks and repeated scripted chase orders. All 22 enemy telemetry samples retain XY=(2.7,0.1)
+while hero HP decreases from 1375 to 1358.8; enemy HP stays 420. The four actual 64x64 map/game
+icons render alongside the native minimap and shared ally/enemy bars, and the minimap switch works.
+First-slot Blizzard (listed fifth in this map) completes as native order 852089. The actual timer
+samples decrease 5.38, 4.28, 3.20, 2.10, 1.00, 0.00 seconds; the screenshot shows 3.6s beneath its
+darkened icon. No controller fault or GL error appears. The private DLL/INI are restored and the
+owned test process closes. The earlier failed launches did not touch the user's game or saves.
+
+The opt-in `-TestGameplay` fixture can use `WCS_BACKGROUND_TEST=1` in its child process environment
+to verify the real game without taking desktop input. It disables keyboard/mouse reads and input
+dispatch, allows background game-thread updates and accepts toggle/spell/bars/minimap mailbox
+commands. The successful trial includes 21 FPS summaries with focus=0. Ordinary builds exclude
+this switch and all gameplay fixture commands; their focus/input behavior remains unchanged.
+
+## Native walking, rear squad and live command icons (2026-10-11 test branch)
+
+Native-independent suites passed for the movement hook's real x86 caller ABI, order dispatch,
+research row filtering, live ability replacement/cycle handling, native command matching/art,
+per-level mana/cooldown fallback, radial geometry and squad rear/yield positions across headings.
+Config parsing/reload validates all five new squad keys; migration preserves them under both
+PowerShell 7 and Windows PowerShell 5.1. The broad run's sky conversion encountered sandbox
+system-temp access denial; rerunning the affected buy/sky suite with workspace TEMP/TMP passed.
+
+In an isolated byte-for-byte copy of the user's DotA 6.88f AI, the map's own Anti-Mage (Edem)
+correctly resolves learned A022 first and AEbl second, excluding Aamk stats. Forced native walking
+is intercepted while GetUnitMoveSpeed remains native. Under close enemy attacks, XY stays (0,0)
+as HP decreases 838 to 823.5 and enemy HP stays420. Two recruited followers yield left/right then
+settle behind at (-171.3,77.7) and (-167.8,-78.8). Native mana0 causes NO MANA; native definitions
+supply Blink's12-second total even when unavailable command buttons lose their object reference.
+The original elevated running game was inaccessible; this test used a disposable copy after the
+user saved and closed it. No user save or map was modified.
+
+A stock Avatar test found an unsafe older target hook: the native morph/combat update at+CD86D
+dereferences the target returned by+7C2C0 without checking null. The hook now forwards the native
+reference; attack dispatch and the separate walking motor suppress pursuit. The regression verifies
+retained target identity. Opt-in fixtures and loading-screen input exceptions are excluded from
+ordinary packages. The corrected DotA cast uses the actual ground elevation896 rather than z0. Native Blink moves
+XY from(0,0) to(500,0), consumes mana350 to290.6 and reports remaining11.53 then10.43 of12s.
+The screenshot shows the live radial shade/countdown; the motor guard preserves the teleport.
+The repeated stock oracle passes after removing target fabrication: forced native movement remains
+blocked during enemy damage, front followers yield and settle behind, NO MANA is shown at mana0,
+Avatar transforms without a crash and reports its actual180s cooldown. Its native button retains
+BTNAvatarOn during cooldown, and the FPS panel matches that actual button rather than inventing
+an Off icon. First-slot Blizzard completes and shows an actual decreasing6s cooldown sweep.
+No controller fault or GL error occurs in either successful run; owned processes close and private
+DLL/config are restored. Ordinary packages exclude every opt-in fixture command and loading-screen input exception.
+
+### Unit scaling, reserve limits and Shrapnel (2026-10-11)
+
+All native-independent suites pass, including real Windows INI parsing for unit damage, optional
+IAS/movement formulas and reserve bounds. Inventory tests cover zero/custom/larger reserve caps
+and useful purchase charging; rune recovery covers 40 percent. Migration tests pass under
+PowerShell7 and Windows PowerShell5.1, preserving custom prices, reserves, damage mode and switches.
+
+With user approval, the elevated running DotA Sniper was observed through logs and GPU captures,
+without modifying that map or save. Native RTS markers recover1 ->2 ->3; casts spend them to0.
+Four FPS requests after exhaustion leave0. The reported infinite-cast behavior does not reproduce:
+A064 uses map-owned charges with40s restoration, and its native cooldown is deliberately0.
+
+The new DLL in the private stock map uses custom reserve caps50/30/0/70 for F9/F7. After draining,
+a successful native mana-rune pickup at40 percent produces magazines/reserves12/20,12/12,4/0,4/28
+and C4=40. F8 reduces AK reserve50 to20 without granting ammunition. Both optional scaling modes
+reload with reference250. A native Gloves of Haste item changes IAS1.48 to1.63. Thunderclap casts
+once; the repeated request is rejected by the live native timer with5.65s remaining of6.
+
+A disposable DotA copy contains an authored initialization harness, allowing its own hero-entry
+callbacks to finish before learning Shrapnel. Exactly three cast requests succeed from three
+charges; the fourth is rejected. The live marker returns from0 to1 after the map's40s timer.
+Screenshots confirm3 CHG,0 CHG/NO SPELL CHARGES and recharge; no local cooldown timer is fabricated.
+The initial MPQ harness retained stale attributes and was rejected as corrupt; disabling only the
+private attributes fixes that archive. An earlier manually registered hero duplicated its charge
+handler; deferring setup and checking the map's existing trigger fixes the test harness.
+All private DLL/config changes are restored and only owned test PIDs are closed.
+
+### Native weapon attack effects (2026-10-12)
+
+All native-independent suites pass. The new synthetic adapter suite verifies layout mismatch fallback,
+one scoped base replacement, unrelated rolls, preparation queries, native misses and actor removal
+during both preparation and cleanup. C4 transactions reject 2999 gold and charge exactly 3000 through
+both purchase paths. Real INI parsing and repeated migrations preserve disabled effects/custom prices.
+
+Approved disposable stock and DotA 6.88f AI fixtures exercise the production contact path. Stock
+Feedback burns mana; Mask of Death restores HP; learned Bash adds its real BPSE stun and bonus damage.
+Ordinary AWP contacts use finite weapon damage with finishing=0, leaving a healthy target alive.
+DotA A022 burns 28 mana, A04T restores HP and A1UE applies its map-defined stun on a ranged actor.
+Native orb priority remains engine-owned. The actor stays at XY=0/0 with order=0 during these checks.
+F8 switches effects off: no Mana Burn/lifesteal/Bash is applied and native armor damage is retained.
+
+The first prototype omitted native preparation and did not roll Bash; verified preparation and cleanup
+fix this. A paused fixture's stun counter is not a Bash oracle; the final check reads its actual BPSE buff.
+The user's earlier AWP logs show the finishing formula HP*100+1000 with AWPOneShot=1; old settings
+are preserved on updates, independently of the new default. Every test closes only its own process
+and restores private game/config files. Opt-in contact/passive fixture commands are excluded from
+ordinary modules; no retail map, script, native disassembly or log enters source packages.
+
+Final DLL reruns the stock native checks and buy-panel visual inspection. AK preview shows1250gold,
+clip/reserve30/20, native-scaled base damage58 and978RPM from IAS1.63. Text fits the existing panel.
