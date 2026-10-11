@@ -1,4 +1,4 @@
-# Warcraft CS — 0.7.0
+# Warcraft CS вЂ” 0.7.0
 
 Counter-Strike 1.6 inside Warcraft III: control your own hero or unit in first person,
 shoot, and play regular maps, campaigns and compatible custom maps.
@@ -11,9 +11,9 @@ Neither variant includes game files, models, sounds, maps or saves.
 You need your own installed copies of both games.**
 This is an early prototype with known limitations.
 
-**[Download 0.7.0](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.7.0)** ·
-[Release Notes](docs/RELEASE-0.7.0.md) · [Installation](INSTALL.md) · [Requirements](REQUIREMENTS.md)
-· [Troubleshooting](TROUBLESHOOTING.md) · [Discussions](https://github.com/YazgulDev/warcraft-cs/discussions)
+**[Download 0.7.0](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.7.0)** В·
+[Release Notes](docs/RELEASE-0.7.0.md) В· [Installation](INSTALL.md) В· [Requirements](REQUIREMENTS.md)
+В· [Troubleshooting](TROUBLESHOOTING.md) В· [Discussions](https://github.com/YazgulDev/warcraft-cs/discussions)
 
 0.7.0 adds accelerating bunnyhops, airborne traversal, optional speed and fog controls, detailed logs,
 crosshair and campaign-movie input fixes, compact English update notes and full game reinstalls.
@@ -29,7 +29,11 @@ native/optional CS skies, bridge movement and corrected FPS rendering. Earlier c
 - Consistent fullscreen DPI scaling and texture/context recovery after Alt-Tab; native hero portraits keep their layout.
 - WASD, jumping, crouching, acceleration, friction and weapon movement speeds inspired by CS.
 - Half-Life-style air strafing and held-Space bunnyhops; jump over low solids and fall from cliffs.
-- V toggles a horizontal speed counter; N toggles offline FPS fog and the unexplored mask.
+- P toggles a horizontal speed counter; N toggles offline FPS fog and the unexplored mask.
+- Z/X/C/V cast the four learned hero spell slots from first person; keyboard shortcuts are configurable.
+- K toggles ally (green) and enemy (red) health bars together and saves the choice in the INI.
+- **M** toggles the native FPS minimap.
+- The bottom-right spell panel shows the four mapped ability icons, configured keys and native cooldowns.
 - Filled crosshair geometry and automatic control recovery after native campaign movies.
 - Classic AK/M4 and USP/AWP punch calculations, recoil recovery and burst behavior.
 - Primary and secondary melee attacks, locally imported CS sounds and a blood-free hit indicator.
@@ -53,7 +57,7 @@ native/optional CS skies, bridge movement and corrected FPS rendering. Earlier c
 - Standard `WarcraftCSLauncher.exe` builds locally and needs C++ Build Tools / Windows SDK.
   The separate `WarcraftCSLauncher_DLL_Included.exe` offers Player setup without those tools.
   Both may prepare Python/NumPy after agreement to convert your locally owned CS assets.
-- For manual source setup: Git, Python 3.10–3.14, Visual Studio 2022 or Build Tools with
+- For manual source setup: Git, Python 3.10вЂ“3.14, Visual Studio 2022 or Build Tools with
   **Desktop development with C++**, MSVC x86 and Windows SDK.
 - OpenGL support and enough disk space for a separate copy of Warcraft.
 
@@ -69,7 +73,7 @@ Choose a launcher from **[Releases](https://github.com/YazgulDev/warcraft-cs/rel
 | Download | Installation |
 | --- | --- |
 | `WarcraftCSLauncher.exe` or the distribution ZIP | Source-only EXE; **Install** compiles the mod locally and may prepare missing Build Tools / SDK (several GB). |
-| `WarcraftCSLauncher_DLL_Included.exe` | Separate EXE with ready mod DLLs; **Install — Player** avoids Build Tools / SDK. **Install — Developer** builds locally. |
+| `WarcraftCSLauncher_DLL_Included.exe` | Separate EXE with ready mod DLLs; **Install вЂ” Player** avoids Build Tools / SDK. **Install вЂ” Developer** builds locally. |
 
 Clients do not need Git or a separate source checkout. All public ZIPs exclude prebuilt mod DLLs.
 **Antivirus:** Defender detected the bundled `WarcraftCS.mix` in 0.5.0. The unsigned mod uses
@@ -88,7 +92,7 @@ Choose these folders using **Browse...** (the examples are illustrative):
 1. Select your installed Warcraft III 1.26a folder and CS 1.6 folder (`cstrike` or its Half-Life parent).
 2. Select a separate installation folder for Warcraft CS.
 3. Read the download details and agree to downloading/installing the dependencies and their terms.
-4. Click **Install** in the standard launcher, or choose **Install — Player / Developer** in the DLL-included launcher. Install uses the version embedded in that EXE.
+4. Click **Install** in the standard launcher, or choose **Install вЂ” Player / Developer** in the DLL-included launcher. Install uses the version embedded in that EXE.
 5. Choose **The Frozen Throne** or **Reign of Chaos** under **Game to launch**, then click **Play**, select your own living unit and press F6. The choice is remembered after a successful launch.
 
 Both editions use the same private Warcraft III 1.26a installation. RoC selects the original campaign menus;
@@ -146,7 +150,7 @@ and builds the mod in a private Warcraft copy.
 Your original installations remain unchanged. Additional installation and removal details are in
 [INSTALL.md](INSTALL.md).
 
-Choose **Single Player → Custom Game** or **Campaign**, select your own living unit and press F6.
+Choose **Single Player в†’ Custom Game** or **Campaign**, select your own living unit and press F6.
 Individual maps do not need editing. Enable FPS again after changing maps.
 Native campaign movies can replace Warcraft's window; mod controls reconnect automatically after
 playback so F6 enables FPS in the next mission.
@@ -166,7 +170,7 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 
 | Key | Action |
 | --- | --- |
-| F6 / F10 | Toggle FPS ↔ RTS / pause menu and return to RTS |
+| F6 / F10 | Toggle FPS в†” RTS / pause menu and return to RTS |
 | WASD / mouse | Move / look and aim |
 | Shift / Ctrl / Space | Walk / crouch / jump (hold Space for repeated hops by default) |
 | Left mouse button | Shoot or primary melee attack |
@@ -182,8 +186,12 @@ Close Warcraft before updating its private runtime. Preserve your progress first
 | E | Pick up the nearest item/rune if the unit has an available inventory |
 | H / O / J | Your units: follow and fight / follow without attacking / release squad |
 | F8 | Reload settings |
-| V | Show/hide horizontal speed in CS units/s |
+| P | Show/hide horizontal speed in CS units/s |
+| M | Show/hide minimap |
 | N | Disable/restore fog of war while in FPS |
+| K | Show/hide allied and enemy health bars together |
+| Z / X / C / V | Cast hero spell slots 1вЂ“4; target the visible unit or world surface under the reticle |
+| Alt + spell key | Target yourself when the spell allows it |
 
 ## Configuration
 
@@ -191,37 +199,80 @@ EXE installation: `<installation folder>/Game/WarcraftCS/WarcraftCS.ini`.
 Default source installation: `.local/warcraft-cs/WarcraftCS/WarcraftCS.ini`.
 Edit it and press F8 in FPS.
 
+- `[Shortcuts]` configures all keyboard actions listed in the shipped INI, including movement,
+  weapon slots, spell slots, pickup, buying, squad commands, display switches and settings reload.
+  Defaults are `Spell1=Z`, `Spell2=X`, `Spell3=C`, `Spell4=V`, `Speed=P`, `Minimap=M`, `SelfCast=ALT`.
+  Values are English physical `A-Z`, `0-9`, `F1-F12`, `SPACE`, `CTRL`, `SHIFT`, `ALT`, `TAB`,
+  `PERIOD` (or `.`), and `NONE` to disable an action. Keys are case-insensitive and must be unique;
+  swap all conflicting bindings together. An invalid layout falls back to the complete default layout
+  and logs why. Escape/F10 stay reserved; F6 always remains an FPS recovery alias and may only bind
+  ToggleFPS. ToggleFPS cannot be disabled. F8 (or the configured ReloadSettings key) applies edits.
+  HUD labels follow the same loaded bindings. Mouse actions and buy-menu row numbers remain fixed.
+  Install/Update adds missing keys while preserving existing shortcuts.
+
+- `[Spells] Enabled=true`, `AimDistance=3000` (Warcraft units, 100..15000) enable native spell orders.
+  The owner's `UnitAbilities.slk` and race ability UI tables supply the four hero research columns,
+  preserving passive/unlearned gaps. The entire custom hero list is read, including fifth/later skills;
+  declared button columns take precedence over list order, and learned replacements win column collisions.
+  Unknown entries fit around declared buttons; extra/hidden research columns are excluded.
+  Passive, empty or unsupported slots show a notice. Spell effects,
+  mana, cooldowns, legal targets and native cast range remain Warcraft's responsibility.
+  Native basic attacks and retaliation cannot start a chase while FPS owns the hero; other units and
+  the hero's spell components retain native control, and F6 immediately restores ordinary RTS attacks.
+  AimDistance only limits reticle selection; point spells require an actual ground/object surface under the reticle.
+  Movement/fire/reload/weapon switching and opening the buy menu interrupt windup or channeling;
+  held movement/fire does not repeatedly interrupt a newly started cast. Mouse look remains available.
+  For custom map heroes, edited ability lists or unsupported dynamic order getters, set
+  `Slot1Ability=AHtb` (four-character rawcode), `Slot1Order=852095` (native spell order, 852000..853999),
+  and `Slot1Target=unit`; repeat for slots 2вЂ“4. Empty ability/zero order uses automatic lookup.
+  Target modes are `auto`, `unit`, `point`, `immediate`, `self`; SelfCast targets the actor for allowed
+  unit spells. These settings reload live and survive updates. Automatic discovery of arbitrary
+  map object modifications and automatic learning of hero skills are outside this first version.
+
+- `[Rendering] MaxFPS=144` raises the client frame cap above Warcraft's original ~64 FPS.
+  Positive targets are clamped to 30вЂ“360; `0` restores the native limiter. Actual FPS depends on
+  hardware, scene load and graphics-driver limits. `DrawDistance=15000` triples the FPS world-camera
+  far clip from 5000 Warcraft units; valid distances are 3000вЂ“20000. Both apply at startup/on F8.
+  Updates preserve existing values. Draw distance does not reveal unexplored units or remove the
+  map's atmospheric fog; N controls fog of war separately. Greater distances increase render work.
+
 - `[Logging] Detailed=true` enables control, validated-setting, movement and renderer details.
-  `IntervalMs=1000` samples movement/render summaries every second (100–60000 ms).
-  `MaxFileMB=8` bounds each runtime log to 1–64 MiB; `ArchiveCount=3` keeps 0–8 previous
+  `IntervalMs=1000` samples movement/render summaries every second (100вЂ“60000 ms).
+  `MaxFileMB=8` bounds each runtime log to 1вЂ“64 MiB; `ArchiveCount=3` keeps 0вЂ“8 previous
   sessions/segments. Startup and F8 apply all four values. Essential events/errors remain when details
   are disabled. Updates preserve custom values. See [Diagnostics](docs/DIAGNOSTICS.md).
 
 - `[Movement]` enables Half-Life-inspired bunnyhopping and air strafing. Run with W, jump, release W,
   then alternate A + mouse left and D + mouse right. Hold Space to jump on landing and retain momentum.
   Turning in the air builds speed; straight jumps retain the run-up. `JumpBoostPercent=0` is the default,
-  with an optional 0–100% bonus per moving takeoff. Low objects can be cleared above their bounds; tall solids remain blocked.
+  with an optional 0вЂ“100% bonus per moving takeoff. Low objects can be cleared above their bounds; tall solids remain blocked.
   Walking/jumping off a cliff starts a gravity-driven fall. Tune these [movement settings](docs/MOVEMENT.md);
   all apply on F8 without resetting the current jump. Default speed cap: 1000 CS units/s; configurable up to 2000.
 
-- `[Audio] CSVolumePercent=100` controls all CS sounds independently of Warcraft audio. Range: **0–100**;
+- `[Audio] CSVolumePercent=100` controls all CS sounds independently of Warcraft audio. Range: **0вЂ“100**;
   **0** mutes CS, **100** retains the previous levels, and fractional values are accepted.
   F8 applies the new volume immediately, including sounds already playing; restarting also loads it.
   Missing/empty/malformed/non-finite values use 100; finite values outside the range are clamped.
-- `[Runes] AmmoPercent=20`; `AmmoWeapons=all` or `current`.
-- `[Damage] Mode=weapon` uses fixed weapon damage. `Mode=hero` uses the current average Warcraft
-  attack of **any** controlled unit, including creeps, multiplied by each weapon's `HeroMultiplier`.
-- `[Damage] AWPOneShot=false` is the test-build default: AWP uses `[AWP] Damage` (115 by default)
-  and native armor. Set `true` to enable instant enemy kills in `weapon` mode; F8 applies changes.
+- `[Runes] AmmoPercent=40`; `AmmoWeapons=all` or `current`.
+- `[Damage] Mode=unit` is the default: current average Warcraft attack of **any** controlled
+  unit, including creeps and attack bonuses, multiplied by each weapon's `HeroMultiplier`.
+  `Mode=hero` remains a compatible alias; `Mode=weapon` selects fixed damage. C4 retains fixed explosion damage.
+- `[Damage] AWPOneShot=false` is the test-build default: AWP uses unit attack times `HeroMultiplier=3` by default
+  and native armor; `Mode=weapon` instead uses `[AWP] Damage` (115). Set `true` to enable instant enemy kills in `weapon` mode; F8 applies changes.
   Missing/empty/invalid values use `false`; `true`/`false` and `1`/`0` are accepted.
   Updates preserve existing values, so older configs with `AWPOneShot=true` need an explicit edit to disable it.
 - `[Damage] FriendlyFirePercent=50` sets damage to owned/allied units and buildings, including
-  firearms, both melee attacks and C4 (including its planter). Range: 0–100; 0 disables allied damage,
+  firearms, both melee attacks and C4 (including its planter). Range: 0вЂ“100; 0 disables allied damage,
   100 applies full damage. Press F8 to reload; C4 retains the settings from when it was planted.
 - `[Squad] RecruitRadius`, `MaxUnits`, `FollowDistance` and `CombatLeash` control squad behavior.
+  `RearFormation=true` keeps destinations behind the player. `YieldToPlayer=true` sends followers
+  left/right before they rejoin when they enter your travel corridor. `PlayerClearance=100` (60..300)
+  and `YieldAheadDistance=350` (clearance..1000) are Warcraft units. `OrderIntervalMs=150` (50..1000)
+  controls response frequency. All reload with F8 and survive launcher updates; native pathfinding
+  still governs travel around obstacles.
 - `[Loadout] Mode=melee` starts each map with a loaded USP, knife, sword and C4; `Mode=all` grants all weapons
   with their initial ammunition. `BombCount=20` sets starting charges; `MaxBombs=100` caps carried
-  charges (0–1000). F6/F8 and changing the controlled unit never grant another starting kit.
+  charges (0вЂ“1000). F6/F8 and changing the controlled unit never grant another starting kit.
 - `[AK47]`, `[M4A1]`, `[USP]`, `[AWP]`, `[Knife]`, `[Sword]`, `[C4]` use `Price` in native Warcraft
   **gold**. Buying a firearm gives one loaded magazine, with zero reserve rounds. `AmmoPrice` buys
   `AmmoPack` reserve rounds (R loads them). A C4 weapon/ammo purchase grants one charge. Full ammo,
@@ -242,15 +293,36 @@ Edit it and press F8 in FPS.
 - `[Sky] WarcraftEnabled=true` (default) shows Warcraft's stock summer/winter sky in FPS on maps without
   a sky. Keep `Enabled=false` for this mode. Existing map skies are preserved; F6 and cinematics
   restore the map's original sky. Set `WarcraftEnabled=false` and press F8 to disable the preview.
-- `[Interface] ShowSpeed=false` hides the horizontal speed counter by default. V toggles it during
+- `[Interface] ShowSpeed=false` hides the horizontal speed counter by default. P toggles it during
   the session, including across F6 switches; startup/F8 restores the INI value (`true`/`false`, also `1`/`0`).
   The counter uses CS/GoldSrc units/s, matching `MaxBunnySpeed`; vertical jump/fall velocity is excluded.
   Updates add missing keys and preserve custom values. The HUD omits basic WASD/reload/jump/crouch hints.
+- `[Interface] ShowMinimap=true` shows Warcraft's native minimap in the FPS top-right corner.
+- `[Interface] ShowSpellIcons=true` shows four spell icons at the bottom right; `ShowSpellCooldowns=true`
+  adds the live remaining cooldown. `SpellIconSizePercent=7` controls icon size (4..14% of window height).
+  Art comes from your current map/game. `LV0` marks an unlearned spell, `PASS` a passive,
+  `EMPTY` an unmapped slot, and `?` an unsupported native timer. Rejected casts do not start a fake timer.
+    Icons follow the current native command button (including toggle art), skill level and replacement
+    abilities. A native cooldown sweep/countdown updates after casts/resets; insufficient mana tints
+    active skills blue and shows `NO MANA`, while disabled skills dim. Other selected units and the
+    research submenu cannot overwrite the controlled hero's icons.
+  F8 reloads these settings and shortcuts; updates preserve custom values.
+  **M** toggles it for the session, including across F6 switches; startup/F8 restores the saved preference
+  (`true`/`false`, also `1`/`0`). Terrain, fog of war and native markers follow the current map's visibility.
+  `MinimapSizePercent=22` sets the square's side to 22% of window height (10..40, fractional values allowed).
+  F8 applies size changes live; missing/invalid values use the defaults and updates preserve custom values.
+  The FPS minimap is a display; use RTS for map clicks/orders. Native RTS layout and campaign bounds stay intact.
+  Top hints use three compact groups and wrap before the minimap; gold appears beside health/ammunition.
 - `[Interface] DisableFogOfWar=false` keeps map visibility by default (`true`/`false`, also `1`/`0`).
   Set `true` or press N in offline FPS to remove both explored fog and the unexplored black mask.
   N changes only the session; startup/F8 loads the saved preference. F6, menus and cinematics restore
   the map's captured fog/mask settings; returning to FPS reapplies the session choice. Updates preserve
   custom values. Sword and secondary-melee shortcuts are omitted from the HUD; their controls remain.
+- Health bars use `[Interface] ShowAllyHealthBars=false`, `ShowEnemyHealthBars=false` and
+  `HealthBarDistance=2000` (Warcraft units, 0..15000; zero hides bars). K toggles and saves both teams;
+  a mixed saved state first enables both. F8 reloads file edits. Bars exclude your controlled actor,
+  dead/hidden/transported units, fog-hidden targets and passive neutrals. Opaque world depth occludes
+  bars; RTS keeps its native health display.
 - `[Interface] FloatingTextDistance=1200` limits native world labels to the FPS camera view and distance
   in Warcraft units. Set `0` to hide world labels and press F8; RTS, harvesting and screen-space map text keep native behavior.
 
@@ -260,8 +332,8 @@ A successful purchase closes the menu; rejected purchases leave it open.
 Only supported categories appear, preserving CS keys: 1 pistols, 4 rifles, 6 primary ammo,
 7 secondary ammo, 8 equipment (knife, sword, C4), 0 back/cancel. The `.` key buys current-weapon ammo.
 Primary/secondary ammo rows buy one pack per carried weapon in that category; every transaction checks
-funds independently. Defaults are one quarter of the previous weapon prices: AK47 625, M4A1 775,
-USP 125, AWP 1188 (rounded from 1187.5 gold), knife 0, sword 250 and C4 50. Ammo-pack prices are unchanged.
+funds independently. Weapon prices are doubled: AK47 1250, M4A1 1550,
+USP 250, AWP 2376, knife 0, sword 500 and C4 100. Ammo-pack prices are unchanged.
 No round, buy-time or team-spawn restriction is imposed.
 
 When adding a weapon, apply [warcraft-cs-weapon-menu](skills/warcraft-cs-weapon-menu/SKILL.md).
@@ -310,7 +382,7 @@ Planned work:
 Warcraft CS is a hobby project. Help is provided when time allows; replies and fixes are not guaranteed.
 
 1. Read [Troubleshooting](TROUBLESHOOTING.md) and check the launcher's error message.
-2. If the problem remains, ask in [Discussions — Q&A](https://github.com/YazgulDev/warcraft-cs/discussions/categories/q-a).
+2. If the problem remains, ask in [Discussions вЂ” Q&A](https://github.com/YazgulDev/warcraft-cs/discussions/categories/q-a).
    Include the release version, Player/Developer mode, Windows version, GPU, steps to reproduce
    and the relevant log: `install.log` in your client folder for setup, or
    `Game/WarcraftCS/WarcraftCS.log` for in-game problems.
@@ -350,3 +422,24 @@ their implementations are not bundled. Valve/Blizzard game materials are exclude
 
 For the full list of references, adaptations and license terms, see [NOTICE](NOTICE),
 [LICENSE-MIT](LICENSE-MIT), [LICENSE-APACHE](LICENSE-APACHE) and `licenses/`.
+
+### Unit scaling and ammunition limits (test branch)
+
+- `[AK47]`, `[M4A1]`, `[USP]` and `[AWP] MaxReserve` set reserve rounds, excluding the magazine.
+  Defaults are 90, 90, 100 and 30; range 0..100000. Purchases, F7/F9 and rune rewards all use these caps.
+  F8 discards surplus reserve after a reduction, without granting ammo or changing loaded rounds.
+- `[Combat] ScaleFireRateFromAttackSpeed=false` is optional (`true`/`false`, also `1`/`0`).
+  When enabled, firearm interval is divided by native attack-speed multiplier (0.2..5).
+  Agility, items and buffs participate; 2.0 doubles the rate. Reloads, melee and planting are unchanged.
+- `[Movement] ScaleFromUnitMoveSpeed=false` is optional (`true`/`false`). When enabled, CS weapon
+  speed scales by current Warcraft movement speed divided by `UnitMoveSpeedReference=300`
+  (Warcraft units/s, range 1..1000). This replaces the legacy relative slow/haste ratio; it never doubles bonuses.
+  With it disabled, existing slow/haste behavior remains. Root/stun and bunnyhop limits remain enforced.
+- All settings reload with F8. Updates preserve existing prices, damage mode and rune percentage;
+  edit old configs explicitly to adopt the new defaults (`Mode=unit`, `AmmoPercent=40`, prices above).
+
+Spell requests now check native cooldown, mana and disabled state before dispatch and preserve active
+channels when a request is unavailable. DotA 6.88f AI Sniper's Shrapnel uses three map-owned charges
+with 40-second regeneration, while its native cooldown is zero. Its FPS icon displays the actual charge
+count, and an empty marker blocks requests. The mod does not invent a cooldown or alter the map's timer;
+unknown charged spells retain their map's native validation.

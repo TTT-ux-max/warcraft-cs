@@ -1,7 +1,7 @@
 #pragma once
 #include "WarcraftApi.hpp"
 
-// Native AI attack policy is intercepted, not serialized into attack-disable counters or acquisition ranges.
+// Intercept native basic-attack targets and dispatch before pursuit, preserving saved counters and ranges.
 namespace FpsCombatGuard {
 using HookInstaller=bool (*)(void*,void*,void**);
 void Install(uintptr_t base,wc3::Handle (*actor)(),bool (*passiveUnit)(uintptr_t),bool (*passiveAttack)(uintptr_t),HookInstaller hook);

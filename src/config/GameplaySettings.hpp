@@ -1,6 +1,10 @@
 #pragma once
 #include "../combat/WeaponSlots.hpp"
 #include "LoggingSettings.hpp"
+#include "RenderSettings.hpp"
+#include "HealthBarSettings.hpp"
+#include "SpellSettings.hpp"
+#include "../input/ShortcutBindings.hpp"
 
 #include "../movement/MovementSettings.hpp"
 #include <array>
@@ -9,26 +13,40 @@
 // Editable combat defaults and live settings are replaced as one complete snapshot on F8.
 struct GameplaySettings {
     LoggingSettings logging;
+    RenderSettings render;
+    HealthBarSettings healthBars;
+    ShortcutBindings shortcuts;
+    SpellSettings spells;
 
     MovementSettings movement;
-    float runeAmmoPercent = 20;
+    float runeAmmoPercent = 40;
     float runePickupRadius = 160;
     bool runeAmmoAllWeapons = true;
-    bool heroDamage = false;
+    // Native attack damage applies to any controlled creature, including non-hero units.
+    bool heroDamage = true;
+    bool scaleFireRateFromAttackSpeed=false;
     // Ordinary AWP damage is the default; instant finishing remains an explicit player opt-in.
     bool awpOneShot = false;
     // One percentage covers owned/allied units and buildings across firearms, melee and C4.
     float friendlyFirePercent = 50;
     // Limit world labels to nearby FPS activity without altering native resource production.
     float floatingTextDistance=1200;
-    // Startup/F8 preference; V may change visibility for the current session.
+    // Startup/F8 preference; the Speed shortcut may change visibility for the current session.
     bool showSpeed=false;
+    // M changes this session preference; F8 restores the editable startup choice and size.
+    bool showMinimap=true;
+    bool showSpellIcons=true,showSpellCooldowns=true;
+    float spellIconSizePercent=7;
+    float minimapSizePercent=22;
     // Temporary FPS visibility preference; ordinary map fog is restored outside FPS.
     bool disableFogOfWar=false;
     // Scale only the CS mixer; 100 preserves legacy levels and zero mutes every CS voice.
     float csVolumePercent=100;
     // Recruitment and spacing are configurable without rewriting map data or unit ownership.
     float squadRadius=600,squadFollowDistance=180,squadLeash=900;
+    bool squadRearFormation=true,squadYield=true;
+    float squadClearance=100,squadYieldAhead=350;
+    unsigned squadOrderIntervalMs=150;
     int squadMaxUnits=24;
     // Gold economy and loadout are per-map; reloading settings cannot mint another starting kit.
     bool startAllWeapons=false;
@@ -38,7 +56,9 @@ struct GameplaySettings {
     float buyRadius=600;
     std::string shopTypes="";
     // F7 is always a free refill; ordinary purchases still debit native gold.
-    std::array<int,WeaponSlots::Count> weaponPrice={625,775,125,1188,0,50,250};
+    std::array<int,WeaponSlots::Count> weaponPrice={1250,1550,250,2376,0,100,500};
+    // Reserve excludes the loaded magazine; buying, free refills and runes share this limit.
+    std::array<int,WeaponSlots::Count> maxReserve={90,90,100,30,0,0,0};
     std::array<int,WeaponSlots::Count> ammoPrice={80,60,25,125,0,200,0};
     std::array<int,WeaponSlots::Count> ammoPack={30,30,12,10,0,1,0};
     bool csSky=false;
