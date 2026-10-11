@@ -333,7 +333,8 @@ Only supported categories appear, preserving CS keys: 1 pistols, 4 rifles, 6 pri
 7 secondary ammo, 8 equipment (knife, sword, C4), 0 back/cancel. The `.` key buys current-weapon ammo.
 Primary/secondary ammo rows buy one pack per carried weapon in that category; every transaction checks
 funds independently. Weapon prices are doubled: AK47 1250, M4A1 1550,
-USP 250, AWP 2376, knife 0, sword 500 and C4 100. Ammo-pack prices are unchanged.
+USP 250, AWP 2376, knife 0, sword 500 and C4 3000. Other ammo-pack prices are unchanged;
+both C4 purchase paths charge 3000 gold for one bomb by default.
 No round, buy-time or team-spawn restriction is imposed.
 
 When adding a weapon, apply [warcraft-cs-weapon-menu](skills/warcraft-cs-weapon-menu/SKILL.md).
@@ -443,3 +444,19 @@ channels when a request is unavailable. DotA 6.88f AI Sniper's Shrapnel uses thr
 with 40-second regeneration, while its native cooldown is zero. Its FPS icon displays the actual charge
 count, and an empty marker blocks requests. The mod does not invent a cooldown or alter the map's timer;
 unknown charged spells retain their map's native validation.
+
+### Weapon attack effects (test branch)
+
+`[Combat] EnableAttackEffects=true` routes firearm and melee contacts through the controlled unit's
+native attack preparation and impact. Learned passives and carried items can apply Mana Burn,
+lifesteal, Bash, critical strikes and attack callbacks with Warcraft's own chances, restrictions
+and orb priority. Incompatible orb effects do not become stackable; map-specific scripted effects
+still depend on the map's implementation. No basic attack/chase order or extra weapon projectile
+is issued. C4 explosions and destructable hits retain direct damage.
+
+Set `EnableAttackEffects=false` and press F8 to disable this attack-effect path. Direct damage keeps
+the unit's attack type and armor multiplier; map scripts listening to all damage can still run.
+Missing/empty/invalid values enable the feature; `true`/`false` and `1`/`0` are accepted. Updates add
+the key to old configurations and preserve explicit custom values, including C4 prices and
+`AWPOneShot`. To adopt these defaults in an existing installation, set `[C4] Price=3000`,
+`AmmoPrice=3000` and `[Damage] AWPOneShot=false` explicitly.

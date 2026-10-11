@@ -145,3 +145,10 @@ multiplier without writing attack fields. `GameplaySettings.maxReserve` supplies
 inventory/recovery capacity. F8 clamps existing surplus reserve and resets fractional rune credit.
 `MapSpellCharges` recognizes DotA Shrapnel's existing actor/skill/marker facts and produces a value
 snapshot only. SpellCaster checks the shared native snapshot before replacing an active order.
+
+`NativeWeaponAttack` owns the version-verified native preparation/impact/cleanup adapter. A thread-local
+contact scope substitutes only the weapon's base roll during synchronous impact; native passive rolls,
+critical modifiers and attack callbacks remain engine-owned. It temporarily uses instant impact and
+restores the original component only while the same actor still owns it. A handled miss never causes
+a second direct-damage hit. `ShooterController` selects this path after contact/friendly scaling; C4,
+destructables, explicit legacy AWP finishing and disabled/unavailable effects use the direct path.

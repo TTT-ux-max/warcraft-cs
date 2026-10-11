@@ -7,6 +7,8 @@ foreach ($name in @('window-input','fog-of-war','diagnostic-log','native-frame-r
     & (Join-Path $PSScriptRoot "test-$name.ps1")
 }
 & (Join-Path $PSScriptRoot 'test-tree-and-wheel.ps1')
+# Attack scope/lifecycle regressions use synthetic native entry points, with no game files.
+& (Join-Path $PSScriptRoot 'test-native-weapon-attack.ps1')
 # Health bars verify native filtering and actual WGL depth/state without taking input focus.
 & (Join-Path $PSScriptRoot 'test-health-bars.ps1')
 # Configurable spell slots and explicit native order ownership need no interactive game input.

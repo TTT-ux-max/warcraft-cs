@@ -2,6 +2,13 @@
 
 ## Unreleased - test branches
 
+- Add configurable native firearm/melee attack effects: preparation, impact and cleanup preserve
+  learned passives, item orbs, native chances and map attack callbacks without issuing pursuit orders.
+  `[Combat] EnableAttackEffects=true` reloads with F8; false keeps direct damage and native armor class.
+- Set both C4 weapon and ammo purchase defaults to 3000 gold per charge; preserve custom prices on updates.
+- Log active AWP finishing and attack-effect settings, plus per-contact `finishing`/`effects`, to identify
+  preserved `AWPOneShot=true` configurations independently of ordinary unit-scaled damage.
+
 - Default firearm/melee damage to the controlled unit's native attack; retain weapon mode and legacy hero alias.
 - Double weapon prices; retain ammo pack prices. Increase default rune ammo rewards to 40%.
 - Display current unit-scaled damage, firearm cadence and magazine/reserve limits in buy previews.

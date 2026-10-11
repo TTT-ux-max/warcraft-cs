@@ -26,7 +26,9 @@ int main() {
     assert(!settings.startAllWeapons && settings.startBombs==20 && settings.maxBombs==100 );
     assert(settings.buyAccess==GameplaySettings::BuyAccess::Anywhere && !settings.csSky);
     assert(settings.weaponPrice[0]==1250 && settings.weaponPrice[1]==1550 && settings.weaponPrice[2]==250);
-    assert(settings.weaponPrice[3]==2376 && settings.weaponPrice[5]==100 && settings.weaponPrice[6]==500);
+    // C4 catalog and quick replenishment charge the same requested default price.
+    assert(settings.weaponPrice[3]==2376 && settings.weaponPrice[5]==3000 && settings.weaponPrice[6]==500);
+    assert(settings.ammoPrice[5]==3000 && settings.enableAttackEffects);
     assert(settings.squadRadius==600 && settings.squadMaxUnits==24 && settings.squadFollowDistance==180 && settings.squadLeash==900);
     settings.heroDamage=true;settings.heroMultiplier[0]=2;
     assert(settings.ContactDamage(0,false,28)==56);
@@ -327,5 +329,15 @@ int main() {
     assert(settings.squadRearFormation && settings.squadYield && settings.squadClearance==100 && settings.squadYieldAhead==350 && settings.squadOrderIntervalMs==150);
     WritePrivateProfileStringA("Squad","PlayerClearance","160",path.c_str());
     assert(GameplaySettings::Load(path).squadClearance==160);DeleteFileA(path.c_str());
+    // The real parser supports an F8 on/off transition, with safe defaults for malformed input.
+    for(auto value : {"true","1","false","0","broken","","nan"}) {
+        {std::ofstream file(path);file<<"[Combat]\nEnableAttackEffects="<<value<<"\n";}
+        auto effects=GameplaySettings::Load(path);
+        assert(effects.enableAttackEffects==(strcmp(value,"false")!=0 && strcmp(value,"0")!=0));
+    }
+    WritePrivateProfileStringA("Combat","EnableAttackEffects","false",path.c_str());
+    assert(!GameplaySettings::Load(path).enableAttackEffects);
+    WritePrivateProfileStringA("Combat","EnableAttackEffects","true",path.c_str());
+    assert(GameplaySettings::Load(path).enableAttackEffects);DeleteFileA(path.c_str());
     return 0;
 }

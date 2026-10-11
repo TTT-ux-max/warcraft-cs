@@ -19,6 +19,10 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         if (end==value.c_str() || *end || !std::isfinite(parsed)) { wc3::Log("Invalid config %s.%s; using default",section,key);return fallback; }
         return std::clamp(parsed,0.0f,maximum);
     };
+    // Unknown values retain the documented default; explicit false/0 bypasses attack-effect dispatch.
+    auto attackEffects=text("Combat","EnableAttackEffects","true");
+    if(!_stricmp(attackEffects.c_str(),"false") || attackEffects=="0")result.enableAttackEffects=false;
+    else if(_stricmp(attackEffects.c_str(),"true") && attackEffects!="1")wc3::Log("Invalid Combat.EnableAttackEffects; using true");
     // Bound diagnostic frequency/storage at the existing INI boundary, including malformed legacy values.
     auto detailed = text("Logging", "Detailed", "true");
     if (!_stricmp(detailed.c_str(), "false") || detailed == "0") result.logging.detailed = false;

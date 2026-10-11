@@ -6,6 +6,7 @@
 #include "../platform/SpriteTransform.hpp"
 #include "../input/LookAngles.hpp"
 #include "../platform/FpsCombatGuard.hpp"
+#include "../platform/NativeWeaponAttack.hpp"
 #include "../economy/BuyAccess.hpp"
 #include "../presentation/BuyMenuLayout.hpp"
 #include "../platform/MapEnvironment.hpp"
@@ -392,6 +393,8 @@ void ShooterController::ReloadSettings() {
     wc3::Log("Settings loaded runePercent=%.1f ammoWeapons=%s damageMode=%s awpOneShot=%d radius=%.1f friendlyFirePercent=%.1f",
         settings_.runeAmmoPercent,settings_.runeAmmoAllWeapons ? "all" : "current",
         settings_.heroDamage ? "hero" : "weapon",settings_.awpOneShot,settings_.runePickupRadius,settings_.friendlyFirePercent);
+    // Distinguish a stored preference from the finishing rule actually active in this damage mode.
+    wc3::Log("Attack effects enabled=%d AWP finishing active=%d",settings_.enableAttackEffects,settings_.FinishingAWP(WeaponSlots::AWP));
     // Log the validated snapshot, including prices/sky choices, rather than arbitrary raw INI contents.
     wc3::Trace("settings loadoutAll=%d bombs=%d/%d buyAccess=%d buyRadius=%.1f shops=%s csVolume=%.1f floatingText=%.1f squadRadius=%.1f follow=%.1f leash=%.1f maxUnits=%d csSky=%d nativeSky=%d defaultSky=%s",
         settings_.startAllWeapons, settings_.startBombs, settings_.maxBombs, int(settings_.buyAccess), settings_.buyRadius,
@@ -504,9 +507,12 @@ void ShooterController::Strike() {
         float baseDamage=settings_.ContactDamage(weapon_,WeaponSlots::Melee(weapon_) && meleeAttack_.secondary,attack);
         float damage = CombatDamage::Amount(baseDamage,allied,lethal,before,settings_.friendlyFirePercent);
         if (settings_.heroDamage) wc3::Log("hero damage attack=%.1f multiplier=%.2f base=%.1f",attack,settings_.heroMultiplier[weapon_],baseDamage);
-        // Universal AWP damage ignores Warcraft armor; native death keeps death triggers intact.
-        // Disabling friendly fire also avoids zero-damage map events and reflected/retaliatory side effects.
-        if (damage>0) wc3::UnitDamageTarget(unit_, target, &damage, TRUE, TRUE, 0, lethal ? 26 : 4, 0);
+        // Confirmed weapon hits dispatch one native attack, including the map's attack effects, without pursuit.
+        // C4/destructables and explicit finishing retain their own policies; zero friendly damage causes no events.
+        bool effects=damage>0 && !destructable && !lethal && settings_.enableAttackEffects &&
+            NativeWeaponAttack::Apply(unit_,target,damage);
+        if(damage>0 && !effects)wc3::UnitDamageTarget(unit_,target,&damage,FALSE,TRUE,
+            destructable || lethal ? 0 : NativeWeaponAttack::AttackType(unit_),lethal ? 26 : 4,0);
         if (lethal && wc3::Real(wc3::GetUnitState(target, 0)) > 0.405f) wc3::KillUnit(target);
         float after = life();
         if (after < before) {
@@ -519,7 +525,7 @@ void ShooterController::Strike() {
             }
             wc3::Log("hit feedback=marker");
         }
-        wc3::Log("shot weapon=%s target=%08X damage=%.1f hpBefore=%.1f hpAfter=%.1f allied=%d destructable=%d", w.name, target, damage, before, after,allied,destructable);
+        wc3::Log("shot weapon=%s target=%08X damage=%.1f hpBefore=%.1f hpAfter=%.1f allied=%d destructable=%d finishing=%d effects=%d", w.name, target, damage, before, after,allied,destructable,lethal,effects);
     } else if (WeaponSlots::Melee(weapon_) && nearest < attackRange) {
         // Terrain contact uses the original hard-surface sample; misses keep only the swing sound.
         Sound("knife_hitwall1.wav");

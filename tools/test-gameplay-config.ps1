@@ -20,18 +20,18 @@ if ((Get-FileHash -LiteralPath $config).Hash -ne $before) { throw 'Repeated conf
 # Reserve/scaling upgrades preserve existing values and do not silently replace a player's damage/economy mode.
 $customScaling=Join-Path $folder 'custom-unit-scaling.ini'
 @('[AK47]','MaxReserve=250','Price=321','[Damage]','Mode=weapon','[Runes]','AmmoPercent=11',
-    '[Combat]','ScaleFireRateFromAttackSpeed=true','[Movement]','ScaleFromUnitMoveSpeed=true','UnitMoveSpeedReference=270') |
+    '[Combat]','ScaleFireRateFromAttackSpeed=true','EnableAttackEffects=false','[C4]','Price=4321','AmmoPrice=3456','[Movement]','ScaleFromUnitMoveSpeed=true','UnitMoveSpeedReference=270') |
     Set-Content -LiteralPath $customScaling -Encoding ascii
 Update-GameplayConfig $template $customScaling
 $scalingText=Get-Content -LiteralPath $customScaling -Raw
 foreach($setting in @('MaxReserve=250','Price=321','Mode=weapon','AmmoPercent=11','ScaleFireRateFromAttackSpeed=true',
-    'ScaleFromUnitMoveSpeed=true','UnitMoveSpeedReference=270')) {
+    'ScaleFromUnitMoveSpeed=true','UnitMoveSpeedReference=270','EnableAttackEffects=false','Price=4321','AmmoPrice=3456')) {
     if(!$scalingText.Contains($setting)){throw "Scaling migration lost preference: $setting"}
 }
 $scalingHash=(Get-FileHash -LiteralPath $customScaling).Hash
 Update-GameplayConfig $template $customScaling
 if((Get-FileHash -LiteralPath $customScaling).Hash -ne $scalingHash){throw 'Scaling migration is not idempotent.'}
-foreach($setting in @('MaxReserve=90','ScaleFireRateFromAttackSpeed=false','ScaleFromUnitMoveSpeed=false','UnitMoveSpeedReference=300','Mode=unit')) {
+foreach($setting in @('MaxReserve=90','ScaleFireRateFromAttackSpeed=false','EnableAttackEffects=true','ScaleFromUnitMoveSpeed=false','UnitMoveSpeedReference=300','Mode=unit')) {
     if(!$text.Contains($setting)){throw "Missing scaling default: $setting"}
 }
 # Existing CS-volume preferences survive both updates and repeated setup; missing sibling settings still migrate.

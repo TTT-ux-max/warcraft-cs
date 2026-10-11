@@ -5,6 +5,15 @@
 
 int main() {
     GameplaySettings settings;BuyInventory inventory;
+    // Both C4 purchase paths buy one charge for the requested price.
+    assert(settings.weaponPrice[WeaponSlots::C4]==3000 && settings.ammoPrice[WeaponSlots::C4]==3000);
+    for(bool quickAmmo : {false,true}) {
+        BuyInventory bombs;int gold=2999,count=0,reserve=0;bombs.owned[WeaponSlots::C4]=true;
+        assert(bombs.Buy(WeaponSlots::C4,quickAmmo,settings,gold,count,reserve,1,0)==BuyInventory::Result::NoGold);
+        assert(gold==2999 && count==0);
+        gold=3000;assert(bombs.Buy(WeaponSlots::C4,quickAmmo,settings,gold,count,reserve,1,0)==BuyInventory::Result::Bought);
+        assert(gold==0 && count==1);
+    }
     int ammo[7]={},reserve[7]={},magazines[]={30,30,12,10,0,1,0},reserves[]={90,90,100,30,0,0,0};
     inventory.Reset(settings,ammo,reserve,magazines,reserves);
     assert(!inventory.owned[0] && !inventory.owned[3] && inventory.owned[2] && inventory.owned[4] && inventory.owned[5] && inventory.owned[6]);

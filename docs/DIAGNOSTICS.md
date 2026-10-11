@@ -124,3 +124,10 @@ reference. Weapon settings include `maxReserve`. Spell HUD records `charges=-1` 
 sources, or the actual marker count; unavailable requests log their reason, remaining native timer
 and charges. An accepted IssueOrder is an order acknowledgement, not proof of a spell effect.
 Shrapnel's three charges/40-second map timer must not be mistaken for an infinite-cast cooldown bug.
+
+`Native weapon attack effects verified/installed` reports adapter availability. Settings report
+`Attack effects enabled` and `AWP finishing active`; a stored AWPOneShot preference is active only in
+weapon damage mode. Each shot records `finishing` and `effects`. The native contact record reports
+the substituted base and original weapon kind. A native dodge/immune hit is handled without fallback
+damage even when no base roll is consumed. Compare target HP/mana/buffs and attacker HP to establish
+the actual passive effect; a successful dispatch alone does not prove that a chance-based effect proc'd.

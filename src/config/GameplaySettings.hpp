@@ -25,6 +25,8 @@ struct GameplaySettings {
     // Native attack damage applies to any controlled creature, including non-hero units.
     bool heroDamage = true;
     bool scaleFireRateFromAttackSpeed=false;
+    // Weapon contacts use the controlled unit's native attack effects; F8 may opt out.
+    bool enableAttackEffects=true;
     // Ordinary AWP damage is the default; instant finishing remains an explicit player opt-in.
     bool awpOneShot = false;
     // One percentage covers owned/allied units and buildings across firearms, melee and C4.
@@ -56,10 +58,11 @@ struct GameplaySettings {
     float buyRadius=600;
     std::string shopTypes="";
     // F7 is always a free refill; ordinary purchases still debit native gold.
-    std::array<int,WeaponSlots::Count> weaponPrice={1250,1550,250,2376,0,100,500};
+    std::array<int,WeaponSlots::Count> weaponPrice={1250,1550,250,2376,0,3000,500};
     // Reserve excludes the loaded magazine; buying, free refills and runes share this limit.
     std::array<int,WeaponSlots::Count> maxReserve={90,90,100,30,0,0,0};
-    std::array<int,WeaponSlots::Count> ammoPrice={80,60,25,125,0,200,0};
+    // C4 quick replenishment buys the same single charge as its catalog entry.
+    std::array<int,WeaponSlots::Count> ammoPrice={80,60,25,125,0,3000,0};
     std::array<int,WeaponSlots::Count> ammoPack={30,30,12,10,0,1,0};
     bool csSky=false;
     // Every FPS map gets Warcraft's own backdrop unless the player explicitly disables it.

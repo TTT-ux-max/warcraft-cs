@@ -107,6 +107,16 @@ public:
     wc3::Handle TestUnit() const { return Visible() ? unit_ : 0; }
 #endif
 #ifdef WCS_GAMEPLAY_TEST
+    // Disposable scenes exercise the real weapon contact path without desktop mouse input.
+    void TestStrike(int slot) {
+        if(slot<0 || slot>=WeaponSlots::Count || slot==WeaponSlots::C4)return;
+        weapon_=slot;Strike();
+        // Observe real health/mana/stun after production impact; no synthetic passive effects in the oracle.
+        wc3::Log("fixture contact actorHP=%.2f targetMana=%.2f targetStuns=%d targetBash=%d actorOrder=%d",
+            wc3::Real(wc3::GetUnitState(unit_,0)),fixtureTarget_ ? wc3::Real(wc3::GetUnitState(fixtureTarget_,2)) : -1,
+            fixtureTarget_ ? UnitStatus::Read(fixtureTarget_,gameBase_).stunCount : -1,
+            fixtureTarget_ && wc3::HasUnitBuff(fixtureTarget_,0x42505345),wc3::GetUnitCurrentOrder(unit_));
+    }
     // Temporary native fixtures inspect/reduce ammunition without spawning anything in ordinary builds.
     void TestDrainAmmo() { for (int i=0;i<WeaponSlots::Count;++i) ammo_[i]=reserve_[i]=0;ammoRecovery_.Reset(); }
     void TestLogSquad() const { squad_.TestLog(); }

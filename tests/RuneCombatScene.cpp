@@ -63,6 +63,34 @@ void RuneCombatScene::Tick(ShooterController& controller,uintptr_t base,const ch
             wc3::Log("fixture haste added=%d",wc3::UnitAddItem(unit,item));
         }
         else if(BackgroundGameplay::Enabled() && command=="follow")controller.RequestSquad(true);
+        else if(BackgroundGameplay::Enabled() && command=="strike") {
+            // Aim/target creation uses the existing private request; this exercises production contact damage.
+            int slot=2;input>>slot;controller.TestStrike(slot);
+        }
+        else if(BackgroundGameplay::Enabled() && command=="passive") {
+            // Stock abilities are supplied by the disposable map, never bundled with the mod.
+            std::string raw;input>>raw;
+            if(raw.size()==4) {
+                int id=(raw[0]<<24)|(raw[1]<<16)|(raw[2]<<8)|raw[3];
+                using Add=BOOL (__cdecl*)(wc3::Handle,int);
+                BOOL added=reinterpret_cast<Add>(base+0x3C82A0)(unit,id);
+                wc3::Log("fixture passive ability=%08X added=%d level=%d",id,added,wc3::GetUnitAbilityLevel(unit,id));
+            }
+        }
+        else if(BackgroundGameplay::Enabled() && command=="item") {
+            std::string raw;input>>raw;
+            if(raw.size()==4) {
+                float x=wc3::Real(wc3::GetUnitX(unit)),y=wc3::Real(wc3::GetUnitY(unit));
+                int id=(raw[0]<<24)|(raw[1]<<16)|(raw[2]<<8)|raw[3];
+                auto item=wc3::CreateItem(id,&x,&y);items.push_back(item);
+                wc3::Log("fixture passive item=%08X added=%d",id,wc3::UnitAddItem(unit,item));
+            }
+        }
+        else if(BackgroundGameplay::Enabled() && command=="health") {
+            float health=0;input>>health;
+            using SetState=void (__cdecl*)(wc3::Handle,int,float*);
+            reinterpret_cast<SetState>(base+0x3C5EA0)(unit,0,&health);
+        }
         else if(BackgroundGameplay::Enabled() && command=="dota") {
             // Spawn/learn the current map's own Anti-Mage definitions, including its skill-learning triggers.
             float x=0,y=0,facing=0;auto hero=wc3::CreateUnit(wc3::GetLocalPlayer(),0x4564656D,&x,&y,&facing);

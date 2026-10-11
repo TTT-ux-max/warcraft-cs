@@ -45,3 +45,7 @@
 - Fixed spell request feedback during native cooldown and mana restrictions.
 - Added actual Shrapnel charge counts and empty-charge rejection.
 - Updated buy previews to show live damage, firing rate and reserve limits.
+- Added configurable native weapon passives, lifesteal, Mana Burn and Bash.
+- Preserved native passive chances, restrictions and orb priority.
+- Changed both C4 purchase prices to 3000 gold per bomb.
+- Improved AWP instant-kill and weapon-effect diagnostics.

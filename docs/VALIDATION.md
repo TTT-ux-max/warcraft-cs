@@ -620,5 +620,26 @@ private attributes fixes that archive. An earlier manually registered hero dupli
 handler; deferring setup and checking the map's existing trigger fixes the test harness.
 All private DLL/config changes are restored and only owned test PIDs are closed.
 
+### Native weapon attack effects (2026-10-12)
+
+All native-independent suites pass. The new synthetic adapter suite verifies layout mismatch fallback,
+one scoped base replacement, unrelated rolls, preparation queries, native misses and actor removal
+during both preparation and cleanup. C4 transactions reject 2999 gold and charge exactly 3000 through
+both purchase paths. Real INI parsing and repeated migrations preserve disabled effects/custom prices.
+
+Approved disposable stock and DotA 6.88f AI fixtures exercise the production contact path. Stock
+Feedback burns mana; Mask of Death restores HP; learned Bash adds its real BPSE stun and bonus damage.
+Ordinary AWP contacts use finite weapon damage with finishing=0, leaving a healthy target alive.
+DotA A022 burns 28 mana, A04T restores HP and A1UE applies its map-defined stun on a ranged actor.
+Native orb priority remains engine-owned. The actor stays at XY=0/0 with order=0 during these checks.
+F8 switches effects off: no Mana Burn/lifesteal/Bash is applied and native armor damage is retained.
+
+The first prototype omitted native preparation and did not roll Bash; verified preparation and cleanup
+fix this. A paused fixture's stun counter is not a Bash oracle; the final check reads its actual BPSE buff.
+The user's earlier AWP logs show the finishing formula HP*100+1000 with AWPOneShot=1; old settings
+are preserved on updates, independently of the new default. Every test closes only its own process
+and restores private game/config files. Opt-in contact/passive fixture commands are excluded from
+ordinary modules; no retail map, script, native disassembly or log enters source packages.
+
 Final DLL reruns the stock native checks and buy-panel visual inspection. AK preview shows1250gold,
 clip/reserve30/20, native-scaled base damage58 and978RPM from IAS1.63. Text fits the existing panel.

@@ -15,6 +15,7 @@
 #include "../platform/ActorRenderFilter.hpp"
 #include "../platform/FpsCombatGuard.hpp"
 #include "../platform/NativeMovementGuard.hpp"
+#include "../platform/NativeWeaponAttack.hpp"
 #include "../presentation/FullscreenView.hpp"
 #include "../presentation/FpsProjection.hpp"
 #include <MinHook.h>
@@ -316,6 +317,8 @@ static DWORD WINAPI Initialize(void*) {
     // Map timers may request RTS camera presets repeatedly; live FPS owns those native camera writes.
     MapCameraGuard::Install(base, []() { return healthy && controller.BlocksMapCamera(); }, Hook);
     ActorRenderFilter::Install(base, Hook);
+    // Scoped base-damage replacement leaves all ordinary RTS attacks untouched.
+    NativeWeaponAttack::Install(base,Hook);
     NativeFloatingText::Install(base, Hook);
     FpsCombatGuard::Install(base, []() { return healthy ? controller.ViewActor() : 0; },
         [](uintptr_t unit) { return healthy && controller.BlocksPassiveUnit(unit); },
