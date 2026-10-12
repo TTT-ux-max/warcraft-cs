@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased - test branches
+## 0.8.0 — 2026-10-12
 
 - Fix bullets and melee contacts being intercepted by nonphysical effect units such as Broodmother
   webs. `[Combat] IgnorePassableInvulnerableObjects=true` skips Locust units and invulnerable
@@ -69,6 +69,9 @@
 - Keep rectangular-map letterboxing black and restore the world beneath the original RTS map pixel for pixel; leaving FPS retains Warcraft's normal minimap layout.
 - Add `[Interface] ShowMinimap=true` and `MinimapSizePercent=22` (10..40% of window height), validated defaults, live F8 reload and preservation during config upgrades.
 - Compact the top shortcut hints into wrapping groups, wrap them before the minimap on narrow windows, remove duplicate buy/ammo hints and move gold beside health/ammunition.
+
+Complete notes and upgrade instructions: [RELEASE-0.8.0](docs/RELEASE-0.8.0.md).
+Both launchers, source packages and verified updater metadata are rebuilt for 0.8.0.
 
 ## 0.7.0 вЂ” 2026-10-10
 

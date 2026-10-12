@@ -1,4 +1,4 @@
-# Warcraft CS вЂ” 0.7.0
+# Warcraft CS вЂ” 0.8.0
 
 Counter-Strike 1.6 inside Warcraft III: control your own hero or unit in first person,
 shoot, and play regular maps, campaigns and compatible custom maps.
@@ -11,15 +11,15 @@ Neither variant includes game files, models, sounds, maps or saves.
 You need your own installed copies of both games.**
 This is an early prototype with known limitations.
 
-**[Download 0.7.0](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.7.0)** В·
-[Release Notes](docs/RELEASE-0.7.0.md) В· [Installation](INSTALL.md) В· [Requirements](REQUIREMENTS.md)
+**[Download 0.8.0](https://github.com/YazgulDev/warcraft-cs/releases/tag/v0.8.0)** В·
+[Release Notes](docs/RELEASE-0.8.0.md) В· [Installation](INSTALL.md) В· [Requirements](REQUIREMENTS.md)
 В· [Troubleshooting](TROUBLESHOOTING.md) В· [Discussions](https://github.com/YazgulDev/warcraft-cs/discussions)
 
-0.7.0 adds accelerating bunnyhops, airborne traversal, optional speed and fog controls, detailed logs,
-crosshair and campaign-movie input fixes, compact English update notes and full game reinstalls.
-The project also includes the CS-style gold buy menu, configurable
-starting equipment, multiple C4, RoC/TFT selection and `play-roc.bat`, fullscreen/Alt-Tab recovery,
-native/optional CS skies, bridge movement and corrected FPS rendering. Earlier changes are in the [changelog](CHANGELOG.md).
+0.8.0 adds an FPS minimap, ally/enemy health bars, native hero spells with live icons and cooldowns,
+configurable shortcuts, 144 FPS pacing and a 15000-unit draw distance. It fixes ground clipping,
+stuck movement, unwanted pursuit and transformation crashes, improves squad avoidance, and adds
+unit-scaled weapon damage, native passives and reserve ammunition limits. New economy/C4 defaults
+apply to fresh configs; updates preserve your existing choices. Earlier changes are in the [changelog](CHANGELOG.md).
 
 ## Features
 
@@ -39,16 +39,22 @@ native/optional CS skies, bridge movement and corrected FPS rendering. Earlier c
 - Primary and secondary melee attacks, locally imported CS sounds and a blood-free hit indicator.
 - CS-only volume in INI, including shots, reloads, footsteps and C4; F8 applies it to ongoing and future sounds.
 - Damage to units, buildings and gates; configurable allied damage (50% by default). C4 deals 2500 base area damage.
+- Weapons scale damage from the controlled unit attack by default; fixed weapon damage remains configurable.
+- Native weapon passives and item orbs apply to confirmed contacts, including distant firearm hits.
 - AWP uses ordinary configured damage by default; instant enemy kills remain an explicit INI option.
 - Warcraft stuns, roots, slows and attack restrictions also limit FPS actions.
-- E picks up items/runes through the real inventory; a successful rune restores 20% ammunition by default.
+- E picks up items/runes through the real inventory; a successful rune restores 40% ammunition by default.
 - H recruits your own units to follow and fight, O makes them follow without attacking, J releases them.
 - INI settings for ammunition recovery, damage and squad behavior, reloaded with F8.
 - Mouse-wheel weapon cycling through all seven slots, with high-resolution wheel support.
 - B opens a CS-style buy menu using Warcraft gold; configurable prices, starting kits and shop/building access.
+- No starting C4 by default; unlimited paid C4 purchases and configurable reserve ammunition caps.
 - Multiple planted C4 charges with independent fuses; F7 refills carried equipment and F9 grants every weapon for free.
 - Warcraft sky by default in FPS, optional privately converted CS skyboxes, and visible native walkable bridge decks.
-- Corrected near-ground clipping and camera/distance filtering for floating world labels.
+- Configurable 144 FPS pacing and 15000-unit draw distance; corrected near-ground clipping.
+- Trunk-based tree collision, cliff retreat, stable idle movement and safe transformations.
+- Rear squad formations and sideways yielding around the player.
+- Camera/distance filtering for floating world labels.
 
 ## Requirements
 
@@ -139,7 +145,7 @@ Run in PowerShell, replacing the game paths with your own:
 ```powershell
 git clone https://github.com/YazgulDev/warcraft-cs.git
 cd warcraft-cs
-git switch release/0.7.0
+git switch release/0.8.0
 .\setup.cmd -WarcraftDirectory "E:\Warcraft III" -CounterStrikeDirectory "C:\SteamGames\steamapps\common\Half-Life\cstrike"
 .\play.cmd
 ```
