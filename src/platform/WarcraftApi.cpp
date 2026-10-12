@@ -11,6 +11,7 @@ namespace wc3 {
 #include "NativeOffsets.inc"
 #undef NATIVE
 static uintptr_t nativeBase = 0;
+static bool cameraLimitsVerified=false;
 using SurfaceHeight = float (__fastcall*)(int, BOOL*, float, float, BOOL);
 static SurfaceHeight surfaceHeight = nullptr;
 using TerrainRoot = uintptr_t (__cdecl*)();
@@ -60,11 +61,44 @@ bool Bind(HMODULE game) {
     terrainRoot=reinterpret_cast<TerrainRoot>(base+0x1F5A0);
     terrainHeight=reinterpret_cast<TerrainHeight>(base+0x763F00);
     nativeBase = base;
+    // The camera getter, generation resolver and scalar clamp must match this owned 1.26a layout.
+    const unsigned char cameraGetter[]={0x8B,0x81,0x54,0x02,0x00,0x00,0xC3};
+    const unsigned char resolver[]={0x56,0x8B,0x35};
+    const unsigned char scalarLimits[]={0x8D,0x96,0x80,0x00,0x00,0x00};
+    cameraLimitsVerified=!memcmp(reinterpret_cast<void*>(base+0x2F5ED0),cameraGetter,sizeof(cameraGetter)) &&
+        !memcmp(reinterpret_cast<void*>(base+0x3FA30),resolver,sizeof(resolver)) &&
+        *reinterpret_cast<uint32_t*>(base+0x3FA33)==base+0xAB7788 &&
+        !memcmp(reinterpret_cast<void*>(base+0x4771A6),scalarLimits,sizeof(scalarLimits));
+    Log("Native camera far-limit layout verified=%d",cameraLimitsVerified);
 #define NATIVE(result, name, arguments, offset) name = reinterpret_cast<decltype(name)>(base + offset);
 #include "NativeOffsets.inc"
 #undef NATIVE
     Log("Bound Warcraft III 1.26a native API");
     return true;
+}
+float* FarClipMaximum(uint32_t index,uint32_t serial) {
+    if(!cameraLimitsVerified) return nullptr;
+    // The native resolver rejects stale generations before the channel layout is accessed.
+    using Resolve=uintptr_t (__fastcall*)(uint32_t,uint32_t);
+    __try {
+        uintptr_t node=reinterpret_cast<Resolve>(nativeBase+0x3FA30)(index,serial);
+        if(!node) return nullptr;
+        auto limits=reinterpret_cast<float*>(node+0x80);
+        if(limits[0]!=100 || !std::isfinite(limits[1]) || limits[1]<100 || limits[1]>20000) return nullptr;
+        return limits+1;
+    } __except(EXCEPTION_EXECUTE_HANDLER) {return nullptr;}
+}
+CameraClipChannel FarClipChannel() {
+    if(!cameraLimitsVerified) return {};
+    using GetUI=uintptr_t (__fastcall*)(int,int);
+    __try {
+        uintptr_t ui=reinterpret_cast<GetUI>(nativeBase+0x300710)(0,0);
+        uintptr_t camera=ui ? *reinterpret_cast<uintptr_t*>(ui+0x254) : 0;
+        if(!camera) return {};
+        // CAMERA_FIELD_FARZ is the scalar wrapper at +114; +8/+C identify its native channel.
+        uint32_t index=*reinterpret_cast<uint32_t*>(camera+0x11C),serial=*reinterpret_cast<uint32_t*>(camera+0x120);
+        return {index,serial,FarClipMaximum(index,serial)};
+    } __except(EXCEPTION_EXECUTE_HANDLER) {return {};}
 }
 float Ground(float x, float y) {
     Handle location = Location(&x, &y);

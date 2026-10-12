@@ -1,19 +1,27 @@
 #include "MovementObstacles.hpp"
 #include "../geometry/ModelBounds.hpp"
+#include "../geometry/TreeTrunkMesh.hpp"
 #include "SpriteTransform.hpp"
 #include <algorithm>
 #include <limits>
 
-bool MovementObstacles::Bounds(const std::string& path, uintptr_t object, Bounds3& world) {
+bool MovementObstacles::Bounds(const std::string& path, bool destructable, uintptr_t object, Bounds3& world) {
     if (path.empty() || !object) return false;
-    auto found = models_.find(path);
+    auto key=std::make_pair(path,destructable);
+    auto found = models_.find(key);
     if (found == models_.end()) {
         Bounds3 model;
         // Unknown models never grant permission to bypass a blocked pathing cell.
-        if (!ModelBounds::Load(path, model)) model = {{0,0,0},{0,0,0}};
-        wc3::Log("movement obstacle model=%s min=%.1f,%.1f,%.1f max=%.1f,%.1f,%.1f",path.c_str(),
-            model.minimum[0],model.minimum[1],model.minimum[2],model.maximum[0],model.maximum[1],model.maximum[2]);
-        found = models_.emplace(path, model).first;
+        TreeTrunkMesh trunk;
+        // Unit models may also contain EatTree animations; only destructables use standing-trunk rules.
+        bool loaded=ModelBounds::Load(path, model, destructable ? &trunk : nullptr);
+        // A standing tree's visual extents include empty canopy space. Decode its trunk before applying
+        // the existing native sprite transform; unreadable trees retain native pathing as the fallback.
+        if (!loaded || (trunk.IsTree() && !trunk.Bounds(model))) model = {{0,0,0},{0,0,0}};
+        wc3::Log("movement obstacle model=%s min=%.1f,%.1f,%.1f max=%.1f,%.1f,%.1f tree=%d trunkTriangles=%u",path.c_str(),
+            model.minimum[0],model.minimum[1],model.minimum[2],model.maximum[0],model.maximum[1],model.maximum[2],
+            trunk.IsTree(),unsigned(trunk.TriangleCount()));
+        found = models_.emplace(key, model).first;
     }
     const auto& bounds = found->second;
     if (bounds.maximum[0] <= bounds.minimum[0]) return false;
@@ -61,14 +69,14 @@ std::vector<Bounds3> MovementObstacles::Snapshot(wc3::Handle actor, float x, flo
         wc3::GroupRemoveUnit(group, unit);
         if (unit == actor || wc3::IsUnitHidden(unit) || wc3::Real(wc3::GetUnitState(unit, 0)) <= 0) continue;
         Bounds3 bounds;
-        if (Bounds(path(wc3::GetUnitTypeId(unit), false), wc3::UnitObject(unit), bounds)) result.push_back(bounds);
+        if (Bounds(path(wc3::GetUnitTypeId(unit), false), false, wc3::UnitObject(unit), bounds)) result.push_back(bounds);
     }
     wc3::DestroyGroup(group);
     for (auto object : wc3::NearbyDestructables(x, y, radius)) {
         if (wc3::Real(wc3::GetDestructableLife(object)) <= 0) continue;
         using Resolve = uintptr_t (__fastcall*)(wc3::Handle, uintptr_t);
         Bounds3 bounds;
-        if (Bounds(path(wc3::GetDestructableTypeId(object), true),
+        if (Bounds(path(wc3::GetDestructableTypeId(object), true), true,
             reinterpret_cast<Resolve>(base_ + 0x3BE010)(object, 0), bounds)) {
             float cx=wc3::Real(wc3::GetDestructableX(object)), cy=wc3::Real(wc3::GetDestructableY(object)), deck=0;
             // Walkable bridges supply their native deck separately; their enclosing model box includes empty space.

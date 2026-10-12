@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <cctype>
 
 GameplaySettings GameplaySettings::Load(const std::string& filename) {
     GameplaySettings result;
@@ -18,6 +19,14 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         if (end==value.c_str() || *end || !std::isfinite(parsed)) { wc3::Log("Invalid config %s.%s; using default",section,key);return fallback; }
         return std::clamp(parsed,0.0f,maximum);
     };
+    // Unknown values retain the documented default; explicit false/0 bypasses attack-effect dispatch.
+    auto attackEffects=text("Combat","EnableAttackEffects","true");
+    if(!_stricmp(attackEffects.c_str(),"false") || attackEffects=="0")result.enableAttackEffects=false;
+    else if(_stricmp(attackEffects.c_str(),"true") && attackEffects!="1")wc3::Log("Invalid Combat.EnableAttackEffects; using true");
+    // Restore legacy object interception only on an explicit opt-out; malformed preferences keep the fix enabled.
+    auto transparent=text("Combat","IgnorePassableInvulnerableObjects","true");
+    if(!_stricmp(transparent.c_str(),"false") || transparent=="0")result.ignorePassableInvulnerableObjects=false;
+    else if(_stricmp(transparent.c_str(),"true") && transparent!="1")wc3::Log("Invalid Combat.IgnorePassableInvulnerableObjects; using true");
     // Bound diagnostic frequency/storage at the existing INI boundary, including malformed legacy values.
     auto detailed = text("Logging", "Detailed", "true");
     if (!_stricmp(detailed.c_str(), "false") || detailed == "0") result.logging.detailed = false;
@@ -25,7 +34,12 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.logging.intervalMs = unsigned(std::max(100.f, number("Logging", "IntervalMs", 1000, 60000)));
     result.logging.maxFileMB = unsigned(std::max(1.f, number("Logging", "MaxFileMB", 8, 64)));
     result.logging.archiveCount = unsigned(number("Logging", "ArchiveCount", 3, 8));
-    result.runeAmmoPercent=number("Runes","AmmoPercent",20,100);
+    // Zero opts back into Warcraft's original limiter; positive targets stay within a bounded range.
+    float maxFPS=number("Rendering","MaxFPS",144,360);
+    result.render.maxFPS=maxFPS==0 ? 0 : int(std::max(30.f,maxFPS));
+    // Missing or malformed distances use the same default as a fresh settings snapshot.
+    result.render.drawDistance=std::max(3000.f,number("Rendering","DrawDistance",result.render.drawDistance,20000));
+    result.runeAmmoPercent=number("Runes","AmmoPercent",result.runeAmmoPercent,100);
     // Missing settings enable the requested hopping; malformed switches preserve documented defaults.
     auto boolean = [&](const char* key, bool fallback) {
         auto value = text("Movement", key, fallback ? "true" : "false");
@@ -34,6 +48,11 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         return fallback;
     };
     result.movement.bunnyHop = boolean("BunnyHop", true);
+    result.movement.scaleFromUnitMoveSpeed=boolean("ScaleFromUnitMoveSpeed",false);
+    result.movement.unitMoveSpeedReference=std::max(1.f,number("Movement","UnitMoveSpeedReference",300,1000));
+    // Fire-rate scaling is opt-in and independent of weapon damage selection.
+    auto fireRate=text("Combat","ScaleFireRateFromAttackSpeed","false");
+    result.scaleFireRateFromAttackSpeed=!_stricmp(fireRate.c_str(),"true") || fireRate=="1";
     result.movement.autoJump = boolean("AutoJump", true);
     result.movement.jumpBoostPercent = number("Movement", "JumpBoostPercent", 0, 100);
     result.movement.maxBunnySpeed = std::max(250.0f, number("Movement", "MaxBunnySpeed", 1000, 2000));
@@ -43,7 +62,10 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.movement.stepHeight = number("Movement", "StepHeight", 27, 64);
     result.runePickupRadius=number("Runes","PickupRadius",160,400);
     result.runeAmmoAllWeapons=_stricmp(text("Runes","AmmoWeapons","all").c_str(),"current")!=0;
-    result.heroDamage=_stricmp(text("Damage","Mode","weapon").c_str(),"hero")==0;
+    auto damageMode=text("Damage","Mode","unit");
+    result.heroDamage=_stricmp(damageMode.c_str(),"weapon")!=0;
+    if(_stricmp(damageMode.c_str(),"unit") && _stricmp(damageMode.c_str(),"hero") && _stricmp(damageMode.c_str(),"weapon"))
+        wc3::Log("Invalid Damage.Mode; using unit");
     // Missing or malformed settings must not silently enable instant kills; explicit preferences still reload on F8.
     auto awpOneShot=text("Damage","AWPOneShot","false");
     result.awpOneShot=!_stricmp(awpOneShot.c_str(),"true") || awpOneShot=="1";
@@ -52,6 +74,61 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     // Old configs retain 50%; zero disables allied damage and full damage is capped at 100%.
     result.friendlyFirePercent=number("Damage","FriendlyFirePercent",50,100);
     result.floatingTextDistance=number("Interface","FloatingTextDistance",1200,5000);
+    // Team bars require an explicit opt-in; invalid/legacy preferences keep the FPS view clear.
+    auto healthSwitch=[&](const char* key) {
+        auto value=text("Interface",key,"false");
+        if(!_stricmp(value.c_str(),"true") || value=="1") return true;
+        if(!value.empty() && _stricmp(value.c_str(),"false") && value!="0") wc3::Log("Invalid Interface.%s; using false",key);
+        return false;
+    };
+    result.healthBars.allies=healthSwitch("ShowAllyHealthBars");
+    result.healthBars.enemies=healthSwitch("ShowEnemyHealthBars");
+    result.healthBars.distance=number("Interface","HealthBarDistance",2000,15000);
+    // Apply an entire keyboard layout together; a conflicting layout retains usable default controls.
+    bool layoutValid=true;
+    for(size_t i=0;i<ShortcutBindings::Count;++i) {
+        auto action=ShortcutAction(i);auto fallback=ShortcutBindings::Label(result.shortcuts.Key(action));
+        int key=ShortcutBindings::Parse(text("Shortcuts",ShortcutBindings::Name(action),fallback.c_str()));
+        if(key<0)layoutValid=false;else result.shortcuts.Set(action,key);
+    }
+    if(!layoutValid || !result.shortcuts.Valid()) {result.shortcuts=ShortcutBindings();wc3::Log("Invalid/conflicting Shortcuts; using default keyboard layout");}
+    // Rawcodes and order IDs describe existing abilities; they never grant skills or bypass native costs.
+    auto spellsEnabled=text("Spells","Enabled","true");
+    result.spells.enabled=!_stricmp(spellsEnabled.c_str(),"true") || spellsEnabled=="1";
+    if(_stricmp(spellsEnabled.c_str(),"true") && _stricmp(spellsEnabled.c_str(),"false") && spellsEnabled!="1" && spellsEnabled!="0") {
+        result.spells.enabled=true;wc3::Log("Invalid Spells.Enabled; using true");
+    }
+    result.spells.aimDistance=std::max(100.f,number("Spells","AimDistance",3000,15000));
+    for(int slot=0;slot<4;++slot) {
+        std::string prefix="Slot"+std::to_string(slot+1);
+        auto raw=text("Spells",(prefix+"Ability").c_str(),"");
+        if(raw.size()==4 && raw.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")==std::string::npos)result.spells.ability[slot]=raw;
+        else if(!raw.empty())wc3::Log("Invalid Spells.%sAbility; using native hero slot",prefix.c_str());
+        // An order ID is discrete: reject overflow/fractions instead of clamping to another native command.
+        auto orderText=text("Spells",(prefix+"Order").c_str(),"0");char* orderEnd=nullptr;
+        double order=std::strtod(orderText.c_str(),&orderEnd);
+        if(orderEnd!=orderText.c_str() && !*orderEnd && std::isfinite(order) && order==std::floor(order) &&
+            (order==0 || (order>=852000 && order<=853999)))result.spells.order[slot]=int(order);
+        else wc3::Log("Invalid Spells.%sOrder; using native order",prefix.c_str());
+        auto mode=text("Spells",(prefix+"Target").c_str(),"auto");
+        for(auto& c:mode)c=char(std::tolower(static_cast<unsigned char>(c)));
+        if(mode=="auto" || mode=="unit" || mode=="point" || mode=="immediate" || mode=="self")result.spells.target[slot]=mode;
+        else wc3::Log("Invalid Spells.%sTarget; using auto",prefix.c_str());
+    }
+    // Legacy/invalid configs show the native map; explicit false/0 hides it on startup and F8.
+    auto showMinimap=text("Interface","ShowMinimap","true");
+    if (!_stricmp(showMinimap.c_str(),"false") || showMinimap=="0") result.showMinimap=false;
+    else if (_stricmp(showMinimap.c_str(),"true") && showMinimap!="1") wc3::Log("Invalid Interface.ShowMinimap; using true");
+    result.minimapSizePercent=std::max(10.f,number("Interface","MinimapSizePercent",22,40));
+    // Optional spell HUD settings reload with F8; malformed preferences retain its requested default visibility.
+    auto enabledHud=[&](const char* key) {
+        auto value=text("Interface",key,"true");
+        if(!_stricmp(value.c_str(),"false") || value=="0")return false;
+        if(_stricmp(value.c_str(),"true") && value!="1")wc3::Log("Invalid Interface.%s; using true",key);
+        return true;
+    };
+    result.showSpellIcons=enabledHud("ShowSpellIcons");result.showSpellCooldowns=enabledHud("ShowSpellCooldowns");
+    result.spellIconSizePercent=std::max(4.f,number("Interface","SpellIconSizePercent",7,14));
     // Keep the optional counter hidden for old/invalid configs; accept explicit boolean preferences.
     auto showSpeed=text("Interface","ShowSpeed","false");
     result.showSpeed=!_stricmp(showSpeed.c_str(),"true") || showSpeed=="1";
@@ -69,6 +146,18 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.squadFollowDistance=std::max(80.0f,number("Squad","FollowDistance",180,500));
     result.squadLeash=std::max(result.squadFollowDistance+200,number("Squad","CombatLeash",900,3000));
     result.squadMaxUnits=int(std::max(1.0f,number("Squad","MaxUnits",24,64)));
+    // Rear spacing and path yielding reload with F8 without releasing or teleporting the squad.
+    auto squadSwitch=[&](const char* key) {
+        auto value=text("Squad",key,"true");
+        if(!_stricmp(value.c_str(),"false") || value=="0")return false;
+        if(_stricmp(value.c_str(),"true") && value!="1")wc3::Log("Invalid Squad.%s; using true",key);
+        return true;
+    };
+    result.squadRearFormation=squadSwitch("RearFormation");
+    result.squadYield=squadSwitch("YieldToPlayer");
+    result.squadClearance=std::max(60.f,number("Squad","PlayerClearance",100,300));
+    result.squadYieldAhead=std::max(result.squadClearance,number("Squad","YieldAheadDistance",350,1000));
+    result.squadOrderIntervalMs=unsigned(std::max(50.f,number("Squad","OrderIntervalMs",150,1000)));
     // Restricted modes govern both opening B and every transaction, including the quick-ammo key.
     auto access=text("Buy","Access","anywhere");
     if (!_stricmp(access.c_str(),"friendly")) result.buyAccess=BuyAccess::FriendlyBuildings;
@@ -78,7 +167,12 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
     result.shopTypes=text("Buy","ShopTypes","");
     result.startAllWeapons=!_stricmp(text("Loadout","Mode","melee").c_str(),"all");
     result.maxBombs=int(number("Loadout","MaxBombs",100,1000));
-    result.startBombs=std::min(result.maxBombs,int(number("Loadout","BombCount",20,1000)));
+    // Missing/invalid starting counts retain the bomb-free default; explicit counts remain configurable.
+    result.startBombs=std::min(result.maxBombs,int(number("Loadout","BombCount",0,1000)));
+    // Unlimited purchases are the default; F8 can restore MaxBombs as a paid-purchase cap.
+    auto unlimitedBombs=text("Loadout","UnlimitedBombPurchases","true");
+    if(!_stricmp(unlimitedBombs.c_str(),"false") || unlimitedBombs=="0")result.unlimitedBombPurchases=false;
+    else if(_stricmp(unlimitedBombs.c_str(),"true") && unlimitedBombs!="1")wc3::Log("Invalid Loadout.UnlimitedBombPurchases; using true");
     result.csSky=_stricmp(text("Sky","Enabled","false").c_str(),"false")!=0;
     // Default to Warcraft's sky even for older configs missing this key; explicit CS sky still takes precedence.
     result.nativeSky=_stricmp(text("Sky","WarcraftEnabled","true").c_str(),"true")==0;
@@ -103,6 +197,7 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         result.weaponPrice[slot]=int(number(sections[slot],"Price",float(result.weaponPrice[slot]),1000000));
         result.ammoPrice[slot]=int(number(sections[slot],"AmmoPrice",float(result.ammoPrice[slot]),1000000));
         result.ammoPack[slot]=int(std::max(1.0f,number(sections[slot],"AmmoPack",float(std::max(1,result.ammoPack[slot])),1000)));
+        if(slot<4)result.maxReserve[slot]=int(number(sections[slot],"MaxReserve",float(result.maxReserve[slot]),100000));
     }
     result.knifeSecondaryDamage=number("Knife","SecondaryDamage",65,1000000);
     result.swordSecondaryDamage=number("Sword","SecondaryDamage",240,1000000);

@@ -15,6 +15,8 @@ UnitStatus UnitStatus::Read(wc3::Handle unit, uintptr_t gameBase) {
     result.stunCount = *reinterpret_cast<int*>(object + 0x198);
     result.incapacitated = result.stunCount > 0 || wc3::IsUnitPaused(unit) || result.contained || result.hidden;
     result.nativeSpeed = wc3::Real(wc3::GetUnitMoveSpeed(unit));
+    // Presentation consumes the same live unit attack used by damage mode, without calling natives while drawing.
+    result.attackDamage=wc3::UnitAttackAverage(unit);
     result.defaultSpeed = wc3::Real(wc3::GetUnitDefaultMoveSpeed(unit));
     // Native effective speed includes stacked spells/items and returns zero while movement is disabled.
     result.immobilized = result.incapacitated || !std::isfinite(result.nativeSpeed) || result.nativeSpeed <= 0.01f;
@@ -23,6 +25,11 @@ UnitStatus UnitStatus::Read(wc3::Handle unit, uintptr_t gameBase) {
     if (result.immobilized) result.speedScale = 0;
     // Attack-disable counters also cover effects such as hex without disabling permitted movement.
     uintptr_t attack = *reinterpret_cast<uintptr_t*>(object + 0x1E8);
+    // 1.26a's attack component stores the effective IAS multiplier, including agility, items and buffs.
+    float multiplier=1;SIZE_T got=0;
+    if(attack && ReadProcessMemory(GetCurrentProcess(),reinterpret_cast<void*>(attack+0x1B0),&multiplier,sizeof(multiplier),&got) &&
+        got==sizeof(multiplier) && std::isfinite(multiplier) && multiplier>0)
+        result.attackSpeed=std::clamp(multiplier,.2f,5.f);
     result.disarmed = result.incapacitated || (attack && *reinterpret_cast<int*>(attack + 0x40) > 0);
     return result;
 }
