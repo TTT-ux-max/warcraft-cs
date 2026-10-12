@@ -10,6 +10,7 @@ public:
     void Load(const std::string& path, const std::vector<unsigned char>& bytes, const Bounds3& standing);
     bool IsTree() const { return tree_; }
     size_t TriangleCount() const { return triangles_.size(); }
+    bool Bounds(Bounds3& result) const;
     bool Intersect(const float* origin, const float* direction, float limit, float& entry) const;
 private:
     bool tree_ = false;
