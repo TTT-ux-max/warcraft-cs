@@ -19,7 +19,7 @@ void NativeMinimap::ContextDeleted(HGLRC context) {
     context_=nullptr;background_=map_=0;textureSide_=0;capturing_=ready_=false;
 }
 void NativeMinimap::BeginFrame(uintptr_t ui,int width,int height,bool enabled) {
-    ui_=ui;width_=width;height_=height;enabled_=enabled;capturing_=ready_=capturedAny_=false;
+    ui_=ui;width_=width;height_=height;enabled_=enabled;capturing_=ready_=capturedAny_=cleared_=false;
 }
 bool NativeMinimap::Prepare() {
     if (!enabled_ || !ui_ || width_<=0 || height_<=0) return false;
@@ -62,10 +62,8 @@ bool NativeMinimap::Prepare() {
     glBindTexture(GL_TEXTURE_2D,background_);
     glCopyTexSubImage2D(GL_TEXTURE_2D,0,0,0,x_,y_,cropWidth_,cropHeight_);
     glPopAttrib();
-    // Rectangular levels leave letterbox strips: black replaces the racial console behind them.
-    glPushAttrib(GL_SCISSOR_BIT|GL_COLOR_BUFFER_BIT);glEnable(GL_SCISSOR_TEST);
-    glScissor(x_,y_,cropWidth_,cropHeight_);glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);
-    glClearColor(0,0,0,1);glClear(GL_COLOR_BUFFER_BIT);glPopAttrib();
+    // The letterbox black clear moves to the first confirmed map batch in Submit: a hidden
+    // interface submits no map batches, and an early clear would blacken the live strip.
     capturing_=true;return true;
 }
 bool NativeMinimap::MapBatch(GLsizei count,GLenum type,const void* indices) const {
@@ -104,6 +102,14 @@ bool NativeMinimap::MapBatch(GLsizei count,GLenum type,const void* indices) cons
 void NativeMinimap::Submit(GLenum mode,GLsizei count,GLenum type,const void* indices,DrawElements original) {
     if (!capturing_ && !Prepare()) return;
     if (!MapBatch(count,type,indices)) return;
+    if (!cleared_) {
+        // Rectangular levels leave letterbox strips: black replaces the console behind them,
+        // applied only once a real map batch proves the capture will hold content.
+        glPushAttrib(GL_SCISSOR_BIT|GL_COLOR_BUFFER_BIT);glEnable(GL_SCISSOR_TEST);
+        glScissor(x_,y_,cropWidth_,cropHeight_);glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);
+        glClearColor(0,0,0,1);glClear(GL_COLOR_BUFFER_BIT);glPopAttrib();
+        cleared_=true;
+    }
     capturedAny_=true;
     // Retain native terrain/fog/marker batches, rasterizing only their map pixels.
     // Native UI must not overwrite world depth later sampled by health bars and sky.

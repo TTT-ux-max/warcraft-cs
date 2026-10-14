@@ -19,7 +19,7 @@ private:
     void Quad(GLuint texture,float left,float bottom,float right,float top,bool inset=true);
     uintptr_t ui_=0;
     int width_=0,height_=0,x_=0,y_=0,cropWidth_=0,cropHeight_=0,textureSide_=0;
-    bool enabled_=false,capturing_=false,ready_=false,capturedAny_=false;
+    bool enabled_=false,capturing_=false,ready_=false,capturedAny_=false,cleared_=false;
     HGLRC context_=nullptr;
     GLuint background_=0,map_=0;
 };
