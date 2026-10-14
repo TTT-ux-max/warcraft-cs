@@ -1,6 +1,7 @@
 # Private installs, downloaded code and all generated results stay on the owner's computer.
 .local/
 build/
+build2/
 dist/
 vendor/
 third_party/

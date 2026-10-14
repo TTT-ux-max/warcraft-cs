@@ -134,14 +134,27 @@ Running differently:
 - 1.27a has no verified world-render entry point yet, so the per-frame controller tick
   moves from the world callback to the swap-buffer hook, which needs no game address at
   all. The simulation still advances once per presented frame; the native world-pass
-  choreography around it (actor render filtering, label timing, minimap pixel capture)
-  is unavailable and is skipped rather than approximated. The minimap in particular
-  needs two things 1.27a does not supply: a UI-phase anchor (the 1.26a `0x60C580` entry
-  whose `83 EC 10 53 55 56 57 8B F9` prologue, and the whole `push ebx; push ebp;
-  push esi; push edi` form, occur zero times in 1.27a), and the `ui -> CMinimap ->
-  CFrame` offsets used to read the native crop rectangle. Without the anchor the
-  GL-submission filter cannot tell a console batch from a world batch, and intercepting
-  world geometry that happens to project into the crop rectangle would corrupt the frame.
+  choreography around it (actor render filtering, label timing) is unavailable and is
+  skipped rather than approximated.
+- The classic console band is still hidden, but not the way 1.26a hides it. 1.26a marks the
+  UI pass from its world and UI draw hooks (`0x395900`, `0x60C580`); neither signature
+  survives in 1.27a, so `nativeUIPhase` is never raised there and `ShowInterface(FALSE, …)`
+  only hides controls - the border skin and translucent body keep being drawn every frame.
+  The band is instead dropped by geometry at GL submission. 1.27a draws the console through
+  `glDrawElements` over client vertex arrays, so `DrawElementsHook` classifies each batch:
+  a batch whose projection is orthographic (`projection[11]==0 && projection[15]==1`, world
+  batches always render perspective) and whose every vertex projects inside the strip
+  recorded by `FullscreenView::ObserveWorldViewport` - plus a low short-quad rule for the
+  skin's top border beam - is console chrome and is swallowed before it reaches the driver.
+  Anything that reaches the world region or leaves the viewport keeps drawing, so partial
+  overlaps can never clip live geometry. Verified on DotA and on a Chinese custom map: the
+  FPS view shows world pixels only in the strip, the F6 round trip restores a fully intact
+  RTS console, and no black rectangle is left behind.
+- The native minimap pixel capture does work on 1.27a: it is fed by the same submissions the
+  geometry filter swallows (`minimap.Submit`, exactly as the 1.26a UI hook feeds it), with
+  `BeginFrame` started from the frame anchor and `FinishFrame` restoring the captured pixels
+  after the overlay pass. The letterbox clear is lazy, so it only runs once a map batch has
+  actually been captured.
 
 Disabled on 1.27a, each bailing out through its own guard:
 

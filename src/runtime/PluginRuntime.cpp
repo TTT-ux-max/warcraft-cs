@@ -21,7 +21,6 @@
 #include <MinHook.h>
 #include <algorithm>
 #include <cstring>
-#include <intrin.h>
 #ifdef WCS_FLOATING_TEXT_TEST
 #include "../../tests/FloatingTextScene.hpp"
 #endif
@@ -104,50 +103,14 @@ static bool RectSeen(GLint x, GLint y, GLint w, GLint h, GLint* cache, unsigned&
     return false;
 }
 // ---------------------------------------------------------------------------
-// 1.27a console draw-path probe (temporary). Builds without a world anchor have
-// nothing that marks the UI phase, so identify instead which GL entries and
-// which Game.dll call sites produce the console band: keep the last GL
-// submissions before present in a ring and dump it (run-length encoded) at a
-// bounded cadence. Remove once the console entry point is verified.
+// Per-second GL state statistics: proves which call path re-issues (or restores)
+// the world viewport between our present-time force and the next world pass.
 // ---------------------------------------------------------------------------
-enum ProbeFunc {
-    ProbeGlBegin = 0, ProbeGlVertex2f, ProbeGlTexCoord2f, ProbeGlColor4f, ProbeGlColor4ub,
-    ProbeGlRectf, ProbeGlDrawArrays, ProbeGlDrawRangeElements, ProbeGlDrawElements,
-    ProbeGlCallList, ProbeGlCallLists, ProbeGlBitmap, ProbeGlViewport, ProbeGlScissor,
-    ProbeGlPushAttrib, ProbeGlPopAttrib, ProbeFuncCount
-};
-static const char* const probeNames[ProbeFuncCount] = {
-    "glBegin", "glVertex2f", "glTexCoord2f", "glColor4f", "glColor4ub", "glRectf",
-    "glDrawArrays", "glDrawRangeElements", "glDrawElements", "glCallList", "glCallLists",
-    "glBitmap", "glViewport", "glScissor", "glPushAttrib", "glPopAttrib"
-};
-struct ProbeEntry { unsigned char func; unsigned rva, a, b; };
-static ProbeEntry probeRing[256];
-static volatile long probeHead = 0;
-static long probeFrame = 0;
-static long probeCounts[ProbeFuncCount] = {};
-static unsigned ProbeRva(uintptr_t caller) {
-    return caller >= gameBase && caller < gameBase + 0x1000000 ? unsigned(caller - gameBase) : 0xFFFFFFFFu;
-}
-static void ProbeSubmit(int func, unsigned a, unsigned b, uintptr_t caller) {
-    if (overlayPass) return;
-    long slot = InterlockedIncrement(&probeHead) - 1;
-    ProbeEntry& entry = probeRing[slot % 256];
-    entry.func = (unsigned char)func; entry.rva = ProbeRva(caller); entry.a = a; entry.b = b;
-    ++probeCounts[func];
-}
-static unsigned FloatBits(float value) { unsigned bits; memcpy(&bits, &value, 4); return bits; }
-
-// Per-second GL state statistics: proves which call path re-issues (or restores) the world
-// viewport between our present-time force and the next world pass.
 static volatile long glStatVp = 0, glStatSc = 0, glStatPush = 0, glStatPop = 0;
 static GLint glStatLastVp[4] = {}, glStatLastSc[4] = {};
 static void APIENTRY ViewportHook(GLint x, GLint y, GLsizei width, GLsizei height) {
     RECT rect={};
     static GLint seen[24*4]; static unsigned seenCount = 0;
-    ProbeSubmit(ProbeGlViewport, unsigned(x & 0xFFFF) | (unsigned(y & 0xFFFF) << 16),
-        unsigned(width & 0xFFFF) | (unsigned(height & 0xFFFF) << 16),
-        reinterpret_cast<uintptr_t>(_ReturnAddress()));
     InterlockedIncrement(&glStatVp);
     glStatLastVp[0]=x; glStatLastVp[1]=y; glStatLastVp[2]=width; glStatLastVp[3]=height;
     if (!RectSeen(x,y,width,height,seen,seenCount)) {
@@ -168,9 +131,6 @@ static void APIENTRY ViewportHook(GLint x, GLint y, GLsizei width, GLsizei heigh
 static void APIENTRY ScissorHook(GLint x, GLint y, GLsizei width, GLsizei height) {
     RECT rect={};
     static GLint seen[24*4]; static unsigned seenCount = 0;
-    ProbeSubmit(ProbeGlScissor, unsigned(x & 0xFFFF) | (unsigned(y & 0xFFFF) << 16),
-        unsigned(width & 0xFFFF) | (unsigned(height & 0xFFFF) << 16),
-        reinterpret_cast<uintptr_t>(_ReturnAddress()));
     InterlockedIncrement(&glStatSc);
     glStatLastSc[0]=x; glStatLastSc[1]=y; glStatLastSc[2]=width; glStatLastSc[3]=height;
     if (!RectSeen(x,y,width,height,seen,seenCount)) {
@@ -189,12 +149,10 @@ using PopAttrib = void (APIENTRY*)(void);
 static PushAttrib originalPushAttrib = nullptr;
 static PopAttrib originalPopAttrib = nullptr;
 static void APIENTRY PushAttribHook(GLbitfield mask) {
-    ProbeSubmit(ProbeGlPushAttrib, mask, 0, reinterpret_cast<uintptr_t>(_ReturnAddress()));
     InterlockedIncrement(&glStatPush);
     originalPushAttrib(mask);
 }
 static void APIENTRY PopAttribHook(void) {
-    ProbeSubmit(ProbeGlPopAttrib, 0, 0, reinterpret_cast<uintptr_t>(_ReturnAddress()));
     InterlockedIncrement(&glStatPop);
     originalPopAttrib();
     // An attribute pop restores the viewport captured at push time, silently undoing the
@@ -401,8 +359,6 @@ static bool BatchInConsoleStrip(GLsizei count, GLenum type, const void* indices)
     return inside;
 }
 static void APIENTRY DrawElementsHook(GLenum mode, GLsizei count, GLenum type, const void* indices) {
-    ProbeSubmit(ProbeGlDrawElements, mode, unsigned(count),
-        reinterpret_cast<uintptr_t>(_ReturnAddress()));
     // Warcraft batches the console after world rendering, including cinematic backing textures.
     if (healthy && nativeUIPhase && !overlayPass && controller.Visible() && GetTickCount() - lastWorld < 500) {
         minimap.Submit(mode,count,type,indices,originalDrawElements);return;
@@ -415,115 +371,7 @@ static void APIENTRY DrawElementsHook(GLenum mode, GLsizei count, GLenum type, c
         && BatchInConsoleStrip(count, type, indices)) {
         minimap.Submit(mode,count,type,indices,originalDrawElements);return;
     }
-    // Builds without a verified world entry point (1.27a) never raise nativeUIPhase. Diagnose
-    // instead: walk the stack for Game.dll code addresses at draw time, which reveals the
-    // console's render call chain without a world/UI anchor. Large batches sample the world
-    // chain for contrast; small batches sample the suspected UI chain.
-    if (healthy && !overlayPass && !originalWorld && controller.Visible() && GetTickCount() - lastWorld < 500) {
-        static unsigned stackProbes = 0;
-        static unsigned tick = 0;
-        bool compact = count <= 0x400;
-        if (++tick % 64 == 0 && stackProbes < 150) {
-            ++stackProbes;
-            static uintptr_t imageEnd = 0;
-            if (!imageEnd) {
-                auto dos = reinterpret_cast<PIMAGE_DOS_HEADER>(gameBase);
-                auto nt = reinterpret_cast<PIMAGE_NT_HEADERS>(gameBase + dos->e_lfanew);
-                imageEnd = gameBase + nt->OptionalHeader.SizeOfImage;
-            }
-            void** sp = reinterpret_cast<void**>(_AddressOfReturnAddress());
-            char chain[300] = {}; int offset = 0;
-            int found = 0;
-            for (void** slot = sp; slot < sp + 2048 && found < 10; ++slot) {
-                uintptr_t value = reinterpret_cast<uintptr_t>(*slot);
-                if (value >= gameBase + 0x1000 && value < imageEnd) {
-                    offset += _snprintf_s(chain + offset, sizeof(chain) - offset, _TRUNCATE, "%06X ", unsigned(value - gameBase));
-                    ++found;
-                }
-            }
-            wc3::Trace("stackprobe %s count=%d chain=%s", compact ? "small" : "large", count, chain);
-        }
-    }
     originalDrawElements(mode, count, type, indices);
-}
-// Immediate-mode and array probes: whichever of these the console band uses, its
-// submissions cluster at the frame tail with a stable caller RVA.
-using GlBeginFn = void (APIENTRY*)(GLenum);
-using GlVertex2fFn = void (APIENTRY*)(GLfloat, GLfloat);
-using GlTexCoord2fFn = void (APIENTRY*)(GLfloat, GLfloat);
-using GlColor4fFn = void (APIENTRY*)(GLfloat, GLfloat, GLfloat, GLfloat);
-using GlColor4ubFn = void (APIENTRY*)(GLubyte, GLubyte, GLubyte, GLubyte);
-using GlRectfFn = void (APIENTRY*)(GLfloat, GLfloat, GLfloat, GLfloat);
-using GlDrawArraysFn = void (APIENTRY*)(GLenum, GLint, GLsizei);
-using GlDrawRangeElementsFn = void (APIENTRY*)(GLenum, GLuint, GLuint, GLsizei, GLenum, const void*);
-using GlCallListFn = void (APIENTRY*)(GLuint);
-using GlCallListsFn = void (APIENTRY*)(GLsizei, GLenum, const void*);
-using GlBitmapFn = void (APIENTRY*)(GLsizei, GLsizei, GLfloat, GLfloat, GLfloat, GLfloat, const GLubyte*);
-static GlBeginFn originalGlBegin = nullptr;
-static GlVertex2fFn originalGlVertex2f = nullptr;
-static GlTexCoord2fFn originalGlTexCoord2f = nullptr;
-static GlColor4fFn originalGlColor4f = nullptr;
-static GlColor4ubFn originalGlColor4ub = nullptr;
-static GlRectfFn originalGlRectf = nullptr;
-static GlDrawArraysFn originalGlDrawArrays = nullptr;
-static GlDrawRangeElementsFn originalGlDrawRangeElements = nullptr;
-static GlCallListFn originalGlCallList = nullptr;
-static GlCallListsFn originalGlCallLists = nullptr;
-static GlBitmapFn originalGlBitmap = nullptr;
-static void APIENTRY GlBeginProbe(GLenum mode) {
-    uintptr_t caller = reinterpret_cast<uintptr_t>(_ReturnAddress());
-    ProbeSubmit(ProbeGlBegin, mode, 0, caller);
-    originalGlBegin(mode);
-}
-static void APIENTRY GlVertex2fProbe(GLfloat x, GLfloat y) {
-    uintptr_t caller = reinterpret_cast<uintptr_t>(_ReturnAddress());
-    ProbeSubmit(ProbeGlVertex2f, FloatBits(x), FloatBits(y), caller);
-    originalGlVertex2f(x, y);
-}
-static void APIENTRY GlTexCoord2fProbe(GLfloat s, GLfloat t) {
-    uintptr_t caller = reinterpret_cast<uintptr_t>(_ReturnAddress());
-    ProbeSubmit(ProbeGlTexCoord2f, FloatBits(s), FloatBits(t), caller);
-    originalGlTexCoord2f(s, t);
-}
-static void APIENTRY GlColor4fProbe(GLfloat r, GLfloat g, GLfloat b, GLfloat a) {
-    uintptr_t caller = reinterpret_cast<uintptr_t>(_ReturnAddress());
-    ProbeSubmit(ProbeGlColor4f, FloatBits(r), FloatBits(a), caller);
-    originalGlColor4f(r, g, b, a);
-}
-static void APIENTRY GlColor4ubProbe(GLubyte r, GLubyte g, GLubyte b, GLubyte a) {
-    uintptr_t caller = reinterpret_cast<uintptr_t>(_ReturnAddress());
-    ProbeSubmit(ProbeGlColor4ub, r | (unsigned(g) << 8) | (unsigned(b) << 16) | (unsigned(a) << 24), 0, caller);
-    originalGlColor4ub(r, g, b, a);
-}
-static void APIENTRY GlRectfProbe(GLfloat x1, GLfloat y1, GLfloat x2, GLfloat y2) {
-    uintptr_t caller = reinterpret_cast<uintptr_t>(_ReturnAddress());
-    ProbeSubmit(ProbeGlRectf, FloatBits(x1), FloatBits(y2), caller);
-    originalGlRectf(x1, y1, x2, y2);
-}
-static void APIENTRY GlDrawArraysProbe(GLenum mode, GLint first, GLsizei count) {
-    uintptr_t caller = reinterpret_cast<uintptr_t>(_ReturnAddress());
-    ProbeSubmit(ProbeGlDrawArrays, mode | (unsigned(first) << 8), unsigned(count), caller);
-    originalGlDrawArrays(mode, first, count);
-}
-static void APIENTRY GlDrawRangeElementsProbe(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const void* indices) {
-    uintptr_t caller = reinterpret_cast<uintptr_t>(_ReturnAddress());
-    ProbeSubmit(ProbeGlDrawRangeElements, mode | (unsigned(count) << 8), type, caller);
-    originalGlDrawRangeElements(mode, start, end, count, type, indices);
-}
-static void APIENTRY GlCallListProbe(GLuint list) {
-    uintptr_t caller = reinterpret_cast<uintptr_t>(_ReturnAddress());
-    ProbeSubmit(ProbeGlCallList, list, 0, caller);
-    originalGlCallList(list);
-}
-static void APIENTRY GlCallListsProbe(GLsizei n, GLenum type, const void* lists) {
-    uintptr_t caller = reinterpret_cast<uintptr_t>(_ReturnAddress());
-    ProbeSubmit(ProbeGlCallLists, unsigned(n), type, caller);
-    originalGlCallLists(n, type, lists);
-}
-static void APIENTRY GlBitmapProbe(GLsizei width, GLsizei height, GLfloat xorig, GLfloat yorig, GLfloat xmove, GLfloat ymove, const GLubyte* bitmap) {
-    uintptr_t caller = reinterpret_cast<uintptr_t>(_ReturnAddress());
-    ProbeSubmit(ProbeGlBitmap, unsigned(width), unsigned(height), caller);
-    originalGlBitmap(width, height, xorig, yorig, xmove, ymove, bitmap);
 }
 static void __fastcall PerspectiveHook(uintptr_t output, uintptr_t unused, float fov, float aspect, float nearZ, float farZ) {
     bool fps=healthy && controller.Visible() && GetTickCount()-lastWorld<500;
@@ -611,35 +459,6 @@ static void PresentFrame(HDC dc) {
         }
     }
     HWND window = WindowFromDC(dc);
-    // Console draw-path probe: the ring holds the submissions closest to present, which is
-    // where the console band lives. Run-length encode so repeated identical callers stay brief.
-    if (healthy && controller.Visible() && !originalWorld && probeFrame <= 600) {
-        bool dump = (probeFrame >= 2 && probeFrame < 5) || (probeFrame > 4 && probeFrame % 120 == 0);
-        ++probeFrame;
-        if (dump) {
-            long head = probeHead;
-            long start = head > 256 ? head - 256 : 0;
-            const ProbeEntry* group = nullptr; long run = 0;
-            auto flush = [&]() {
-                if (group && run) wc3::Trace("glprobe f=%s rva=%06X a=%08X b=%08X x%ld",
-                    probeNames[group->func], group->rva, group->a, group->b, run);
-                run = 0;
-            };
-            for (long i = start; i < head; ++i) {
-                const ProbeEntry& entry = probeRing[i % 256];
-                if (group && (entry.func != group->func || entry.rva != group->rva ||
-                    entry.a != group->a || entry.b != group->b)) flush();
-                group = &entry; ++run;
-            }
-            flush();
-            char counts[320] = {}; int offset = 0;
-            for (int func = 0; func < ProbeFuncCount; ++func)
-                if (probeCounts[func])
-                    offset += _snprintf_s(counts + offset, sizeof(counts) - offset, _TRUNCATE, "%s=%ld ", probeNames[func], probeCounts[func]);
-            wc3::Trace("glprobe counts %s", counts);
-            memset(probeCounts, 0, sizeof(probeCounts));
-        }
-    }
     // Recheck the real render window after films: Warcraft may replace it or reset its input procedure.
     if (windowInput.Observe(window)) {
         controller.AttachWindow(window);
@@ -682,29 +501,6 @@ static bool Hook(void* target, void* callback, void** original) {
     MH_STATUS enable = create == MH_OK ? MH_EnableHook(target) : create;
     wc3::Log("hook target=%08X create=%d enable=%d", target, create, enable);
     return create == MH_OK && enable == MH_OK;
-}
-// Installs the console draw-path probe hooks. Only builds without a world anchor install
-// them; 1.26a identifies the UI phase structurally and must not pay the overhead.
-static void InstallConsoleDrawProbe(HMODULE gl) {
-    struct Probe { const char* name; void** original; void* hook; };
-    const Probe probes[] = {
-        {"glBegin", reinterpret_cast<void**>(&originalGlBegin), reinterpret_cast<void*>(GlBeginProbe)},
-        {"glVertex2f", reinterpret_cast<void**>(&originalGlVertex2f), reinterpret_cast<void*>(GlVertex2fProbe)},
-        {"glTexCoord2f", reinterpret_cast<void**>(&originalGlTexCoord2f), reinterpret_cast<void*>(GlTexCoord2fProbe)},
-        {"glColor4f", reinterpret_cast<void**>(&originalGlColor4f), reinterpret_cast<void*>(GlColor4fProbe)},
-        {"glColor4ub", reinterpret_cast<void**>(&originalGlColor4ub), reinterpret_cast<void*>(GlColor4ubProbe)},
-        {"glRectf", reinterpret_cast<void**>(&originalGlRectf), reinterpret_cast<void*>(GlRectfProbe)},
-        {"glDrawArrays", reinterpret_cast<void**>(&originalGlDrawArrays), reinterpret_cast<void*>(GlDrawArraysProbe)},
-        {"glDrawRangeElements", reinterpret_cast<void**>(&originalGlDrawRangeElements), reinterpret_cast<void*>(GlDrawRangeElementsProbe)},
-        {"glCallList", reinterpret_cast<void**>(&originalGlCallList), reinterpret_cast<void*>(GlCallListProbe)},
-        {"glCallLists", reinterpret_cast<void**>(&originalGlCallLists), reinterpret_cast<void*>(GlCallListsProbe)},
-        {"glBitmap", reinterpret_cast<void**>(&originalGlBitmap), reinterpret_cast<void*>(GlBitmapProbe)},
-    };
-    for (const Probe& probe : probes) {
-        void* target = reinterpret_cast<void*>(GetProcAddress(gl, probe.name));
-        if (target) Hook(target, probe.hook, probe.original);
-        else wc3::Log("glprobe export missing: %s", probe.name);
-    }
 }
 // A detour behind the opengl32 export only survives while that export is what the engine calls.
 // Overlay and vendor present interposers rewrite the caller's import entry as soon as the first
@@ -852,7 +648,6 @@ static DWORD WINAPI Initialize(void*) {
     Hook(reinterpret_cast<void*>(GetProcAddress(gl, "glPopAttrib")), reinterpret_cast<void*>(PopAttribHook), reinterpret_cast<void**>(&originalPopAttrib));
     Hook(reinterpret_cast<void*>(GetProcAddress(gl, "wglDeleteContext")), reinterpret_cast<void*>(DeleteContextHook), reinterpret_cast<void**>(&originalDeleteContext));
     Hook(reinterpret_cast<void*>(GetProcAddress(gl, "glDrawElements")), reinterpret_cast<void*>(DrawElementsHook), reinterpret_cast<void**>(&originalDrawElements));
-    if (!originalWorld) InstallConsoleDrawProbe(gl);
     Hook(swapExport, reinterpret_cast<void*>(SwapLayerHook), reinterpret_cast<void**>(&originalSwap));
     // The engine presents through its own import entry, so claim that entry as the authoritative
     // anchor instead of relying on the export prologue surviving every other in-process hook.

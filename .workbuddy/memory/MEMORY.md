@@ -36,12 +36,22 @@
 
 ## 1.27a 控制台条带
 
-- 1.27a 控制台面板不走 glDrawElements（即时模式），`ShowInterface(FALSE)` 只藏控件；
-  覆盖方案：Overlay（present 时）用 CS 底板盖住世界视口 GL y 偏移以下的条带，
-  高度来自 `FullscreenView::ConsoleStrip()`（ViewportHook 在 `!originalWorld` 时观测）。
-  1.26a 不受影响（恒 0）。1.27a Expand 全屏视口方案未生效，原因未查明。
+- 1.27a **没有** WorldHook/UIHook 签名，`nativeUIPhase` 永不置位，`ShowInterface(FALSE)`
+  只藏控件，控制台皮肤+底图每帧仍画在底带（世界视口 GL y=128 以下）。
+- **正式方案（逆向，已替代早期的 CS 底板覆盖）**：在 `glDrawElements` 按几何判定——
+  控制台确实走 `glDrawElements`（客户端顶点数组 2D 四边形）；判据为**正交投影**
+  （`projection[11]==0 && projection[15]==1`，世界批次恒为透视）+ 全部顶点投影落在
+  `FullscreenView::ConsoleStrip()` 条带内（容差 `max(12, strip*0.1)`），另加
+  `count<=16 && maxY<=strip*1.6f` 的低矮小四边形规则吃掉皮肤顶梁。命中即交
+  `minimap.Submit` 后吞掉（与 1.26a UIHook 同路径）。
+- 同一批提交顺带喂原生小地图：`PresentFrame` 在 `!originalWorld` 时 `minimap.BeginFrame`，
+  `FinishFrame` 无条件调用；letterbox 清屏惰性化（`capturedAny_/cleared_`），否则左侧留黑块。
+- 1.26a 不受影响（`nativeUIPhase` 路径优先，几何判定只在 `!originalWorld` 生效）。
 
 ## 约定
 
 - 地址**不允许**按调用点硬编码；加到 `tools/generate_native_offsets.py` 的表里，经 `wc3::Rva()` 引用。
-- 提交前跑 `python tools/audit_sources.py --staged`；`.local`、`build` 等不入库。
+- 提交前跑 `python tools/audit_sources.py --staged`；`.local`、`build`、`build2` 等不入库。
+- 产物输出目录（`build.ps1 -OutputDirectory`）必须预置 `WarcraftOriginalMss.dll`（原始 Miles）；
+  若只有 `Mss32.dll`，那其实是本模组 loader，会被误当原件复制，导致声音代理出错。
+  中间产物固定在仓库根 `build/`，与输出目录无关。
