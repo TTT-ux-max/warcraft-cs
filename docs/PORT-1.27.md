@@ -151,7 +151,11 @@ Running differently:
   instead of being skipped, because the widescreen helper in the client's `ijl15.dll`
   rewrites exactly these draws and desyncs into a driver crash when calls vanish. Skipping
   the strip batches is safe; clipping the top bar keeps every call in the chain while no
-  pixel survives. Anything that reaches the world region or leaves the viewport keeps
+  pixel survives. The band it clips is measured as a fraction of the frame height, never as
+  a fixed pixel count: the deepest top-bar edge and the top overflow scale linearly with the
+  frame (73 px / 12 px at 1064x593 windowed, 111 px / 19 px at 1440x900 fullscreen, both in
+  the 900/593 ratio), so the same fraction keeps the hide correct in windowed and fullscreen
+  modes alike. Anything that reaches the world region or leaves the viewport keeps
   drawing, so partial overlaps can never clip live geometry. Verified on DotA and on a
   Chinese custom map: the FPS view shows world pixels only in the strip, the top band holds
   nothing but the mod's own HUD text, the F6 round trip restores a fully intact RTS console,

@@ -405,8 +405,13 @@ static int ClassifyUiBatch(GLsizei count, GLenum type, const void* indices) {
     // above the world viewport; 1.26a hides it with the whole UI phase. Its quads hug the
     // screen top and overflow past the top edge (GL clips them), while tall panels such as
     // quests and multiboards keep their bottom edge far below this band and stay visible.
+    // The chrome scales with the frame, so the band is a fraction of the frame height instead
+    // of a fixed pixel count. Measured deepest edge and top overflow: 73 px / 12 px at
+    // 1064x593 windowed and 111 px / 19 px at 1440x900 fullscreen, both exactly proportional
+    // (900/593), so one fraction covers every resolution the client can pick.
     float top = float(viewport[1] + viewport[3]);
-    if (minX >= left && maxX <= right && minY >= top - 76.0f && maxY <= top + 16.0f) return 2;
+    float bandDown = top * (80.0f / 593.0f), bandUp = top * (18.0f / 593.0f);
+    if (minX >= left && maxX <= right && minY >= top - bandDown && maxY <= top + bandUp) return 2;
     // Console chrome never leaves its strip; anything reaching the world or off-screen
     // keeps drawing so partial overlaps can never clip live geometry.
     bool tiles = maxY <= stripTop && minY >= -tolerance && minX >= left && maxX <= right;
@@ -414,12 +419,6 @@ static int ClassifyUiBatch(GLsizei count, GLenum type, const void* indices) {
     // the strip (46px at 593p). Small ortho quads that stay inside that low band are console
     // chrome too; chat and system notices share it, which the anchored path also hides.
     bool border = count <= 16 && minY >= -tolerance && maxY <= strip * 1.6f;
-    static unsigned reported = 0;
-    if (reported < 24 && maxY < strip * 2.5f) {
-        ++reported;
-        wc3::Trace("console batch %s count=%d bbox x=%.0f..%.0f y=%.0f..%.0f stripTop=%.0f",
-            (tiles || border) ? "swallow" : "keep", count, minX, maxX, minY, maxY, stripTop);
-    }
     return tiles || border ? 1 : 0;
 }
 static void APIENTRY DrawElementsHook(GLenum mode, GLsizei count, GLenum type, const void* indices) {
