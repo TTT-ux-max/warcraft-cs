@@ -70,9 +70,9 @@ apply to fresh configs; updates preserve your existing choices. Earlier changes 
 
 Warcraft III **1.27a** (Game.dll `1.27.0.52240`) is accepted as a second host with a partial
 port: the complete JASS native layer, the camera guard, the pause hook, the frame-rate demand
-patch behind `Rendering.MaxFPS`, the per-frame tick and the hidden classic console (dropped by
-geometry at GL submission, because 1.27a exposes no UI-phase anchor) work, while the hooks whose
-1.26a signatures are x87-based stay disabled. The launcher, setup
+patch behind `Rendering.MaxFPS`, the per-frame tick and the hidden native chrome (console band
+and top bar both dropped by geometry at GL submission, because 1.27a exposes no UI-phase anchor)
+work, while the hooks whose 1.26a signatures are x87-based stay disabled. The launcher, setup
 and Player packages accept exactly these two builds and refuse any other `Game.dll` before
 copying a single file. Reforged and other Warcraft patches are not supported.
 See [docs/PORT-1.27.md](docs/PORT-1.27.md).

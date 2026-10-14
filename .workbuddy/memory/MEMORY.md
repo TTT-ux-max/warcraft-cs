@@ -51,6 +51,11 @@
   `minimap.Submit` 后吞掉（与 1.26a UIHook 同路径）。
 - 同一批提交顺带喂原生小地图：`PresentFrame` 在 `!originalWorld` 时 `minimap.BeginFrame`，
   `FinishFrame` 无条件调用；letterbox 清屏惰性化（`capturedAny_/cleared_`），否则左侧留黑块。
+- **顶部资源栏**（资源数字/菜单/昼夜图标， deepest 底边 top-64px，部分四边形向上越出屏）：
+  正交 && x 在屏内 && `minY >= top-76 && maxY <= top+16` 即判定为顶栏。**必须用零面积 scissor
+  裁剪（照常调用原始链），不能跳过调用**——客户端 `ijl15.dll`（WarcraftHelper 宽屏）改写这些
+  批次，调用消失会使其失步 → 驱动读野指针 FATAL（~0x698x = GL ICD）。底部条带跳过是安全的。
+  实现见 `ClassifyUiBatch()`（0=保留 1=条带 2=顶栏）。
 - 1.26a 不受影响（`nativeUIPhase` 路径优先，几何判定只在 `!originalWorld` 生效）。
 
 ## 约定

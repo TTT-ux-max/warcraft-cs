@@ -293,18 +293,19 @@ static void __fastcall UIHook(uintptr_t frame, uintptr_t unused) {
     nativeUIPhase = ui && !*reinterpret_cast<int*>(ui + 0x258) && !*reinterpret_cast<int*>(ui + 0x260);
     originalUI(frame, unused);
 }
-// True when every submitted vertex projects into the console strip below the engine's own
-// world viewport. Reads the client vertex array directly, mirroring NativeMinimap::MapBatch;
-// the guarded walk keeps a hostile or malformed array from ever faulting the host.
-static bool BatchInConsoleStrip(GLsizei count, GLenum type, const void* indices) {
+// True when the batch is native 2D chrome the 1.27a FPS view must not draw: returns
+// 1 for console-strip chrome (the caller feeds the native minimap capturer first) and
+// 2 for the top bar (plain swallow - it is never map geometry). Mirrors NativeMinimap::
+// MapBatch; the guarded walk keeps a hostile or malformed array from ever faulting.
+static int ClassifyUiBatch(GLsizei count, GLenum type, const void* indices) {
     int strip = FullscreenView::ConsoleStrip();
-    if (strip <= 0 || count <= 0 || count > 4096 || !indices) return false;
+    if (strip <= 0 || count <= 0 || count > 4096 || !indices) return 0;
     // The console is screen-fixed 2D UI: an orthographic projection. World batches render
     // perspective, so this cheap rejection keeps their pixels untouched.
     float projection[16] = {};
     glGetFloatv(GL_PROJECTION_MATRIX, projection);
-    if (projection[11] != 0.0f || projection[15] != 1.0f) return false;
-    if (!glIsEnabled(GL_VERTEX_ARRAY)) return false;
+    if (projection[11] != 0.0f || projection[15] != 1.0f) return 0;
+    if (!glIsEnabled(GL_VERTEX_ARRAY)) return 0;
     GLint size = 0, stride = 0, vertexType = 0, viewport[4] = {};
     void* vertices = nullptr;
     glGetIntegerv(GL_VERTEX_ARRAY_SIZE, &size);
@@ -327,20 +328,26 @@ static bool BatchInConsoleStrip(GLsizei count, GLenum type, const void* indices)
             unsigned index = type == GL_UNSIGNED_SHORT ? static_cast<const unsigned short*>(indices)[i] :
                 type == GL_UNSIGNED_INT ? static_cast<const unsigned*>(indices)[i] :
                 type == GL_UNSIGNED_BYTE ? static_cast<const unsigned char*>(indices)[i] : 0xFFFFFFFF;
-            if (index > 100000) return false;
+            if (index > 100000) return 0;
             const float* vertex = reinterpret_cast<const float*>(static_cast<const char*>(vertices) + size_t(index) * stride);
             float position[4] = {vertex[0], vertex[1], size >= 3 ? vertex[2] : 0.0f, size == 4 ? vertex[3] : 1.0f};
             float eye[4] = {}, clip[4] = {};
             for (int row = 0; row < 4; ++row) for (int col = 0; col < 4; ++col) eye[row] += model[col*4+row] * position[col];
             for (int row = 0; row < 4; ++row) for (int col = 0; col < 4; ++col) clip[row] += projection[col*4+row] * eye[col];
-            if (!std::isfinite(clip[3]) || std::abs(clip[3]) < .000001f) return false;
+            if (!std::isfinite(clip[3]) || std::abs(clip[3]) < .000001f) return 0;
             float x = viewport[0] + (clip[0]/clip[3] + 1) * viewport[2] * .5f;
             float y = viewport[1] + (clip[1]/clip[3] + 1) * viewport[3] * .5f;
-            if (!std::isfinite(x) || !std::isfinite(y)) return false;
+            if (!std::isfinite(x) || !std::isfinite(y)) return 0;
             if (!i) { minX = maxX = x; minY = maxY = y; }
             else { minX = std::min(minX,x); maxX = std::max(maxX,x); minY = std::min(minY,y); maxY = std::max(maxY,y); }
         }
-    } __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
+    } __except (EXCEPTION_EXECUTE_HANDLER) { return 0; }
+    // The native top bar (resource numbers, menu and day/night icons) is screen-fixed chrome
+    // above the world viewport; 1.26a hides it with the whole UI phase. Its quads hug the
+    // screen top and overflow past the top edge (GL clips them), while tall panels such as
+    // quests and multiboards keep their bottom edge far below this band and stay visible.
+    float top = float(viewport[1] + viewport[3]);
+    if (minX >= left && maxX <= right && minY >= top - 76.0f && maxY <= top + 16.0f) return 2;
     // Console chrome never leaves its strip; anything reaching the world or off-screen
     // keeps drawing so partial overlaps can never clip live geometry.
     bool tiles = maxY <= stripTop && minY >= -tolerance && minX >= left && maxX <= right;
@@ -348,15 +355,13 @@ static bool BatchInConsoleStrip(GLsizei count, GLenum type, const void* indices)
     // the strip (46px at 593p). Small ortho quads that stay inside that low band are console
     // chrome too; chat and system notices share it, which the anchored path also hides.
     bool border = count <= 16 && minY >= -tolerance && maxY <= strip * 1.6f;
-    bool inside = tiles || border;
     static unsigned reported = 0;
-    if (reported < 24 && (inside || maxY < strip * 2.5f)) {
+    if (reported < 24 && maxY < strip * 2.5f) {
         ++reported;
         wc3::Trace("console batch %s count=%d bbox x=%.0f..%.0f y=%.0f..%.0f stripTop=%.0f",
-            inside ? (tiles ? "swallow-tile" : "swallow-border") : "keep", count,
-            minX, maxX, minY, maxY, stripTop);
+            (tiles || border) ? "swallow" : "keep", count, minX, maxX, minY, maxY, stripTop);
     }
-    return inside;
+    return tiles || border ? 1 : 0;
 }
 static void APIENTRY DrawElementsHook(GLenum mode, GLsizei count, GLenum type, const void* indices) {
     // Warcraft batches the console after world rendering, including cinematic backing textures.
@@ -364,12 +369,24 @@ static void APIENTRY DrawElementsHook(GLenum mode, GLsizei count, GLenum type, c
         minimap.Submit(mode,count,type,indices,originalDrawElements);return;
     }
     // Builds without a verified world/UI anchor (1.27a) never raise nativeUIPhase, so the
-    // console cannot be dropped by phase. Drop it by geometry instead: batches whose every
-    // vertex projects into the strip below the engine's world viewport are console chrome.
-    // The native minimap is captured from these submissions first, mirroring the anchor path.
-    if (healthy && !overlayPass && !originalWorld && controller.Visible() && GetTickCount() - lastWorld < 500
-        && BatchInConsoleStrip(count, type, indices)) {
-        minimap.Submit(mode,count,type,indices,originalDrawElements);return;
+    // console cannot be dropped by phase. Drop it by geometry instead: strip batches still
+    // feed the native minimap capturer (mirroring the anchor path), while the top bar is
+    // never map geometry and is swallowed without touching the capture state.
+    if (healthy && !overlayPass && !originalWorld && controller.Visible() && GetTickCount() - lastWorld < 500) {
+        int batch = ClassifyUiBatch(count, type, indices);
+        if (batch == 1) { minimap.Submit(mode,count,type,indices,originalDrawElements);return; }
+        if (batch == 2) {
+            // Swallow by rasterization, not by skipping: third-party draw wrappers rewrite
+            // these very batches and desync when calls vanish, so let the whole call chain
+            // proceed and clip it to an empty rectangle instead. No pixel can survive a
+            // zero-area scissor, and driver state stays exactly as an unfiltered frame.
+            glPushAttrib(GL_SCISSOR_BIT);
+            glEnable(GL_SCISSOR_TEST);
+            glScissor(0, 0, 0, 0);
+            originalDrawElements(mode, count, type, indices);
+            glPopAttrib();
+            return;
+        }
     }
     originalDrawElements(mode, count, type, indices);
 }
@@ -641,6 +658,13 @@ static DWORD WINAPI Initialize(void*) {
     else wc3::Log("Perspective signature mismatch; original near plane retained");
     // The verified Game.dll import uses the two-argument layer-buffer API.
     HMODULE gl = GetModuleHandleA("opengl32.dll");
+    // Module bases make any crash address attributable in the log alone.
+    HMODULE self = nullptr;
+    GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+        reinterpret_cast<LPCWSTR>(&DrawElementsHook), &self);
+    wc3::Log("modules self=%p ijl15=%p game=%p helper=%p d3d9=%p",
+        self, GetModuleHandleA("ijl15.dll"), GetModuleHandleA("game.dll"),
+        GetModuleHandleA("WarcraftHelper.dll"), GetModuleHandleA("d3d9.dll"));
     void* swapExport = reinterpret_cast<void*>(GetProcAddress(gl, "wglSwapLayerBuffers"));
     Hook(reinterpret_cast<void*>(GetProcAddress(gl, "glViewport")), reinterpret_cast<void*>(ViewportHook), reinterpret_cast<void**>(&originalViewport));
     Hook(reinterpret_cast<void*>(GetProcAddress(gl, "glScissor")), reinterpret_cast<void*>(ScissorHook), reinterpret_cast<void**>(&originalScissor));

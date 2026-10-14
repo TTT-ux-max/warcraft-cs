@@ -146,10 +146,16 @@ Running differently:
   batches always render perspective) and whose every vertex projects inside the strip
   recorded by `FullscreenView::ObserveWorldViewport` - plus a low short-quad rule for the
   skin's top border beam - is console chrome and is swallowed before it reaches the driver.
-  Anything that reaches the world region or leaves the viewport keeps drawing, so partial
-  overlaps can never clip live geometry. Verified on DotA and on a Chinese custom map: the
-  FPS view shows world pixels only in the strip, the F6 round trip restores a fully intact
-  RTS console, and no black rectangle is left behind.
+  The native top bar (resource numbers, menu and day/night icons) is hidden by the same
+  geometry filter, with one difference: those batches are drawn through a zero-area scissor
+  instead of being skipped, because the widescreen helper in the client's `ijl15.dll`
+  rewrites exactly these draws and desyncs into a driver crash when calls vanish. Skipping
+  the strip batches is safe; clipping the top bar keeps every call in the chain while no
+  pixel survives. Anything that reaches the world region or leaves the viewport keeps
+  drawing, so partial overlaps can never clip live geometry. Verified on DotA and on a
+  Chinese custom map: the FPS view shows world pixels only in the strip, the top band holds
+  nothing but the mod's own HUD text, the F6 round trip restores a fully intact RTS console,
+  and no black rectangle is left behind.
 - The native minimap pixel capture does work on 1.27a: it is fed by the same submissions the
   geometry filter swallows (`minimap.Submit`, exactly as the 1.26a UI hook feeds it), with
   `BeginFrame` started from the frame anchor and `FinishFrame` restoring the captured pixels
