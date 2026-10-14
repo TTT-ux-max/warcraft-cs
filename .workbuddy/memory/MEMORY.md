@@ -33,6 +33,11 @@
 - 主机清单的**唯一来源**是 `setup/host-build.ps1`，必须与运行时 `wc3::GameBuild::SelectBuild()`
   保持一致；两者不同步会导致"安装器放行、模块却拒绝挂钩"。
 - 本机 1.27a 客户端在 `D:\game\Warcraft III 1.27 Reforged`。
+- **必须以 OpenGL 启动**：1.27 默认 D3D9，而 1.27a 分支的帧锚点是 `wglSwapLayerBuffers`，
+  D3D 下模组加载但完全静止（F6 无效、日志停在初始化且无 `render frames=`）。
+  启动方式：`war3.exe -opengl`（游戏目录有 `Start WarcraftCS (OpenGL).cmd`）。
+  排查口诀：日志无 `render frames=`/`control key=` → 先看启动参数。
+  该客户端还装了 ENB 的 `d3d9.dll` 代理（OpenGL 下不生效）与 `WarcraftHelper.dll`。
 
 ## 1.27a 控制台条带
 
