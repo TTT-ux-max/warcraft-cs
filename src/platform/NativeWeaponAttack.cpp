@@ -1,4 +1,5 @@
 #include "NativeWeaponAttack.hpp"
+#include "GameBuild.hpp"
 #include <cmath>
 #include <cstring>
 
@@ -42,12 +43,12 @@ bool Execute(wc3::Handle attacker,wc3::Handle victim,uintptr_t object,uintptr_t 
         // Only the synchronous impact changes kind: no additional projectile, animation delay or AI order.
         *reinterpret_cast<int*>(attack+0xDC)=instantKind;
         // Native wind-up rolls Bash/critical chances before impact. Its callbacks also notify map attack triggers.
-        reinterpret_cast<Prepare>(gameBase+0x281580)(object,target,&zero,&zero);
+        reinterpret_cast<Prepare>(gameBase+wc3::Rva(0x281580))(object,target,&zero,&zero);
         uintptr_t currentAttack=0;
         if(wc3::UnitObject(attacker)==object && wc3::UnitObject(victim)==target &&
             Read(object+0x1E8,currentAttack) && currentAttack==attack) {
             current.inImpact=true;
-            reinterpret_cast<Impact>(gameBase+0xCF660)(attack,target,0,0,1,0,1);
+            reinterpret_cast<Impact>(gameBase+wc3::Rva(0xCF660))(attack,target,0,0,1,0,1);
         }
     } __finally {
         contact=previous;
@@ -55,7 +56,7 @@ bool Execute(wc3::Handle attacker,wc3::Handle victim,uintptr_t object,uintptr_t 
         // Attack callbacks can transform/remove the hero; never restore a freed/replaced attack component.
         if(wc3::UnitObject(attacker)==object) {
             // Release native per-attack flags/counters, just as the ordinary attack animation ends.
-            reinterpret_cast<Finish>(gameBase+0x276330)(object,wc3::UnitObject(victim)==target ? target : 0);
+            reinterpret_cast<Finish>(gameBase+wc3::Rva(0x276330))(object,wc3::UnitObject(victim)==target ? target : 0);
             int currentKind=0;
             if(wc3::UnitObject(attacker)==object && Read(object+0x1E8,stillOwned) && stillOwned==attack &&
                 Read(attack+0xDC,currentKind) && currentKind==instantKind)
@@ -73,15 +74,15 @@ void NativeWeaponAttack::Install(uintptr_t base,HookInstaller hook) {
     const unsigned char prepare[]={0x51,0x57,0x8B,0xF9};
     const unsigned char finish[]={0x8B,0x81,0xE0,0x01,0x00,0x00};
     const unsigned char range[]={0x56,0x8B,0xF1,0x8B,0x86,0xC0,0x02,0x00,0x00};
-    std::memcpy(&relative,reinterpret_cast<void*>(base+0xCF82B),4);
-    bool verified=!std::memcmp(reinterpret_cast<void*>(base+0xCF660),impact,sizeof(impact)) &&
-        !std::memcmp(reinterpret_cast<void*>(base+0xC6940),roll,sizeof(roll)) &&
-        !std::memcmp(reinterpret_cast<void*>(base+0x281580),prepare,sizeof(prepare)) &&
-        !std::memcmp(reinterpret_cast<void*>(base+0x276330),finish,sizeof(finish)) &&
-        !std::memcmp(reinterpret_cast<void*>(base+0xC6B30),range,sizeof(range)) &&
-        !std::memcmp(reinterpret_cast<void*>(base+0xD0225),cleanup,sizeof(cleanup)) && 0xCF82F+relative==0xC6940;
-    available=verified && hook(reinterpret_cast<void*>(base+0xC6940),reinterpret_cast<void*>(DamageRoll),reinterpret_cast<void**>(&originalRoll)) &&
-        hook(reinterpret_cast<void*>(base+0xC6B30),reinterpret_cast<void*>(ContactRange),reinterpret_cast<void**>(&originalRange));
+    std::memcpy(&relative,reinterpret_cast<void*>(base+wc3::Rva(0xCF82B)),4);
+    bool verified=!std::memcmp(reinterpret_cast<void*>(base+wc3::Rva(0xCF660)),impact,sizeof(impact)) &&
+        !std::memcmp(reinterpret_cast<void*>(base+wc3::Rva(0xC6940)),roll,sizeof(roll)) &&
+        !std::memcmp(reinterpret_cast<void*>(base+wc3::Rva(0x281580)),prepare,sizeof(prepare)) &&
+        !std::memcmp(reinterpret_cast<void*>(base+wc3::Rva(0x276330)),finish,sizeof(finish)) &&
+        !std::memcmp(reinterpret_cast<void*>(base+wc3::Rva(0xC6B30)),range,sizeof(range)) &&
+        !std::memcmp(reinterpret_cast<void*>(base+wc3::Rva(0xD0225)),cleanup,sizeof(cleanup)) && 0xCF82F+relative==0xC6940;
+    available=verified && hook(reinterpret_cast<void*>(base+wc3::Rva(0xC6940)),reinterpret_cast<void*>(DamageRoll),reinterpret_cast<void**>(&originalRoll)) &&
+        hook(reinterpret_cast<void*>(base+wc3::Rva(0xC6B30)),reinterpret_cast<void*>(ContactRange),reinterpret_cast<void**>(&originalRange));
     wc3::Log("Native weapon attack effects verified=%d installed=%d",verified,available);
 }
 bool NativeWeaponAttack::Apply(wc3::Handle attacker,wc3::Handle target,float damage,float contactDistance) {

@@ -37,7 +37,8 @@ public static class LauncherReinstallTests {
             Directory.CreateDirectory(Path.Combine(selected,"launcher"));
             if (!legacy) {
                 Directory.CreateDirectory(Path.Combine(selected,"setup"));
-                foreach (string name in new[] {"warcraft-runtime.ps1","prebuilt-runtime.ps1"})
+                // A verified modern release ships its repair policy together with the host table it shares.
+                foreach (string name in new[] {"warcraft-runtime.ps1","prebuilt-runtime.ps1","host-build.ps1"})
                     File.Copy(Path.Combine(current,"setup",name),Path.Combine(selected,"setup",name));
             }
             // Stub only conversion/module installation. Actual SetupRunner and the production copy adapter

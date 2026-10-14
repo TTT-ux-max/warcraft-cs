@@ -1,5 +1,7 @@
 # Accept either cstrike itself or its Half-Life parent, while keeping generated files outside both games.
 . (Join-Path (Split-Path -Parent $PSScriptRoot) 'setup/audio-runtime.ps1')
+# The supported host builds are shared with setup and packaging so all three agree on Game.dll.
+. (Join-Path (Split-Path -Parent $PSScriptRoot) 'setup/host-build.ps1')
 function Get-ClientPaths($Request) {
     $warcraft=(Resolve-Path -LiteralPath $Request.WarcraftDirectory).Path.TrimEnd('\')
     $cstrike=(Resolve-Path -LiteralPath $Request.CounterStrikeDirectory).Path.TrimEnd('\')
@@ -17,8 +19,8 @@ function Assert-ClientGames([string]$Warcraft,[string]$CounterStrike) {
     foreach ($name in @('war3.exe','Game.dll','Mss32.dll','Storm.dll','War3.mpq','War3x.mpq','War3Patch.mpq','War3xlocal.mpq')) {
         if (!(Test-Path -LiteralPath (Join-Path $Warcraft $name) -PathType Leaf)) { throw "Missing Warcraft file: $name" }
     }
-    $version=(Get-Item -LiteralPath (Join-Path $Warcraft 'Game.dll')).VersionInfo
-    if ($version.FileMajorPart -ne 1 -or $version.FileMinorPart -ne 26 -or $version.FileBuildPart -ne 0 -or $version.FilePrivatePart -ne 6401) { throw 'Only Warcraft III 1.26a (Game.dll 1.26.0.6401) is supported.' }
+    # A host the runtime cannot bind to must be refused before extraction, copying or downloads.
+    Assert-WarcraftHostBuild $Warcraft
     # Reject missing Miles codecs/providers before the launcher downloads or installs dependencies.
     Assert-WarcraftAudioRuntime $Warcraft
     foreach ($weapon in @('ak47','m4a1','usp','awp','knife','c4')) {

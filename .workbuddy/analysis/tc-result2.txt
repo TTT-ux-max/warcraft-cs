@@ -1,0 +1,2 @@
+﻿COFF machine=0x8664  size=620
+first16=64 86 04 00 E4 10 CE 6A 90 01 00 00 0C 00 00 00

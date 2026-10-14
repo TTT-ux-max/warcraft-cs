@@ -69,7 +69,9 @@ try {
     Write-Output $modeInfo
     & (Join-Path $source 'setup/setup.ps1') -WarcraftDirectory $paths.warcraft -CounterStrikeDirectory $paths.cstrike -RuntimeDirectory $runtime -PythonExecutable $python -SwordModel $swordModel -InstallMode $mode -PrebuiltDirectory $prebuilt
     if ($LASTEXITCODE) { throw 'Game setup failed.' }
-    @{source=$source;runtime=$runtime;version=(Get-Content (Join-Path $source 'VERSION') -Raw).Trim();revision=(Split-Path -Leaf $source);sword_model=$swordModel;install_mode=$mode} |
+    # Record the accepted host so later Play/Update/diagnostics can show which Game.dll these
+    # modules were installed against; a repatched game folder is then visible instead of silent.
+    @{source=$source;runtime=$runtime;version=(Get-Content (Join-Path $source 'VERSION') -Raw).Trim();revision=(Split-Path -Leaf $source);sword_model=$swordModel;install_mode=$mode;host_version=(Get-WarcraftHostBuild $paths.warcraft).Version} |
         ConvertTo-Json | Set-Content -LiteralPath (Join-Path $paths.install 'client-installed.json') -Encoding utf8
     Write-Output 'Installation complete. You can now press Play.'
 } finally { Stop-Transcript | Out-Null }

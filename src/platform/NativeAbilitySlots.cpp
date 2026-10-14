@@ -1,4 +1,5 @@
 #include "NativeAbilitySlots.hpp"
+#include "GameBuild.hpp"
 #include <windows.h>
 #include <unordered_set>
 
@@ -10,7 +11,7 @@ uintptr_t Next(uintptr_t base,uintptr_t link) {
     std::array<uint32_t,2> key={};if(!Load(link,key) || (key[0]&key[1])==0xFFFFFFFF)return 0;
     // Warcraft's generation resolver rejects deleted/reused nodes, as in GetUnitAbilityLevel.
     using Resolve=uintptr_t (__thiscall*)(uintptr_t);
-    return reinterpret_cast<Resolve>(base+0x4786B0)(link);
+    return reinterpret_cast<Resolve>(base+wc3::Rva(0x4786B0))(link);
 }
 }
 std::array<int,4> NativeAbilitySlots::Read(uintptr_t base,uintptr_t unit) {

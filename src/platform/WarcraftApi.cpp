@@ -1,4 +1,5 @@
 #include "WarcraftApi.hpp"
+#include "GameBuild.hpp"
 #include "DiagnosticLog.hpp"
 #include <cstdio>
 #include <cstdarg>
@@ -33,19 +34,40 @@ void LogError(const char* format, ...) {
     va_list args; va_start(args, format); DiagnosticLog::Write("ERROR", format, args); va_end(args);
 }
 float Real(Bits bits) { float value; memcpy(&value, &bits, 4); return value; }
+// Each supported build carries its own compiled native table. The pointer declarations
+// above come from the 1.26a reference; only the assigned offsets differ per build.
+static void BindNatives126a(uintptr_t base) {
+#define NATIVE(result, name, arguments, offset) name = reinterpret_cast<decltype(name)>(base + offset);
+#include "NativeOffsets.inc"
+#undef NATIVE
+}
+static void BindNatives127a(uintptr_t base) {
+#define NATIVE(result, name, arguments, offset) name = reinterpret_cast<decltype(name)>(base + offset);
+#include "NativeOffsets127a.inc"
+#undef NATIVE
+}
 bool Bind(HMODULE game) {
     // Refuse other builds rather than executing unverified function addresses.
-    char path[MAX_PATH]; GetModuleFileNameA(game, path, MAX_PATH);
-    DWORD ignored = 0, size = GetFileVersionInfoSizeA(path, &ignored);
-    if (!size) return false;
-    auto bytes = new unsigned char[size];
-    VS_FIXEDFILEINFO* info = nullptr; UINT length = 0;
-    bool correct = GetFileVersionInfoA(path, 0, size, bytes) &&
-        VerQueryValueA(bytes, "\\", reinterpret_cast<void**>(&info), &length) &&
-        info && info->dwFileVersionMS == MAKELONG(26, 1) && info->dwFileVersionLS == MAKELONG(6401, 0);
-    delete[] bytes;
-    if (!correct) { Log("Unsupported Game.dll: expected 1.26.0.6401"); return false; }
+    GameBuildKind build = SelectBuild(game);
+    if (build == GameBuildKind::Unsupported) {
+        Log("Unsupported Game.dll: expected 1.26.0.6401 or 1.27.0.52240");
+        return false;
+    }
     auto base = reinterpret_cast<uintptr_t>(game);
+    nativeBase = base;
+    if (build == GameBuildKind::Classic127a) {
+        // 1.27 recompiled the JASS table, so every entry is resolved by name plus the
+        // signature the engine itself stores (see tools/generate_native_offsets.py).
+        BindNatives127a(base);
+        // 1.27 also moved float code generation from x87 to SSE, so the 1.26a helper
+        // byte signatures and the walkable-surface helper cannot be revalidated here.
+        // Ground() keeps working through the JASS Location/GetLocationZ pair, and the
+        // optional terrain/bridge helpers stay disabled rather than guessing.
+        Log("Bound Warcraft III %s native API; terrain surface helpers unavailable",
+            ActiveBuildName());
+        MarkBound();
+        return true;
+    }
     // Verified 1.26a GetLocationZ helper: ECX=terrain mode, EDX=raised-surface output,
     // stack=x/y/include-walkables, ST0=height. Refuse a patched helper instead of guessing its ABI.
     const unsigned char surfaceSignature[] = {0x83,0xEC,0x0C,0xD9,0x44,0x24,0x10,0x53,0xD9,0x5C,0x24,0x04};
@@ -70,10 +92,9 @@ bool Bind(HMODULE game) {
         *reinterpret_cast<uint32_t*>(base+0x3FA33)==base+0xAB7788 &&
         !memcmp(reinterpret_cast<void*>(base+0x4771A6),scalarLimits,sizeof(scalarLimits));
     Log("Native camera far-limit layout verified=%d",cameraLimitsVerified);
-#define NATIVE(result, name, arguments, offset) name = reinterpret_cast<decltype(name)>(base + offset);
-#include "NativeOffsets.inc"
-#undef NATIVE
-    Log("Bound Warcraft III 1.26a native API");
+    BindNatives126a(base);
+    Log("Bound Warcraft III %s native API",ActiveBuildName());
+    MarkBound();
     return true;
 }
 float* FarClipMaximum(uint32_t index,uint32_t serial) {
@@ -81,7 +102,7 @@ float* FarClipMaximum(uint32_t index,uint32_t serial) {
     // The native resolver rejects stale generations before the channel layout is accessed.
     using Resolve=uintptr_t (__fastcall*)(uint32_t,uint32_t);
     __try {
-        uintptr_t node=reinterpret_cast<Resolve>(nativeBase+0x3FA30)(index,serial);
+        uintptr_t node=reinterpret_cast<Resolve>(nativeBase+Rva(0x3FA30))(index,serial);
         if(!node) return nullptr;
         auto limits=reinterpret_cast<float*>(node+0x80);
         if(limits[0]!=100 || !std::isfinite(limits[1]) || limits[1]<100 || limits[1]>20000) return nullptr;
@@ -92,7 +113,7 @@ CameraClipChannel FarClipChannel() {
     if(!cameraLimitsVerified) return {};
     using GetUI=uintptr_t (__fastcall*)(int,int);
     __try {
-        uintptr_t ui=reinterpret_cast<GetUI>(nativeBase+0x300710)(0,0);
+        uintptr_t ui=reinterpret_cast<GetUI>(nativeBase+Rva(0x300710))(0,0);
         uintptr_t camera=ui ? *reinterpret_cast<uintptr_t*>(ui+0x254) : 0;
         if(!camera) return {};
         // CAMERA_FIELD_FARZ is the scalar wrapper at +114; +8/+C identify its native channel.
@@ -121,13 +142,16 @@ float TerrainGround(float x, float y) {
     return terrainHeight(terrainRoot(),position,-1);
 }
 std::string UnitModelPath(int type) {
+    // The active-map definition list is a data structure, not a function, so it has no
+    // name to resolve by: a build without a verified address returns no path instead.
+    if (!Rva(0xAB58F0)) return {};
     auto read = [](uintptr_t address, void* value, size_t size) {
         SIZE_T got = 0;
         return address && ReadProcessMemory(GetCurrentProcess(), reinterpret_cast<void*>(address), value, size, &got) && got == size;
     };
     auto pointer = [&](uintptr_t address) { uintptr_t value = 0; read(address, &value, 4); return value; };
     // 1.26a's active-map definition list: rawcode at node +8, world path at definition +0x30.
-    uintptr_t head = pointer(nativeBase + 0xAB58F0), node = pointer(head + 8) + 0x10, first = node;
+    uintptr_t head = pointer(nativeBase + Rva(0xAB58F0)), node = pointer(head + 8) + 0x10, first = node;
     for (int i = 0; head && node && i < 8192; ++i) {
         int id = 0; if (!read(node + 8, &id, 4)) break;
         if (id == type) {
@@ -149,23 +173,26 @@ BOOL __fastcall CollectDestructable(uintptr_t object, DestructableEnumeration* c
     if (reinterpret_cast<ClassTag>(*reinterpret_cast<uintptr_t*>(table + 0x1C))(object) != 0x2B773364) return TRUE;
     // This is the same native widget-to-handle registration as CreateDestructable, using its current map environment.
     using ToHandle = Handle (__thiscall*)(uintptr_t, uintptr_t, BOOL);
-    Handle handle = reinterpret_cast<ToHandle>(nativeBase + 0x430C80)(context->environment, object, FALSE);
+    Handle handle = reinterpret_cast<ToHandle>(nativeBase + Rva(0x430C80))(context->environment, object, FALSE);
     if (handle) context->result.push_back(handle);
     return TRUE;
 }
 }
 std::vector<Handle> NearbyDestructables(float x, float y, float radius) {
+    // The spatial query needs the environment accessor, the widget enumerator and the
+    // map root pointer together; without all three the query is skipped.
+    if (!RvaAvailable({0xAB65F4, 0x3A8060, 0x4693D0, 0x430C80})) return {};
     using Environment = uintptr_t (__thiscall*)(uintptr_t);
-    uintptr_t root = *reinterpret_cast<uintptr_t*>(nativeBase + 0xAB65F4);
+    uintptr_t root = *reinterpret_cast<uintptr_t*>(nativeBase + Rva(0xAB65F4));
     if (!root) return {};
-    DestructableEnumeration context{reinterpret_cast<Environment>(nativeBase + 0x3A8060)(root), {}};
+    DestructableEnumeration context{reinterpret_cast<Environment>(nativeBase + Rva(0x3A8060))(root), {}};
     if (!context.environment) return {};
     // EnumDestructablesInRect's synchronous spatial backend accepts a native callback, unlike its JASS-code parameter.
     using Enumerate = void (__fastcall*)(const float*, unsigned, uintptr_t, uintptr_t,
         BOOL (__fastcall*)(uintptr_t, DestructableEnumeration*), DestructableEnumeration*);
     // CRect stores Y before X; its getters prove the native order differs from a usual XY rectangle.
     float rectangle[] = {y-radius, x-radius, y+radius, x+radius};
-    reinterpret_cast<Enumerate>(nativeBase + 0x4693D0)(rectangle, 0x04FB0000, 0, 0, CollectDestructable, &context);
+    reinterpret_cast<Enumerate>(nativeBase + Rva(0x4693D0))(rectangle, 0x04FB0000, 0, 0, CollectDestructable, &context);
     return context.result;
 }
 namespace {
@@ -174,36 +201,40 @@ BOOL __fastcall CollectItem(uintptr_t object,DestructableEnumeration* context) {
     auto table=*reinterpret_cast<uintptr_t*>(object);
     if (reinterpret_cast<ClassTag>(*reinterpret_cast<uintptr_t*>(table+0x1C))(object)!=0x6974656D) return TRUE;
     using ToHandle=Handle (__thiscall*)(uintptr_t,uintptr_t,BOOL);
-    Handle item=reinterpret_cast<ToHandle>(nativeBase+0x430C80)(context->environment,object,FALSE);
+    Handle item=reinterpret_cast<ToHandle>(nativeBase+Rva(0x430C80))(context->environment,object,FALSE);
     if (item) context->result.push_back(item);return TRUE;
 }
 }
 std::vector<Handle> NearbyItems(float x,float y,float radius) {
+    if (!RvaAvailable({0xAB65F4, 0x3A8060, 0x4693D0, 0x430C80})) return {};
     using Environment=uintptr_t (__thiscall*)(uintptr_t);
-    uintptr_t root=*reinterpret_cast<uintptr_t*>(nativeBase+0xAB65F4);if (!root) return {};
-    DestructableEnumeration context{reinterpret_cast<Environment>(nativeBase+0x3A8060)(root),{}};
+    uintptr_t root=*reinterpret_cast<uintptr_t*>(nativeBase+Rva(0xAB65F4));if (!root) return {};
+    DestructableEnumeration context{reinterpret_cast<Environment>(nativeBase+Rva(0x3A8060))(root),{}};
     if (!context.environment) return {};
     // EnumItemsInRect uses this same synchronous spatial backend with item mask 0x04F70000.
     // Pass a native callback, not a C++ address disguised as JASS bytecode; CRect is Y/X ordered.
     using Enumerate=void (__fastcall*)(const float*,unsigned,uintptr_t,uintptr_t,
         BOOL (__fastcall*)(uintptr_t,DestructableEnumeration*),DestructableEnumeration*);
     float rectangle[]={y-radius,x-radius,y+radius,x+radius};
-    reinterpret_cast<Enumerate>(nativeBase+0x4693D0)(rectangle,0x04F70000,0,0,CollectItem,&context);
+    reinterpret_cast<Enumerate>(nativeBase+Rva(0x4693D0))(rectangle,0x04F70000,0,0,CollectItem,&context);
     return context.result;
 }
 uintptr_t UnitObject(Handle unit) {
     // Resolve current-map handles instead of retaining pointers through removal or campaign transitions.
     using Resolve=uintptr_t (__fastcall*)(Handle,uintptr_t);
-    return unit ? reinterpret_cast<Resolve>(nativeBase+0x3BDCB0)(unit,0) : 0;
+    return unit ? reinterpret_cast<Resolve>(nativeBase+Rva(0x3BDCB0))(unit,0) : 0;
 }
 float UnitAttackAverage(Handle unit) {
+    // The attack record and its damage-dice getters are unverified on 1.27, so the
+    // average falls back to zero and weapons keep their fixed configured damage.
+    if (!RvaAvailable({0xC6CB0, 0xC6CD0})) return 0;
     uintptr_t object=UnitObject(unit);
     uintptr_t attack=object ? *reinterpret_cast<uintptr_t*>(object+0x1E8) : 0;
     if (!attack) return 0;
     // Verified 1.26a getters: base+bonus+dice and base+bonus+dice*sides, primary attack index zero.
     using Damage=int (__thiscall*)(uintptr_t,int);
-    int low=reinterpret_cast<Damage>(nativeBase+0xC6CB0)(attack,0);
-    int high=reinterpret_cast<Damage>(nativeBase+0xC6CD0)(attack,0);
+    int low=reinterpret_cast<Damage>(nativeBase+Rva(0xC6CB0))(attack,0);
+    int high=reinterpret_cast<Damage>(nativeBase+Rva(0xC6CD0))(attack,0);
     return (float(low)+float(high))*.5f;
 }
 std::string DestructableModelPath(int type) {
@@ -211,14 +242,15 @@ std::string DestructableModelPath(int type) {
     // +0x268A50 is its replacement texture slot, not the model; single-variation gates use variation zero.
     using Path = void (__fastcall*)(char*, unsigned, int, int, BOOL, BOOL);
     char path[MAX_PATH] = {};
-    reinterpret_cast<Path>(nativeBase + 0x268E20)(path,MAX_PATH,type,0,FALSE,FALSE);
+    if (!Rva(0x268E20)) return path;
+    reinterpret_cast<Path>(nativeBase + Rva(0x268E20))(path,MAX_PATH,type,0,FALSE,FALSE);
     return path;
 }
 float DestructableFacing(Handle handle) {
     using Resolve = uintptr_t (__fastcall*)(Handle, uintptr_t);
     using Position = uintptr_t (__thiscall*)(uintptr_t);
     using Angle = uintptr_t (__thiscall*)(uintptr_t, float*);
-    uintptr_t object = reinterpret_cast<Resolve>(nativeBase + 0x3BE010)(handle, 0);
+    uintptr_t object = reinterpret_cast<Resolve>(nativeBase + Rva(0x3BE010))(handle, 0);
     if (!object) return 0;
     // Follow GetUnitFacing's transform getter directly: the shared widget transform supplies radians.
     uintptr_t table = *reinterpret_cast<uintptr_t*>(object);
@@ -229,7 +261,7 @@ float DestructableFacing(Handle handle) {
     return angle;
 }
 Handle Effect(const char* model, float x, float y) {
-    // Native string getter +0x4C4630 reads only wrapper+8 -> node+0x1C -> UTF-8 bytes.
+    // Native string getter (1.26a +0x4C4630, 1.27a +0x516F0) reads wrapper+8 -> node+0x1C -> UTF-8 bytes.
     // The stack wrapper lives through the synchronous model load; it never enters the JASS string table.
     uintptr_t node[8] = {}; node[7] = reinterpret_cast<uintptr_t>(model);
     uintptr_t wrapper[3] = {}; wrapper[2] = reinterpret_cast<uintptr_t>(node);
@@ -238,10 +270,11 @@ Handle Effect(const char* model, float x, float y) {
 bool HasUnitBuff(Handle unit, int type) {
     // Native buff objects can have level -1: GetUnitAbilityLevel returning zero does not mean absent.
     // Use the same read-only alias lookup and inclusion flags as 1.26a's UnitRemoveAbility, without removing it.
+    if (!RvaAvailable({0x3BDCB0, 0x787D0})) return false;
     using Resolve = uintptr_t (__fastcall*)(Handle, uintptr_t);
     using Find = uintptr_t (__thiscall*)(uintptr_t, int, BOOL, BOOL, BOOL, BOOL);
-    uintptr_t object = reinterpret_cast<Resolve>(nativeBase + 0x3BDCB0)(unit, 0);
-    return object && reinterpret_cast<Find>(nativeBase + 0x787D0)(object, type, FALSE, TRUE, TRUE, TRUE) != 0;
+    uintptr_t object = reinterpret_cast<Resolve>(nativeBase + Rva(0x3BDCB0))(unit, 0);
+    return object && reinterpret_cast<Find>(nativeBase + Rva(0x787D0))(object, type, FALSE, TRUE, TRUE, TRUE) != 0;
 }
 bool IsNeutralUnit(Handle unit) {
     Handle owner = GetOwningPlayer(unit);

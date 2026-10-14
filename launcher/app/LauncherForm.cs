@@ -42,7 +42,7 @@ namespace WarcraftCSLauncher {
             };
             AddLabel("WARCRAFT CS", 22, 18, 730, 36, new Font("Segoe UI", 22, FontStyle.Bold));
             AddLabel("Version "+CurrentVersion+" — "+(includesRuntime ? "DLL included" : "source-only; DLLs built locally"), 24, 62, 730, 28, Font);
-            FolderRow("Warcraft III 1.26a folder", warcraft, 100);
+            FolderRow("Warcraft III folder (1.26a or 1.27a)", warcraft, 100);
             FolderRow("Counter-Strike 1.6 folder (cstrike or Half-Life)", cs, 172);
             FolderRow("Install Warcraft CS here", destination, 244);
             warcraft.Name="WarcraftDirectory"; cs.Name="CounterStrikeDirectory"; destination.Name="InstallDirectory";
@@ -54,6 +54,8 @@ namespace WarcraftCSLauncher {
                      "Developer: builds DLLs locally; prepares missing Build Tools / SDK (several GB).\r\n" :
                      "This source-only EXE contains no prebuilt mod DLLs.\r\n"+
                      "Local installation and updates build DLLs; missing Build Tools / SDK may take several GB.\r\n")+
+                     // Both accepted hosts are disclosed here; 1.27a is a partial port, not an equal alternative.
+                     "1.26a is fully supported; on 1.27a several native features stand down.\r\n"+
                      "Python (~26 MB if missing) and NumPy convert your local CS assets.\r\n"+
                      "Source builds also obtain MinHook. Existing compatible tools are reused.\r\n"+
                      "Microsoft tools may request administrator approval or a restart.\r\n"+

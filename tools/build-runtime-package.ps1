@@ -3,9 +3,13 @@ param([Parameter(Mandatory=$true)][string]$SourceRevision,[Parameter(Mandatory=$
 $ErrorActionPreference='Stop'
 $root=Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'paths.ps1')
+# Share the host table with setup and the launcher so a package can only claim a build they accept.
+. (Join-Path $root 'setup/host-build.ps1')
 if (!$WarcraftDirectory) { $WarcraftDirectory=Get-WarcraftCsRuntime $root }
-$version=(Get-Item -LiteralPath (Join-Path $WarcraftDirectory 'Game.dll')).VersionInfo
-if ($version.FileMajorPart -ne 1 -or $version.FileMinorPart -ne 26 -or $version.FileBuildPart -ne 0 -or $version.FilePrivatePart -ne 6401) { throw 'Build Player modules against owned Warcraft III 1.26a.' }
+# The package records the exact host that supplied its forwarder ABI; installing it elsewhere
+# is refused by Assert-PrebuiltHost rather than silently hooking an unknown Game.dll.
+$hostBuild=Get-WarcraftHostBuild $WarcraftDirectory
+Write-Output ("Packaging Player modules for Warcraft III $($hostBuild.Version) ($($hostBuild.Support) module support).")
 $original=Join-Path $WarcraftDirectory 'WarcraftOriginalMss.dll'
 if (!(Test-Path -LiteralPath $original)) { $original=Join-Path $WarcraftDirectory 'Mss32.dll' }
 $build=Join-Path $root 'build/player-runtime'
@@ -26,7 +30,7 @@ foreach ($name in $files) {
 }
 # Bind the native bundle to the exact audited source archive and supported forwarder ABI.
 @{Version=(Get-Content -LiteralPath (Join-Path $root 'VERSION') -Raw).Trim();SourceRevision=$SourceRevision;
-    HostVersion='1.26.0.6401';OriginalSoundSha256=(Get-FileHash -LiteralPath $original -Algorithm SHA256).Hash.ToLowerInvariant();Files=$hashes} |
+    HostVersion=$hostBuild.Version;OriginalSoundSha256=(Get-FileHash -LiteralPath $original -Algorithm SHA256).Hash.ToLowerInvariant();Files=$hashes} |
     ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $package 'runtime.json') -Encoding UTF8
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 # Reject stale package files rather than silently including any unrelated private build input.

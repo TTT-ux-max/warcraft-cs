@@ -26,6 +26,12 @@ When adding or changing weapons, apply
 [warcraft-cs-weapon-menu](skills/warcraft-cs-weapon-menu/SKILL.md) so combat, buying,
 private previews and configuration stay synchronized.
 
-Supported host: offline Warcraft III 1.26a x86 (Game.dll 1.26.0.6401).
+Supported hosts: offline Warcraft III 1.26a x86 (Game.dll 1.26.0.6401) and
+1.27a x86 (Game.dll 1.27.0.52240, partial - see docs/PORT-1.27.md). Addresses are
+never hard-coded per call site; add a row to tools/generate_native_offsets.py and
+reference it through wc3::Rva() so each build keeps its own table. The launcher, setup and
+Player packaging share the same host list in setup/host-build.ps1, which mirrors the runtime's
+build selector: adding or removing a supported Game.dll means changing both, or an installation
+reaches a host the module refuses to bind to.
 Never test fixtures in the user's campaign. Preserve the latest progress before restarting
 an active game. Native opt-in verification scenes are excluded from ordinary builds.

@@ -1,4 +1,5 @@
 #include "UnitStatus.hpp"
+#include "../platform/GameBuild.hpp"
 #include <algorithm>
 #include <cmath>
 
@@ -6,7 +7,7 @@ UnitStatus UnitStatus::Read(wc3::Handle unit, uintptr_t gameBase) {
     UnitStatus result;
     // Use the same validated handle resolver as 1.26a's native unit getters, never a cached pointer.
     using ResolveUnit = uintptr_t (__fastcall*)(wc3::Handle, uintptr_t);
-    uintptr_t object = reinterpret_cast<ResolveUnit>(gameBase + 0x3BDCB0)(unit, 0);
+    uintptr_t object = reinterpret_cast<ResolveUnit>(gameBase + wc3::Rva(0x3BDCB0))(unit, 0);
     if (!object) { result.incapacitated = result.immobilized = result.disarmed = true; return result; }
     // Bdvv is the victim's Devour vision buff; loading alone also covers ordinary transports.
     result.contained = wc3::IsUnitLoaded(unit) != FALSE;

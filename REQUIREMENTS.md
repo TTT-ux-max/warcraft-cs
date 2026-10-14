@@ -8,7 +8,7 @@ Applies to **0.8.0**. See [Release Notes](docs/RELEASE-0.8.0.md) for changes and
 | Requirement | Details |
 | --- | --- |
 | Operating system | Windows 10/11 x64, with .NET Framework 4.x and Windows PowerShell 5.1 available. The launcher is x64; the supported Warcraft runtime and mod are x86. |
-| Warcraft III | Your own complete **Warcraft III 1.26a** installation; `Game.dll` must report **1.26.0.6401**. Reforged and other patches are unsupported. |
+| Warcraft III | Your own complete **Warcraft III x86**: **1.26a** (`Game.dll` **1.26.0.6401**, complete support) or **1.27a** (`Game.dll` **1.27.0.52240**, [partial support](docs/PORT-1.27.md)). Reforged and other patches are unsupported. The launcher, setup and Player packages share this list, so a Game.dll outside it is refused before anything is copied. |
 | Counter-Strike | Your own installed **Counter-Strike 1.6**, with the loose models and sounds listed below. Select `cstrike` or its Half-Life parent in the launcher. |
 | Graphics/input | A working OpenGL driver compatible with Warcraft's OpenGL mode, a keyboard and a mouse. A wheel is optional; keys 1–7 also select weapons. |
 | Installation folder | A dedicated writable folder outside both original games. Allow room for another complete Warcraft copy, converted assets, source revisions and dependency caches. |
@@ -51,7 +51,7 @@ Conversion reads the owned models, hands, animation and audio locally. The origi
 **Update** is a separate action fetching the latest stable GitHub project release. The standard variant always
 builds locally; the DLL-included variant preserves its saved Player/Developer mode and its EXE variant.
 
-Both modes use Python/NumPy for asset conversion. Player validates the owned Miles library against the binary package; a different Miles ABI requires Developer mode. Proprietary Warcraft libraries/codecs remain locally supplied.
+Both modes use Python/NumPy for asset conversion. Player validates the owned Miles library against the binary package and installs only into the Warcraft III build that package recorded, so a Player package never lands on a different `Game.dll`; a different Miles ABI or host version requires Developer mode. Proprietary Warcraft libraries/codecs remain locally supplied.
 
 ## Dependencies prepared by the launcher
 
@@ -66,7 +66,7 @@ Python downloads are checked by SHA256 and publisher signature. Microsoft's boot
 
 ## Building from source
 
-Install the Python/C++/SDK capabilities above and **Git for Windows** before running `setup.cmd`. Manual setup takes the actual `cstrike` folder. To build the standalone launcher, also supply owned Warcraft III 1.26a for the supported Miles forwarder ABI and keep the Windows .NET Framework C# compiler, .NET Windows Forms and compression/web assemblies available.
+Install the Python/C++/SDK capabilities above and **Git for Windows** before running `setup.cmd`. Manual setup takes the actual `cstrike` folder. To build the standalone launcher, also supply owned Warcraft III 1.26a or 1.27a for the Miles forwarder ABI of the host you package against and keep the Windows .NET Framework C# compiler, .NET Windows Forms and compression/web assemblies available.
 
 Developers run `tools/test-all.ps1` for the C++ rules, `tools/build-launcher.ps1` and `tools/test-launcher.ps1` for the launcher, and `tools/audit_sources.py` before committing or publishing. Native verification scenes are opt-in and excluded from ordinary builds.
 

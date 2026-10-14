@@ -4,6 +4,7 @@
 #include "ReticleDiagnostics.hpp"
 #include "BuyMenuView.hpp"
 #include "HudHints.hpp"
+#include "FullscreenView.hpp"
 #include "../platform/NativeMinimap.hpp"
 #include "../platform/DiagnosticLog.hpp"
 #include <algorithm>

@@ -27,7 +27,8 @@ command or `setup.log` in Warcraft CS.
 
 Verify these requirements first:
 
-- Windows x64, owned Warcraft III **1.26a x86**, `Game.dll` file version **1.26.0.6401**.
+- Windows x64, owned Warcraft III **x86 1.26a or 1.27a**: `Game.dll` file version **1.26.0.6401**
+  or **1.27.0.52240**. The 1.27a port is partial; see [the port notes](docs/PORT-1.27.md).
 - Your own CS 1.6 `cstrike` folder with its loose `models` and `sound` files.
 - A separate client/runtime folder outside the original game folders.
 - Offline single player and a living unit owned by your player for FPS mode.
@@ -36,7 +37,8 @@ Verify these requirements first:
 
 | Symptom | What to do |
 | --- | --- |
-| Unsupported Game.dll | Select the installed 1.26a x86 game. Other patches and Reforged are unsupported. Check `Game.dll` Properties → Details. |
+| Unsupported Game.dll | Select an installed **1.26a** or **1.27a** x86 game. Other patches and Reforged are unsupported. Check `Game.dll` Properties → Details. |
+| Player modules do not match this installation | A Player package installs only into the Warcraft III build it was packaged against and with the same `Mss32.dll`. Use Developer mode to build modules for your own installation. |
 | Missing owned Warcraft file or Miles provider | Use a complete working installation of your own Warcraft. Retry setup to copy its audio providers into the private runtime. Do not download individual DLLs from third-party sites. |
 | Missing `v_*.mdl`, model or CS sound | Select the actual `cstrike` folder containing the required loose model/sound files, then retry setup. Neither launcher downloads game content. |
 | Compiler, MSVC or Windows SDK missing | Standard/Developer mode needs Microsoft C++ Build Tools, x86 MSVC and a Windows SDK. Check the C++ workload in Visual Studio Installer. Use the DLL-included launcher in Player mode to install without Build Tools/SDK. |

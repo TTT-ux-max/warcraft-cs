@@ -4,6 +4,9 @@
 #include <string>
 #include <vector>
 #include "CameraClipChannel.hpp"
+// Every adapter resolves its legacy offsets through the active build's table, so the
+// translation helpers travel with the native API they translate.
+#include "GameBuild.hpp"
 
 namespace wc3 {
 // Independent native visibility switches, used only by the offline FPS override adapter.

@@ -1,0 +1,1039 @@
+
+Dump of file F:\PY\msvc\VC\Tools\MSVC\14.44.35207\lib\x86\libcpmt.lib
+
+File Type: LIBRARY
+
+   Linker Directives
+   -----------------
+   /ALTERNATENAME:__imp____std_init_once_begin_initialize@16=__imp__InitOnceBeginInitialize@16
+   /ALTERNATENAME:__imp____std_init_once_complete@12=__imp__InitOnceComplete@12
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+   /alternatename:___isa_available=___isa_available_default
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+   /DEFAULTLIB:uuid.lib
+   /DEFAULTLIB:uuid.lib
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+   /include:?id@?$collate@D@std@@2V0locale@2@A
+   /include:?id@?$messages@D@std@@2V0locale@2@A
+   /include:?id@?$money_get@DV?$istreambuf_iterator@DU?$char_traits@D@std@@@std@@@std@@2V0locale@2@A
+   /include:?id@?$money_put@DV?$ostreambuf_iterator@DU?$char_traits@D@std@@@std@@@std@@2V0locale@2@A
+   /include:?id@?$moneypunct@D$0A@@std@@2V0locale@2@A
+   /include:?id@?$moneypunct@D$00@std@@2V0locale@2@A
+   /include:?id@?$time_get@DV?$istreambuf_iterator@DU?$char_traits@D@std@@@std@@@std@@2V0locale@2@A
+   /include:?id@?$time_put@DV?$ostreambuf_iterator@DU?$char_traits@D@std@@@std@@@std@@2V0locale@2@A
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+   /include:?id@?$time_put@_WV?$ostreambuf_iterator@_WU?$char_traits@_W@std@@@std@@@std@@2V0locale@2@A
+   /include:?id@?$num_get@_WV?$istreambuf_iterator@_WU?$char_traits@_W@std@@@std@@@std@@2V0locale@2@A
+   /include:?id@?$num_put@_WV?$ostreambuf_iterator@_WU?$char_traits@_W@std@@@std@@@std@@2V0locale@2@A
+   /include:?id@?$numpunct@_W@std@@2V0locale@2@A
+   /include:?id@?$collate@_W@std@@2V0locale@2@A
+   /include:?id@?$messages@_W@std@@2V0locale@2@A
+   /include:?id@?$money_get@_WV?$istreambuf_iterator@_WU?$char_traits@_W@std@@@std@@@std@@2V0locale@2@A
+   /include:?id@?$money_put@_WV?$ostreambuf_iterator@_WU?$char_traits@_W@std@@@std@@@std@@2V0locale@2@A
+   /include:?id@?$moneypunct@_W$0A@@std@@2V0locale@2@A
+   /include:?id@?$moneypunct@_W$00@std@@2V0locale@2@A
+   /include:?id@?$time_get@_WV?$istreambuf_iterator@_WU?$char_traits@_W@std@@@std@@@std@@2V0locale@2@A
+   /include:?id@?$num_get@GV?$istreambuf_iterator@GU?$char_traits@G@std@@@std@@@std@@2V0locale@2@A
+   /include:?id@?$num_put@GV?$ostreambuf_iterator@GU?$char_traits@G@std@@@std@@@std@@2V0locale@2@A
+   /include:?id@?$numpunct@G@std@@2V0locale@2@A
+   /include:?id@?$collate@G@std@@2V0locale@2@A
+   /include:?id@?$messages@G@std@@2V0locale@2@A
+   /include:?id@?$money_get@GV?$istreambuf_iterator@GU?$char_traits@G@std@@@std@@@std@@2V0locale@2@A
+   /include:?id@?$money_put@GV?$ostreambuf_iterator@GU?$char_traits@G@std@@@std@@@std@@2V0locale@2@A
+   /include:?id@?$moneypunct@G$0A@@std@@2V0locale@2@A
+   /include:?id@?$moneypunct@G$00@std@@2V0locale@2@A
+   /include:?id@?$time_get@GV?$istreambuf_iterator@GU?$char_traits@G@std@@@std@@@std@@2V0locale@2@A
+   /include:?id@?$time_put@GV?$ostreambuf_iterator@GU?$char_traits@G@std@@@std@@@std@@2V0locale@2@A
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+   /FAILIFMISMATCH:_PPLTASK_ASYNC_LOGGING=1
+   /FAILIFMISMATCH:ppltask_saved_frame_numbers=PPL_TASK_SAVE_FRAME_COUNT
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+   /FAILIFMISMATCH:_PPLTASK_ASYNC_LOGGING=1
+   /FAILIFMISMATCH:ppltask_saved_frame_numbers=PPL_TASK_SAVE_FRAME_COUNT
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+   /include:?id@?$num_get@DV?$istreambuf_iterator@DU?$char_traits@D@std@@@std@@@std@@2V0locale@2@A
+   /include:?id@?$num_put@DV?$ostreambuf_iterator@DU?$char_traits@D@std@@@std@@@std@@2V0locale@2@A
+   /include:?id@?$numpunct@D@std@@2V0locale@2@A
+   /include:?id@?$codecvt@DDU_Mbstatet@@@std@@2V0locale@2@A
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+   /FAILIFMISMATCH:_PPLTASK_ASYNC_LOGGING=1
+   /FAILIFMISMATCH:ppltask_saved_frame_numbers=PPL_TASK_SAVE_FRAME_COUNT
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+   /include:?id@?$codecvt@DDU_Mbstatet@@@std@@2V0locale@2@A
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+   /include:?id@?$codecvt@DDU_Mbstatet@@@std@@2V0locale@2@A
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+   /include:?id@?$codecvt@DDU_Mbstatet@@@std@@2V0locale@2@A
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+   /include:?id@?$codecvt@DDU_Mbstatet@@@std@@2V0locale@2@A
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /DEFAULTLIB:uuid.lib
+   /DEFAULTLIB:uuid.lib
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+   /DEFAULTLIB:Advapi32
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+   /include:?initializer@?$zeta_initializer@OU?$policy@V?$promote_float@$0A@@policies@math@boost@@V?$promote_double@$0A@@234@Udefault_policy@234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@@policies@math@boost@@U?$integral_constant@H$0DF@@std@@@detail@math@boost@@2Uinit@1234@B
+   /include:?initializer@?$zeta_initializer@NU?$policy@V?$promote_float@$0A@@policies@math@boost@@V?$promote_double@$0A@@234@Udefault_policy@234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@@policies@math@boost@@U?$integral_constant@H$0DF@@std@@@detail@math@boost@@2Uinit@1234@B
+   /include:?initializer@?$expint_i_initializer@OU?$policy@V?$promote_float@$0A@@policies@math@boost@@V?$promote_double@$0A@@234@Udefault_policy@234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@@policies@math@boost@@U?$integral_constant@H$0DF@@std@@@detail@math@boost@@2Uinit@1234@B
+   /include:?initializer@?$expint_i_initializer@NU?$policy@V?$promote_float@$0A@@policies@math@boost@@V?$promote_double@$0A@@234@Udefault_policy@234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@@policies@math@boost@@U?$integral_constant@H$0DF@@std@@@detail@math@boost@@2Uinit@1234@B
+   /include:?initializer@?$log1p_initializer@OU?$policy@V?$promote_float@$0A@@policies@math@boost@@V?$promote_double@$0A@@234@Udefault_policy@234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@@policies@math@boost@@U?$integral_constant@H$0DF@@std@@@detail@math@boost@@2Uinit@1234@B
+   /include:?initializer@?$log1p_initializer@NU?$policy@V?$promote_float@$0A@@policies@math@boost@@V?$promote_double@$0A@@234@Udefault_policy@234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@@policies@math@boost@@U?$integral_constant@H$0DF@@std@@@detail@math@boost@@2Uinit@1234@B
+   /include:?initializer@?$bessel_j1_initializer@O@detail@math@boost@@2Uinit@1234@B
+   /include:?initializer@?$bessel_j1_initializer@N@detail@math@boost@@2Uinit@1234@B
+   /include:?initializer@?$bessel_k0_initializer@OU?$integral_constant@H$0DF@@std@@@detail@math@boost@@2Uinit@1234@B
+   /include:?initializer@?$bessel_k1_initializer@OU?$integral_constant@H$0DF@@std@@@detail@math@boost@@2Uinit@1234@B
+   /include:?initializer@?$bessel_k0_initializer@NU?$integral_constant@H$0DF@@std@@@detail@math@boost@@2Uinit@1234@B
+   /include:?initializer@?$bessel_k1_initializer@NU?$integral_constant@H$0DF@@std@@@detail@math@boost@@2Uinit@1234@B
+   /include:?initializer@?$lgamma_initializer@OU?$policy@V?$promote_float@$0A@@policies@math@boost@@V?$promote_double@$0A@@234@Udefault_policy@234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@@policies@math@boost@@@detail@math@boost@@2Uinit@1234@B
+   /include:?initializer@?$lgamma_initializer@NU?$policy@V?$promote_float@$0A@@policies@math@boost@@V?$promote_double@$0A@@234@Udefault_policy@234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@@policies@math@boost@@@detail@math@boost@@2Uinit@1234@B
+   /include:?initializer@?$expm1_initializer@OU?$policy@V?$promote_float@$0A@@policies@math@boost@@V?$promote_double@$0A@@234@Udefault_policy@234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@@policies@math@boost@@U?$integral_constant@H$0DF@@std@@@detail@math@boost@@2Uinit@1234@B
+   /include:?initializer@?$expm1_initializer@NU?$policy@V?$promote_float@$0A@@policies@math@boost@@V?$promote_double@$0A@@234@Udefault_policy@234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@U6234@@policies@math@boost@@U?$integral_constant@H$0DF@@std@@@detail@math@boost@@2Uinit@1234@B
+   /include:?id@?$num_put@DV?$ostreambuf_iterator@DU?$char_traits@D@std@@@std@@@std@@2V0locale@2@A
+   /include:?id@?$numpunct@D@std@@2V0locale@2@A
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+   /alternatename:___sanitizer_annotate_contiguous_container=___sanitizer_annotate_contiguous_container_default
+   /alternatename:__Asan_vector_should_annotate=__Asan_vector_should_annotate_default
+   /alternatename:__Asan_string_should_annotate=__Asan_string_should_annotate_default
+
+   Linker Directives
+   -----------------
+   /FAILIFMISMATCH:_MSC_VER=1900
+   /FAILIFMISMATCH:_ITERATOR_DEBUG_LEVEL=0
+   /FAILIFMISMATCH:RuntimeLibrary=MT_StaticRelease
+
+  Summary
+
+          DC .CRT$XCC
+           8 .CRT$XCL
+          20 .CRT$XCU
+           4 .CRT$XIC
+        8EB7 .bss
+       3B170 .chks64
+        210D .data
+        1657 .data$r
+        2F67 .data$rs
+      A2B47C .debug$S
+        30E8 .debug$T
+        8A0A .drectve
+        255C .gfids$y
+           4 .giats$y
+       2A3C5 .rdata
+        8F8A .rdata$r
+         9C4 .sxdata
+         94B .text$di
+       BF83A .text$mn
+        7410 .text$x
+         1C8 .text$yd
+          C6 .voltbl
+        9B80 .xdata$x

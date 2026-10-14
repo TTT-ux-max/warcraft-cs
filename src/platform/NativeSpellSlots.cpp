@@ -1,4 +1,5 @@
 #include "NativeSpellSlots.hpp"
+#include "GameBuild.hpp"
 #include "NativeAbilityInfo.hpp"
 #include "NativeAbilitySlots.hpp"
 #include "NativeCommandCard.hpp"
@@ -19,7 +20,7 @@ void NativeSpellSlots::Configure(uintptr_t base) {
     base_=base;
     // Same lookup used by GetUnitAbilityLevel; fail closed on an unsupported native implementation.
     const unsigned char signature[]={0x8B,0x44,0x24,0x04,0x3D,0x75,0x62,0x4E,0x41};
-    verified_=!memcmp(reinterpret_cast<void*>(base+0x787D0),signature,sizeof(signature));
+    verified_=!memcmp(reinterpret_cast<void*>(base+wc3::Rva(0x787D0)),signature,sizeof(signature));
     wc3::Log("Native spell ability lookup verified=%d",verified_);
 }
 std::array<int,4> NativeSpellSlots::Resolve(wc3::Handle unit) {
@@ -65,7 +66,7 @@ uintptr_t NativeSpellSlots::Object(wc3::Handle unit,int ability) const {
     if(!verified_ || !ability)return 0;
     using Find=uintptr_t (__thiscall*)(uintptr_t,int,BOOL,BOOL,BOOL,BOOL);
     uintptr_t object=wc3::UnitObject(unit);if(!object)return 0;
-    uintptr_t skill=reinterpret_cast<Find>(base_+0x787D0)(object,ability,FALSE,TRUE,TRUE,TRUE),table=0;
+    uintptr_t skill=reinterpret_cast<Find>(base_+wc3::Rva(0x787D0))(object,ability,FALSE,TRUE,TRUE,TRUE),table=0;
     return Read(skill,table) && table>=base_+0x880000 && table<base_+0xA80000 ? skill : 0;
 }
 SpellHudSlots NativeSpellSlots::Snapshot(wc3::Handle unit,const SpellSettings& settings) {
@@ -73,7 +74,7 @@ SpellHudSlots NativeSpellSlots::Snapshot(wc3::Handle unit,const SpellSettings& s
     auto resolved=Resolve(unit);
     // Sample all learned/passive gaps using the very same mapping consumed by spell casting.
     using GetUI=uintptr_t (__fastcall*)(int,int);
-    uintptr_t ui=verified_ ? reinterpret_cast<GetUI>(base_+0x300710)(0,0) : 0;
+    uintptr_t ui=verified_ ? reinterpret_cast<GetUI>(base_+wc3::Rva(0x300710))(0,0) : 0;
     float mana=wc3::Real(wc3::GetUnitState(unit,2));
     for(int i=0;i<4;++i) {
         auto& slot=result[i];slot.ability=settings.ability[i].empty() ? resolved[i] : HeroSpellSlots::Rawcode(settings.ability[i]);

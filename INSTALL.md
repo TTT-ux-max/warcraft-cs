@@ -1,7 +1,8 @@
 # Install and play Warcraft CS
 
-You need your own installed Warcraft III **1.26a x86** (Game.dll **1.26.0.6401**)
-and Counter-Strike 1.6. Reforged and other Warcraft patches are unsupported.
+You need your own installed Warcraft III **x86**: **1.26a** (Game.dll **1.26.0.6401**) or
+**1.27a** (Game.dll **1.27.0.52240**, partial support - see [the port notes](docs/PORT-1.27.md)),
+plus Counter-Strike 1.6. Reforged and other Warcraft patches are unsupported.
 This offline, single-player prototype does not download games or redistribute their content.
 Full campaign/custom-map compatibility has not been verified.
 See [REQUIREMENTS.md](REQUIREMENTS.md) for the complete system, owned-file and dependency checklist.
@@ -23,7 +24,7 @@ Open the launcher and use **Browse...** next to each field:
 
 | Launcher field | Choose this | Example |
 | --- | --- | --- |
-| Warcraft III 1.26a folder | Your Warcraft game root, containing `war3.exe`, `Game.dll`, `Mss32.dll`, `Storm.dll` and the four MPQ archives listed below. | `E:\Warcraft III` |
+| Warcraft III folder (1.26a or 1.27a) | Your Warcraft game root, containing `war3.exe`, `Game.dll`, `Mss32.dll`, `Storm.dll` and the four MPQ archives listed below. | `E:\Warcraft III` |
 | Counter-Strike 1.6 folder (cstrike or Half-Life) | The `cstrike` folder containing the loose weapon models and sounds. Its `Half-Life` parent also works. | `C:\SteamGames\steamapps\common\Half-Life\cstrike` |
 | Install Warcraft CS here | A dedicated writable folder outside both game installations, with space for another Warcraft copy and dependencies. | Keep the default `%LOCALAPPDATA%\WarcraftCS`, or choose `D:\WarcraftCS`. |
 
@@ -94,7 +95,8 @@ Use the launcher for either edition so fullscreen rendering uses consistent DPI 
 For a source checkout, double-click `play-roc.bat` or run `play.cmd -Edition ReignOfChaos` to open
 the original RoC campaign menus; `play.cmd` alone opens TFT. Both use the shared PowerShell launcher.
 Add `-Windowed` for an optional windowed launch. The supported game
-version remains 1.26a, and two-player custom missions still require their intended player count.
+versions are 1.26a (complete) and 1.27a (partial), and two-player custom missions still require their
+intended player count.
 
 ## Settings, saves, updates and removal
 

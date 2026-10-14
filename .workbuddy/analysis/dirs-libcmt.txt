@@ -1,0 +1,348 @@
+
+Dump of file F:\PY\msvc\VC\Tools\MSVC\14.44.35207\lib\x86\libcmt.lib
+
+File Type: LIBRARY
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+   /MERGE:.rtc=.rdata
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+   /alternatename:___scrt_exe_initialize_mta=___scrt_stub_for_initialize_mta
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+   /alternatename:___volatile_metadata=___AbsoluteZero
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+   /merge:.CRT=.rdata
+   /alternatename:___acrt_initialize=___scrt_stub_for_acrt_initialize
+   /alternatename:___acrt_uninitialize=___scrt_stub_for_acrt_uninitialize
+   /alternatename:___acrt_uninitialize_critical=___scrt_stub_for_acrt_uninitialize_critical
+   /alternatename:___acrt_thread_attach=___scrt_stub_for_acrt_thread_attach
+   /alternatename:___acrt_thread_detach=___scrt_stub_for_acrt_thread_detach
+   /alternatename:__is_c_termination_complete=___scrt_stub_for_is_c_termination_complete
+   /alternatename:___vcrt_initialize=___scrt_stub_for_acrt_initialize
+   /alternatename:___vcrt_uninitialize=___scrt_stub_for_acrt_uninitialize
+   /alternatename:___vcrt_uninitialize_critical=___scrt_stub_for_acrt_uninitialize_critical
+   /alternatename:___vcrt_thread_attach=___scrt_stub_for_acrt_thread_attach
+   /alternatename:___vcrt_thread_detach=___scrt_stub_for_acrt_thread_detach
+   /defaultlib:kernel32.lib
+   /disallowlib:msvcrt.lib
+   /disallowlib:msvcrtd.lib
+   /defaultlib:libcmt.lib
+   /disallowlib:libcmtd.lib
+   /disallowlib:vcruntime.lib
+   /disallowlib:vcruntimed.lib
+   /defaultlib:libvcruntime.lib
+   /disallowlib:libvcruntimed.lib
+   /disallowlib:ucrtd.lib
+   /defaultlib:libucrt.lib
+   /disallowlib:libucrtd.lib
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+   /alternatename:__pRawDllMain=__pDefaultRawDllMain
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+   /ThrowingNew
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+   Linker Directives
+   -----------------
+
+  Summary
+
+           C .00cfg
+           4 .CRT$XCA
+          10 .CRT$XCAA
+           4 .CRT$XCZ
+           4 .CRT$XDA
+           4 .CRT$XDZ
+           4 .CRT$XIA
+          10 .CRT$XIAA
+          10 .CRT$XIAC
+           4 .CRT$XIC
+           4 .CRT$XIZ
+           4 .CRT$XLA
+           4 .CRT$XLC
+           4 .CRT$XLD
+           4 .CRT$XLZ
+           4 .CRT$XPA
+           4 .CRT$XPZ
+           4 .CRT$XTA
+           4 .CRT$XTZ
+         393 .bss
+        2460 .chks64
+          C4 .data
+          5F .data$r
+          18 .data$rs
+         1C0 .debug$F
+      2B132C .debug$S
+        A2D4 .debug$T
+         661 .drectve
+          A8 .gfids$y
+         B02 .rdata
+          40 .rdata$CastGuardVftablesA
+          40 .rdata$CastGuardVftablesC
+          18 .rdata$T
+         120 .rdata$r
+           4 .rtc$IAA
+           4 .rtc$IZZ
+           4 .rtc$TAA
+           4 .rtc$TZZ
+          48 .sxdata
+       66890 .text$mn
+           F .text$mn$00
+          91 .text$x
+           1 .tls
+          8D .tls$
+           1 .tls$ZZZ
+          2E .voltbl
+         3E0 .xdata$x
+      1A3374 _RDATA

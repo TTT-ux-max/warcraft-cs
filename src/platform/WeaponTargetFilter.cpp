@@ -1,4 +1,5 @@
 #include "WeaponTargetFilter.hpp"
+#include "GameBuild.hpp"
 #include <cmath>
 
 namespace {
@@ -16,8 +17,12 @@ bool WeaponTargetFilter::PassThrough(wc3::Handle unit,uintptr_t gameBase) {
         !Read(object+0x16C,index) || !Read(object+0x170,generation))return false;
     // 1.26a's impact distance helper resolves this position reference and reads its live collision radius.
     // Read actual collision, not model size or movement speed; unknown geometry remains an obstacle.
+    // The resolver is x87-generated on 1.26a and has no verified 1.27 address, so a zero translation
+    // means "cannot read collision" rather than "zero collision": keep the unit opaque and bail out.
+    uintptr_t resolverRva=wc3::Rva(0x3FA30);
+    if(!resolverRva)return false;
     using Position=uintptr_t (__fastcall*)(unsigned,unsigned);
-    uintptr_t position=reinterpret_cast<Position>(gameBase+0x3FA30)(index,generation);float radius=-1;
+    uintptr_t position=reinterpret_cast<Position>(gameBase+resolverRva)(index,generation);float radius=-1;
     if(!Read(position ? position+0x90 : 0,radius) || !std::isfinite(radius) || radius<0)return false;
     if(radius==0)return true;
     // SetUnitPathing(false) can keep the authored radius while clearing its live collision mask.

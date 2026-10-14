@@ -8,7 +8,8 @@ Clients do not need Git or Python beforehand. Source setup requires C++ tools/SD
 
 ## Install and play
 
-1. Browse to your Warcraft III **1.26a** installation (`Game.dll` 1.26.0.6401).
+1. Browse to your Warcraft III **1.26a** or **1.27a** installation (`Game.dll` 1.26.0.6401 or
+   1.27.0.52240). 1.26a is fully supported; 1.27a is a [partial port](PORT-1.27.md).
 2. Browse to your Counter-Strike 1.6 `cstrike` folder or its Half-Life parent. CS is required
    for local hands, models, animation and audio; the launcher does not download either game.
 3. Choose the client installation folder. Default: `%LOCALAPPDATA%/WarcraftCS`.
@@ -24,7 +25,7 @@ Clients do not need Git or Python beforehand. Source setup requires C++ tools/SD
 
 | Field | Example | Files to look for |
 | --- | --- | --- |
-| Warcraft III 1.26a folder | `E:\Warcraft III` | `war3.exe`, `Game.dll` (1.26.0.6401), `Mss32.dll`, `Storm.dll`, `War3.mpq`, `War3x.mpq`, `War3Patch.mpq`, `War3xlocal.mpq` |
+| Warcraft III folder (1.26a or 1.27a) | `E:\Warcraft III` | `war3.exe`, `Game.dll` (1.26.0.6401 or 1.27.0.52240), `Mss32.dll`, `Storm.dll`, `War3.mpq`, `War3x.mpq`, `War3Patch.mpq`, `War3xlocal.mpq` |
 | Counter-Strike 1.6 folder | `C:\SteamGames\steamapps\common\Half-Life\cstrike` | `models/v_ak47.mdl`, the other weapon models, `sound/weapons`, `sound/player` |
 | Install Warcraft CS here | `D:\WarcraftCS` | A dedicated writable folder outside Warcraft, Half-Life and `cstrike`; setup creates `Game` and `sources` inside it. |
 
@@ -129,7 +130,7 @@ Back up any saves from `Game/save` before removing your client copy.
 
 ## Build and verify the EXE
 
-Developers need Git, Python, Visual Studio x86 C++ tools/SDK, owned Warcraft III 1.26a and the Windows .NET Framework C# compiler. Stage the reviewed source first:
+Developers need Git, Python, Visual Studio x86 C++ tools/SDK, owned Warcraft III 1.26a or 1.27a and the Windows .NET Framework C# compiler. Stage the reviewed source first:
 
 ```powershell
 python tools/audit_sources.py --staged

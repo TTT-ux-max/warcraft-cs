@@ -1,4 +1,5 @@
 #include "ActorRenderFilter.hpp"
+#include "GameBuild.hpp"
 #include <cstring>
 
 namespace {
@@ -44,24 +45,24 @@ void ActorRenderFilter::Install(uintptr_t gameBase, Hook hook) {
     base = gameBase;
     // Both verified CSprite render paths include all material types; alpha zero alone leaves additive layers.
     const unsigned char signature[] = {0x56, 0x8B, 0xF1, 0x83, 0x7E, 0x20, 0x00};
-    if (memcmp(reinterpret_cast<void*>(base + 0x4D34E0), signature, sizeof(signature)) ||
-        memcmp(reinterpret_cast<void*>(base + 0x4D2E40), signature, sizeof(signature))) {
+    if (memcmp(reinterpret_cast<void*>(base + wc3::Rva(0x4D34E0)), signature, sizeof(signature)) ||
+        memcmp(reinterpret_cast<void*>(base + wc3::Rva(0x4D2E40)), signature, sizeof(signature))) {
         wc3::Log("Actor sprite render signature mismatch; filter not installed"); return;
     }
-    hook(reinterpret_cast<void*>(base + 0x4D34E0), reinterpret_cast<void*>(Opaque), reinterpret_cast<void**>(&originalOpaque));
-    hook(reinterpret_cast<void*>(base + 0x4D2E40), reinterpret_cast<void*>(Translucent), reinterpret_cast<void**>(&originalTranslucent));
+    hook(reinterpret_cast<void*>(base + wc3::Rva(0x4D34E0)), reinterpret_cast<void*>(Opaque), reinterpret_cast<void**>(&originalOpaque));
+    hook(reinterpret_cast<void*>(base + wc3::Rva(0x4D2E40)), reinterpret_cast<void*>(Translucent), reinterpret_cast<void**>(&originalTranslucent));
     const unsigned char submitSignature[] = {0x83,0xEC,0x60,0x56,0x8B,0xF1,0x83,0x7E,0x20,0x00};
-    if (!memcmp(reinterpret_cast<void*>(base+0x4D2E60),submitSignature,sizeof(submitSignature)))
-        hook(reinterpret_cast<void*>(base+0x4D2E60),reinterpret_cast<void*>(SubmitActor),reinterpret_cast<void**>(&originalSubmit));
-    if (!memcmp(reinterpret_cast<void*>(base+0x4D2F10),submitSignature,sizeof(submitSignature)))
-        hook(reinterpret_cast<void*>(base+0x4D2F10),reinterpret_cast<void*>(SubmitActorAlpha),reinterpret_cast<void**>(&originalSubmitAlpha));
+    if (!memcmp(reinterpret_cast<void*>(base+wc3::Rva(0x4D2E60)),submitSignature,sizeof(submitSignature)))
+        hook(reinterpret_cast<void*>(base+wc3::Rva(0x4D2E60)),reinterpret_cast<void*>(SubmitActor),reinterpret_cast<void**>(&originalSubmit));
+    if (!memcmp(reinterpret_cast<void*>(base+wc3::Rva(0x4D2F10)),submitSignature,sizeof(submitSignature)))
+        hook(reinterpret_cast<void*>(base+wc3::Rva(0x4D2F10)),reinterpret_cast<void*>(SubmitActorAlpha),reinterpret_cast<void**>(&originalSubmitAlpha));
 }
 void ActorRenderFilter::Begin(wc3::Handle unit) {
     // Resolve fresh each frame: a map reload or morph can replace a sprite without replacing its unit handle.
     actorSprite = 0;
     if (!unit || !base) return;
     using Resolve = uintptr_t (__fastcall*)(wc3::Handle, uintptr_t);
-    uintptr_t object = reinterpret_cast<Resolve>(base + 0x3BDCB0)(unit, 0);
+    uintptr_t object = reinterpret_cast<Resolve>(base + wc3::Rva(0x3BDCB0))(unit, 0);
     if (object) actorSprite = Pointer(object + 0x28);
     static wc3::Handle loggedUnit = 0;
     if (unit != loggedUnit) {

@@ -1,13 +1,20 @@
-param([string]$OutputDirectory = '',[string]$MinHookDirectory='',[string]$PythonExecutable='', [switch]$TestStatusEffects,[switch]$TestGameplay,[switch]$TestTreeAndWheel,[switch]$TestWorldSurfaces,[switch]$TestFloatingText,[switch]$TestMovement)
+param([string]$OutputDirectory = '',[string]$MinHookDirectory='',[string]$PythonExecutable='',[string]$CompilerRoot='', [switch]$TestStatusEffects,[switch]$TestGameplay,[switch]$TestTreeAndWheel,[switch]$TestWorldSurfaces,[switch]$TestFloatingText,[switch]$TestMovement)
 $ErrorActionPreference = 'Stop'
 $modRoot = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'paths.ps1')
 if (!$OutputDirectory) { $OutputDirectory = Get-WarcraftCsRuntime $modRoot }
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
+# A standalone x86 toolchain without a Visual Studio installation is resolved first, so the
+# supported hosts stay buildable from an owned MSVC + Windows SDK tree alone.
 $compilerLocator = 'C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe'
-$compilerRoot = & $compilerLocator -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-if (!$compilerRoot) { throw 'Visual Studio x86 C++ tools are required.' }
+$compilerRoot = $CompilerRoot
+if (!$compilerRoot) { $compilerRoot = $env:WCS_COMPILER_ROOT }
+if (!$compilerRoot -and (Test-Path -LiteralPath $compilerLocator)) {
+    $compilerRoot = & $compilerLocator -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+}
+if (!$compilerRoot) { throw 'Visual Studio x86 C++ tools are required; pass -CompilerRoot or set WCS_COMPILER_ROOT for a standalone toolchain.' }
 $compilerEnvironment = Join-Path $compilerRoot 'VC/Auxiliary/Build/vcvars32.bat'
+if (!(Test-Path -LiteralPath $compilerEnvironment)) { throw "The x86 compiler environment is missing: $compilerEnvironment" }
 # Build the pinned upstream library locally instead of depending on a bundled third-party binary.
 if (!$MinHookDirectory) { $MinHookDirectory=Join-Path $modRoot '.local/dependencies/minhook' }
 if (!(Test-Path -LiteralPath (Join-Path $MinHookDirectory 'include/MinHook.h'))) { & (Join-Path $PSScriptRoot 'fetch-dependencies.ps1') -Destination $MinHookDirectory }
@@ -17,7 +24,7 @@ $hookRoot=Join-Path $MinHookDirectory 'include'
 # Share model decoding while keeping unit and destructable geometry separate from the controller.
 # Actor mesh filtering owns rendering only, independent of the unit's simulation visibility.
 # Relative Windows input is separate from look-angle math, physical movement and native camera ownership.
-$sources = @('platform/WarcraftApi.cpp', 'input/MouseLook.cpp', 'movement/MovementPhysics.cpp', 'platform/WarcraftCollision.cpp', 'presentation/FirstPersonCamera.cpp', 'platform/MapCameraGuard.cpp', 'platform/ActorRenderFilter.cpp', 'audio/GameAudio.cpp', 'presentation/FullscreenView.cpp', 'presentation/HitFeedback.cpp', 'presentation/ScopeView.cpp', 'combat/UnitStatus.cpp', 'geometry/ModelBounds.cpp', 'platform/SpriteTransform.cpp', 'combat/UnitHitboxes.cpp', 'combat/DestructableHitboxes.cpp', 'combat/PlantedBomb.cpp', 'combat/WeaponRecoil.cpp', 'application/ShooterController.cpp', 'presentation/GunMesh.cpp', 'presentation/Overlay.cpp', 'runtime/PluginRuntime.cpp', 'Plugin.cpp', 'input/InputDispatcher.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
+$sources = @('platform/GameBuild.cpp', 'platform/WarcraftApi.cpp', 'input/MouseLook.cpp', 'movement/MovementPhysics.cpp', 'platform/WarcraftCollision.cpp', 'presentation/FirstPersonCamera.cpp', 'platform/MapCameraGuard.cpp', 'platform/ActorRenderFilter.cpp', 'audio/GameAudio.cpp', 'presentation/FullscreenView.cpp', 'presentation/HitFeedback.cpp', 'presentation/ScopeView.cpp', 'combat/UnitStatus.cpp', 'geometry/ModelBounds.cpp', 'platform/SpriteTransform.cpp', 'combat/UnitHitboxes.cpp', 'combat/DestructableHitboxes.cpp', 'combat/PlantedBomb.cpp', 'combat/WeaponRecoil.cpp', 'application/ShooterController.cpp', 'presentation/GunMesh.cpp', 'presentation/Overlay.cpp', 'runtime/PluginRuntime.cpp', 'Plugin.cpp', 'input/InputDispatcher.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
 # Native spell fixtures are opt-in and are excluded from the installed normal build.
 # Item pickup and temporary native squad policies remain independent of shooter input/rendering.
 $sources += @('config/GameplaySettings.cpp','inventory/ItemPickup.cpp','squad/SquadController.cpp','platform/FpsCombatGuard.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }

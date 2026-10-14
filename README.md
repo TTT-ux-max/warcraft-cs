@@ -58,7 +58,8 @@ apply to fresh configs; updates preserve your existing choices. Earlier changes 
 
 ## Requirements
 
-- Windows x64 and **Warcraft III 1.26a x86**, with `Game.dll` version `1.26.0.6401`.
+- Windows x64 and **Warcraft III x86 1.26a or 1.27a**, with `Game.dll` version `1.26.0.6401`
+  (complete support) or `1.27.0.52240` (partial support).
 - Installed Counter-Strike 1.6 with loose files in `cstrike/models` and `cstrike/sound`.
 - Standard `WarcraftCSLauncher.exe` builds locally and needs C++ Build Tools / Windows SDK.
   The separate `WarcraftCSLauncher_DLL_Included.exe` offers Player setup without those tools.
@@ -67,7 +68,13 @@ apply to fresh configs; updates preserve your existing choices. Earlier changes 
   **Desktop development with C++**, MSVC x86 and Windows SDK.
 - OpenGL support and enough disk space for a separate copy of Warcraft.
 
-Reforged and other Warcraft patches are not supported.
+Warcraft III **1.27a** (Game.dll `1.27.0.52240`) is accepted as a second host with a partial
+port: the complete JASS native layer, the camera guard, the pause hook, the frame-rate demand
+patch behind `Rendering.MaxFPS` and the per-frame tick work, while the hooks whose 1.26a
+signatures are x87-based stay disabled. The launcher, setup
+and Player packages accept exactly these two builds and refuse any other `Game.dll` before
+copying a single file. Reforged and other Warcraft patches are not supported.
+See [docs/PORT-1.27.md](docs/PORT-1.27.md).
 The full game-file, system, build-dependency and updater requirements are in [REQUIREMENTS.md](REQUIREMENTS.md).
 
 ## Setup and play
@@ -91,17 +98,17 @@ Choose these folders using **Browse...** (the examples are illustrative):
 
 | Launcher field | Which folder to choose | Example |
 | --- | --- | --- |
-| Warcraft III 1.26a folder | The game root containing `war3.exe`, `Game.dll`, `Mss32.dll` and the Warcraft MPQ archives. Do not choose `Maps` or `save`. | `E:\Warcraft III` |
+| Warcraft III folder (1.26a or 1.27a) | The game root containing `war3.exe`, `Game.dll`, `Mss32.dll` and the Warcraft MPQ archives. Do not choose `Maps` or `save`. | `E:\Warcraft III` |
 | Counter-Strike 1.6 folder | `cstrike`, containing `models/v_knife.mdl` and `sound`; the launcher also accepts its `Half-Life` parent. Do not choose the Steam library root or `models` alone. | `C:\SteamGames\steamapps\common\Half-Life\cstrike` |
 | Install Warcraft CS here | A dedicated writable folder outside both game installations. This receives a separate Warcraft copy. | Default: `%LOCALAPPDATA%\WarcraftCS`, or `D:\WarcraftCS` |
 
-1. Select your installed Warcraft III 1.26a folder and CS 1.6 folder (`cstrike` or its Half-Life parent).
+1. Select your installed Warcraft III folder (1.26a or 1.27a) and CS 1.6 folder (`cstrike` or its Half-Life parent).
 2. Select a separate installation folder for Warcraft CS.
 3. Read the download details and agree to downloading/installing the dependencies and their terms.
 4. Click **Install** in the standard launcher, or choose **Install вЂ” Player / Developer** in the DLL-included launcher. Install uses the version embedded in that EXE.
 5. Choose **The Frozen Throne** or **Reign of Chaos** under **Game to launch**, then click **Play**, select your own living unit and press F6. The choice is remembered after a successful launch.
 
-Both editions use the same private Warcraft III 1.26a installation. RoC selects the original campaign menus;
+Both editions use the same private copy of your selected Warcraft III host. RoC selects the original campaign menus;
 it does not turn two-player custom maps into solo missions. Launch through the launcher or `tools/launch.ps1`
 to keep fullscreen DPI scaling consistent after Alt-Tab. For source users, double-click `play-roc.bat`
 or run `play.cmd -Edition ReignOfChaos`; `play.cmd` alone starts Frozen Throne.

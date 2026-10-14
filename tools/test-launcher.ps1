@@ -21,6 +21,9 @@ if ($LASTEXITCODE) { throw 'Audio runtime installation checks failed.' }
 # Run junction creation separately when the shell's sandbox allows Windows reparse points.
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'tools/test-warcraft-runtime.ps1') -SkipJunction
 if ($LASTEXITCODE) { throw 'Warcraft full reinstall checks failed.' }
+# Accepted hosts are decided by Game.dll alone; fixture assemblies supply that metadata without a game install.
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'tools/test-host-build.ps1')
+if ($LASTEXITCODE) { throw 'Host build acceptance checks failed.' }
 # Parse every script for Windows PowerShell and enforce a backend consent denial before any side effects.
 foreach ($script in @(Get-ChildItem -LiteralPath (Join-Path $root 'launcher') -Filter '*.ps1')) {
     $tokens=$null;$errors=$null

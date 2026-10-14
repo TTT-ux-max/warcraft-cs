@@ -19,7 +19,7 @@ void NativeMinimap::ContextDeleted(HGLRC context) {
     context_=nullptr;background_=map_=0;textureSide_=0;capturing_=ready_=false;
 }
 void NativeMinimap::BeginFrame(uintptr_t ui,int width,int height,bool enabled) {
-    ui_=ui;width_=width;height_=height;enabled_=enabled;capturing_=ready_=false;
+    ui_=ui;width_=width;height_=height;enabled_=enabled;capturing_=ready_=capturedAny_=false;
 }
 bool NativeMinimap::Prepare() {
     if (!enabled_ || !ui_ || width_<=0 || height_<=0) return false;
@@ -104,6 +104,7 @@ bool NativeMinimap::MapBatch(GLsizei count,GLenum type,const void* indices) cons
 void NativeMinimap::Submit(GLenum mode,GLsizei count,GLenum type,const void* indices,DrawElements original) {
     if (!capturing_ && !Prepare()) return;
     if (!MapBatch(count,type,indices)) return;
+    capturedAny_=true;
     // Retain native terrain/fog/marker batches, rasterizing only their map pixels.
     // Native UI must not overwrite world depth later sampled by health bars and sky.
     glPushAttrib(GL_SCISSOR_BIT|GL_DEPTH_BUFFER_BIT);glDepthMask(GL_FALSE);
@@ -121,7 +122,9 @@ void NativeMinimap::Quad(GLuint texture,float left,float bottom,float right,floa
     glTexCoord2f(u1,v1);glVertex2f(right,top);glTexCoord2f(u0,v1);glVertex2f(left,top);glEnd();
 }
 void NativeMinimap::FinishFrame() {
-    if (!capturing_ || context_!=wglGetCurrentContext()) return;
+    // Nothing captured means nothing was cleared either: skip the restore instead of
+    // painting an empty frame over the strip (hidden interfaces submit no map batch).
+    if (!capturing_ || !capturedAny_ || context_!=wglGetCurrentContext()) return;
     glPushAttrib(GL_ALL_ATTRIB_BITS);
     glReadBuffer(GL_BACK);
     glBindTexture(GL_TEXTURE_2D,map_);glCopyTexSubImage2D(GL_TEXTURE_2D,0,0,0,x_,y_,cropWidth_,cropHeight_);
