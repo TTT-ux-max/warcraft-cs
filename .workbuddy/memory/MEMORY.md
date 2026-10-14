@@ -65,3 +65,12 @@
 - 产物输出目录（`build.ps1 -OutputDirectory`）必须预置 `WarcraftOriginalMss.dll`（原始 Miles）；
   若只有 `Mss32.dll`，那其实是本模组 loader，会被误当原件复制，导致声音代理出错。
   中间产物固定在仓库根 `build/`，与输出目录无关。
+
+## 1.27a 世界空间叠加（血条/标签）
+
+- 1.27a 无 WorldHook，`WorldLabelView` 必须由 `PresentFrame`（swap 锚点）构建，否则血条全灭
+  （`candidates=N submitted=0` 是判定特征）。
+- 世界投影（vfov/aspect/near/far）1.27a 取不到透视钩子：从**全客户区 viewport 的第一个透视
+  glDrawElements 批次**读 `GL_PROJECTION_MATRIX` 解码（n=m[14]/(m[10]-1)、f=m[14]/(m[10]+1)）。
+  实测 1.27a FPS：vfov=41.7 aspect=2.278 near=100 far=10000——引擎自算 aspect ≠ 客户区比例，必须实测。
+- 踩过的宏：`small`/`near`/`far` 都是 windows.h 宏，本地变量别用这些名字。

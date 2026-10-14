@@ -166,6 +166,47 @@ static void APIENTRY PopAttribHook(void) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// World projection capture (swap-anchored builds). The anchored path reads the
+// real perspective matrix inside its projection hook; a build whose projection
+// hook cannot install has no such source, and every world-space overlay would
+// project with stale screen-space guesses. The matrix is not recoverable from
+// projection loads: the engine also submits small 3D viewports (portraits) that
+// load their own. It is recoverable where the world is actually drawn - world
+// batches go through glDrawElements with that very matrix bound and only the
+// full-client viewport pass belongs to the visible world. Decoding it there
+// gives the exact vertical field of view, aspect and clip planes of the frame.
+// ---------------------------------------------------------------------------
+// verticalFov, aspect, near, far of the world projection seen this frame.
+static float frameProjection[4] = {};
+static bool frameProjectionValid = false;
+static void CaptureWorldProjection(const float* matrix, const GLint* viewport) {
+    RECT client = {};
+    if (!windowInput.Window() || !GetClientRect(windowInput.Window(), &client) || client.right <= 0 || client.bottom <= 0) return;
+    if (viewport[0] != 0 || viewport[1] != 0 || viewport[2] != client.right || viewport[3] != client.bottom) return;
+    if (matrix[5] <= 0.0f || matrix[0] <= 0.0f) return;
+    // `near`/`far` are windows.h macros, so the clip planes need local names.
+    float clipNear = matrix[14] / (matrix[10] - 1.0f), clipFar = matrix[14] / (matrix[10] + 1.0f);
+    float verticalFov = 2 * std::atan(1 / matrix[5]) / 0.01745329252f, aspect = matrix[5] / matrix[0];
+    if (!std::isfinite(clipNear) || !std::isfinite(clipFar) || !std::isfinite(verticalFov) || !std::isfinite(aspect)) return;
+    if (clipNear <= 0 || clipFar <= clipNear || aspect <= 0) return;
+    frameProjection[0] = verticalFov; frameProjection[1] = aspect;
+    frameProjection[2] = clipNear; frameProjection[3] = clipFar;
+    frameProjectionValid = true;
+}
+// Publish the projection captured during the frame being presented, then reset so the next
+// frame publishes only what it rendered itself.
+static void ApplyCapturedProjection() {
+    if (!frameProjectionValid) return;
+    healthVerticalFov = frameProjection[0]; healthAspect = frameProjection[1];
+    healthNear = frameProjection[2]; healthFar = frameProjection[3];
+    frameProjectionValid = false;
+    static DWORD capturedLog = 0;
+    if (DiagnosticLog::Due(capturedLog))
+        wc3::Trace("world projection verticalFov=%.1f aspect=%.3f near=%.1f far=%.1f",
+            healthVerticalFov, healthAspect, healthNear, healthFar);
+}
+
 static InputDispatcher input(controller);
 static LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM key, LPARAM data) {
     // Each window forwards to its own native procedure, even while a replacement window is active.
@@ -224,6 +265,25 @@ static void SafeTick(uintptr_t ui) {
         __except (EXCEPTION_EXECUTE_HANDLER) { wc3::LogError("Native view restoration failed; input remains released"); }
     }
 }
+// World-space overlays (health bars, native floating text) are drawn after the world pass from an
+// immutable camera snapshot. Both frame anchors must publish it: without a snapshot the label view
+// stays inactive and every bar is skipped, which is exactly how 1.27a lost all health bars.
+static void UpdateLabelView() {
+    WorldLabelView labelView;labelView.active=healthy && controller.Visible();
+    if (labelView.active) {
+        labelView.eye[0]=wc3::Real(wc3::GetCameraEyePositionX());
+        labelView.eye[1]=wc3::Real(wc3::GetCameraEyePositionY());
+        labelView.eye[2]=wc3::Real(wc3::GetCameraEyePositionZ());
+        labelView.yaw=controller.ViewYaw();labelView.pitch=std::clamp(controller.ViewPitch(),-65.f,65.f);
+        labelView.verticalFov=controller.ViewFov();
+        RECT rect={};if (windowInput.Window() && GetClientRect(windowInput.Window(),&rect) && rect.bottom>0) labelView.aspect=float(rect.right)/rect.bottom;
+        labelView.maximumDistance=controller.Settings().floatingTextDistance;
+    }
+    NativeFloatingText::SetView(labelView);
+    healthBarView=labelView;healthBarView.maximumDistance=controller.Settings().healthBars.distance;
+    // Bars must match the projection the world was actually rendered with, not the requested angle.
+    healthBarView.verticalFov=healthVerticalFov;healthBarView.aspect=healthAspect;
+}
 static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
     DWORD now = GetTickCount();
     lastWorld = now;
@@ -256,19 +316,7 @@ static int __fastcall WorldHook(uintptr_t ui, uintptr_t unused) {
     // Keep layout evaluation running while hiding its final graphics after the world pass.
     nativeUIPhase = false;
     // Presentation adapters consume an immutable camera snapshot after the simulation tick.
-    WorldLabelView labelView;labelView.active=healthy && controller.Visible();
-    if (labelView.active) {
-        labelView.eye[0]=wc3::Real(wc3::GetCameraEyePositionX());
-        labelView.eye[1]=wc3::Real(wc3::GetCameraEyePositionY());
-        labelView.eye[2]=wc3::Real(wc3::GetCameraEyePositionZ());
-        labelView.yaw=controller.ViewYaw();labelView.pitch=std::clamp(controller.ViewPitch(),-65.f,65.f);
-        labelView.verticalFov=controller.ViewFov();
-        RECT rect={};if (windowInput.Window() && GetClientRect(windowInput.Window(),&rect) && rect.bottom>0) labelView.aspect=float(rect.right)/rect.bottom;
-        labelView.maximumDistance=controller.Settings().floatingTextDistance;
-    }
-    NativeFloatingText::SetView(labelView);
-    healthBarView=labelView;healthBarView.maximumDistance=controller.Settings().healthBars.distance;
-    healthBarView.verticalFov=healthVerticalFov;healthBarView.aspect=healthAspect;
+    UpdateLabelView();
     // Suppress only the controlled actor during world drawing; menus, portraits and RTS still render it.
     ActorRenderFilter::Begin(healthy ? controller.ViewActor() : 0);
     int result = originalWorld(ui, unused);
@@ -304,7 +352,18 @@ static int ClassifyUiBatch(GLsizei count, GLenum type, const void* indices) {
     // perspective, so this cheap rejection keeps their pixels untouched.
     float projection[16] = {};
     glGetFloatv(GL_PROJECTION_MATRIX, projection);
-    if (projection[11] != 0.0f || projection[15] != 1.0f) return 0;
+    if (projection[11] != 0.0f || projection[15] != 1.0f) {
+        // Perspective batches are world geometry. Their viewport is where the matrix that
+        // rendered the visible frame can be read from, because the small 3D viewports
+        // (portraits, minimap models) each load a projection of their own. The world
+        // projection is issued once per frame, so the first world batch describes them all.
+        if (!frameProjectionValid) {
+            GLint worldViewport[4] = {};
+            glGetIntegerv(GL_VIEWPORT, worldViewport);
+            CaptureWorldProjection(projection, worldViewport);
+        }
+        return 0;
+    }
     if (!glIsEnabled(GL_VERTEX_ARRAY)) return 0;
     GLint size = 0, stride = 0, vertexType = 0, viewport[4] = {};
     void* vertices = nullptr;
@@ -459,6 +518,10 @@ static void PresentFrame(HDC dc) {
                 minimap.BeginFrame(fallbackUI, client.right, client.bottom,
                     healthy && controller.Visible() && controller.MinimapVisible());
         }
+        // The frame being presented already submitted its world projection; publish it and
+        // rebuild the camera snapshot the world hook owns on anchored builds.
+        ApplyCapturedProjection();
+        UpdateLabelView();
     }
     // Menus, cinematics, faults and F6 release the camera limit even without another world batch.
     cameraFarClip.Update(healthy && controller.Visible());

@@ -161,6 +161,16 @@ Running differently:
   `BeginFrame` started from the frame anchor and `FinishFrame` restoring the captured pixels
   after the overlay pass. The letterbox clear is lazy, so it only runs once a map batch has
   actually been captured.
+- Unit health bars work on 1.27a. They were silently dead there: the camera snapshot that
+  activates world-space overlays (`WorldLabelView`, eye/yaw/pitch/aspect) was built only
+  inside the world-render hook, and the measured vertical field of view, aspect and clip
+  planes came from the projection hook, which 1.27a cannot install. Both are now owned by
+  the swap-anchored path: `UpdateLabelView()` runs from `PresentFrame`, and the world
+  projection is decoded where the world is actually drawn - the first perspective
+  `glDrawElements` batch whose viewport is the full client (portrait viewports load their
+  own matrices) yields the exact `verticalFov/aspect/near/far` via the standard frustum
+  identities `n = m[14]/(m[10]-1)`, `f = m[14]/(m[10]+1)`. Bars therefore sit on the models
+  with correct depth against the frame the engine rendered.
 
 Disabled on 1.27a, each bailing out through its own guard:
 
