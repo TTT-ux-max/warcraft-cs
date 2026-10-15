@@ -61,6 +61,15 @@ INTERNAL_ADDRESSES = {
     # register encoding (1.26a esi, 1.27a edi) and the jz displacement. Flipping the
     # final `-5` operand to -1 leaves the demand bit set, which is the unlock.
     0x62D7F2: (0x5FCF2, "render-demand clear; and eax,-5 at [this+44h] (1.26a: esi / jz +14h, 1.27a: edi / jz +11h)"),
+    # Unit ability lookup and the list-node resolver it calls. Located from GetUnitAbilityLevel
+    # (RVA 0x1E5EF0, already mapped): its body is `push 1;push 1;push 1;push 0;push id;
+    # mov ecx,CUnit*; call <lookup>` with `ret 14h`. The callee dispatches on the id (the same
+    # engine constant 0x414E6275 the 1.26a build uses) and then walks the [unit+1DCh] ability
+    # list with an `and eax,[ecx]; cmp eax,-1` sentinel - structurally the same function the
+    # 1.26a table calls 0x787D0. The {generation,index} validator invoked from inside that walk
+    # with ecx=link is the sibling 1.26a calls at 0x4786B0.
+    0x787D0: (0x46F440, "CUnit ability lookup behind GetUnitAbilityLevel; dispatches id then walks [unit+1DCh]"),
+    0x4786B0: (0x44150, "ability list {generation,index} resolver; called from the ability lookup with ecx=link"),
 }
 
 # Accepted JASS signature letters for each C declaration type. The reference table

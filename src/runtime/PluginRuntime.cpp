@@ -10,6 +10,8 @@
 #include "../platform/UnitHealthBars.hpp"
 #include "../application/ShooterController.hpp"
 #include "../presentation/Overlay.hpp"
+#include "../presentation/GlCanvas.hpp"
+#include "../platform/D3DHooks.hpp"
 #include "../presentation/ReticleDiagnostics.hpp"
 #include "../platform/MapCameraGuard.hpp"
 #include "../platform/ActorRenderFilter.hpp"
@@ -43,6 +45,7 @@
 
 static ShooterController controller;
 static Overlay overlay;
+static GlCanvas glCanvas;
 static NativeFrameRate frameRate;
 static NativeCameraFarClip cameraFarClip;
 static UnitHealthBars healthBars;
@@ -82,7 +85,7 @@ static Interface originalInterface = nullptr;
 static bool interfaceHiddenForFps = false;
 static bool interfaceReassert = false;
 static bool selfInterfaceRequest = false;
-static void SyncInterface(bool visible);
+static void SyncInterface(bool visible, bool allow = false);
 using DrawElements = void (APIENTRY*)(GLenum, GLsizei, GLenum, const void*);
 static DrawElements originalDrawElements = nullptr;
 using Viewport = void (APIENTRY*)(GLint, GLint, GLsizei, GLsizei);
@@ -206,6 +209,28 @@ static void ApplyCapturedProjection() {
         wc3::Trace("world projection verticalFov=%.1f aspect=%.3f near=%.1f far=%.1f",
             healthVerticalFov, healthAspect, healthNear, healthFar);
 }
+// Direct3D form of CaptureWorldProjection: the device reports its own projection transforms, so
+// the world pass is recognised the same way (full-client viewport, perspective shape) and decoded
+// from the left-handed matrix. Our own weapon and preview projections are set inside the present
+// callback, so the overlay pass flag keeps them out.
+static void CaptureD3DProjection(const float* matrix, const int* viewport) {
+    if (overlayPass || frameProjectionValid || !matrix || !viewport) return;
+    RECT client = {};
+    if (!windowInput.Window() || !GetClientRect(windowInput.Window(), &client) || client.right <= 0 || client.bottom <= 0) return;
+    if (viewport[0] != 0 || viewport[1] != 0 || viewport[2] != client.right || viewport[3] != client.bottom) return;
+    // Left-handed perspective only: _34==1, _44==0 and a depth ratio past the near plane.
+    if (matrix[11] != 1.0f || matrix[15] != 0.0f || matrix[10] <= 1.0f) return;
+    if (matrix[0] <= 0.0f || matrix[5] <= 0.0f) return;
+    // `near`/`far` are windows.h macros, so the clip planes need local names.
+    float clipNear = -matrix[14] / matrix[10];
+    float clipFar = clipNear * matrix[10] / (matrix[10] - 1.0f);
+    float verticalFov = 2 * std::atan(1 / matrix[5]) / 0.01745329252f, aspect = matrix[5] / matrix[0];
+    if (!std::isfinite(clipNear) || !std::isfinite(clipFar) || !std::isfinite(verticalFov) || !std::isfinite(aspect)) return;
+    if (clipNear <= 0 || clipFar <= clipNear || aspect <= 0) return;
+    frameProjection[0] = verticalFov; frameProjection[1] = aspect;
+    frameProjection[2] = clipNear; frameProjection[3] = clipFar;
+    frameProjectionValid = true;
+}
 
 static InputDispatcher input(controller);
 static LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM key, LPARAM data) {
@@ -237,7 +262,13 @@ static void ObserveMap(uintptr_t ui) {
 }
 static BOOL WINAPI DeleteContextHook(HGLRC context) {
     BOOL result = originalDeleteContext(context);
-    if (result) {overlay.ContextDeleted(context);minimap.ContextDeleted(context);}
+    if (result) {
+        // The overlay checks the canvas's context identity first; the GL canvas nulls its own
+        // context after forgetting its fonts, so the overlay must run before that forget.
+        overlay.ContextDeleted(context);
+        glCanvas.ContextDeleted(context);
+        minimap.ContextDeleted(context);
+    }
     return result;
 }
 static void __cdecl InterfaceHook(BOOL show, float* duration) {
@@ -547,16 +578,19 @@ static void PresentFrame(HDC dc) {
     // Restore captured minimap pixels before the overlay reads world depth for health bars.
     // FinishFrame no-ops unless a submission captured something this frame.
     minimap.FinishFrame();
-    if (healthy && GetTickCount() - lastWorld < 500) overlay.Draw(dc,controller,minimap,healthBars.Items(),healthBarView,healthNear,healthFar);
+    RECT client = {};
+    if (window) GetClientRect(window, &client);
+    if (healthy && GetTickCount() - lastWorld < 500)
+        overlay.Draw(glCanvas, dc, window, client.right, client.bottom, controller, minimap, healthBars.Items(), healthBarView, healthNear, healthFar);
     // The reticle cannot reach its draw entry while native recovery or stale world frames suppress the overlay.
     else ReticleDiagnostics::Skip(healthy ? "world-frame-stale" : "controller-fault", 0, 0, GetTickCount() - lastWorld);
     overlayPass = false; nativeUIPhase = false;
     // Observe skipped frames too: a valid context alone does not establish an active FPS overlay.
     if (DiagnosticLog::Due(previous)) {
-        RECT client = {}; if (window) GetClientRect(window, &client);
+        RECT diagClient = {}; if (window) GetClientRect(window, &diagClient);
         wc3::Trace("render frames=%u healthy=%d fps=%d worldAgeMs=%lu context=%p focus=%d window=%ldx%ld buying=%d scope=%d anchor=%d",
             frames, healthy, controller.Visible(), GetTickCount() - lastWorld, wglGetCurrentContext(),
-            window == GetForegroundWindow(), client.right, client.bottom, controller.Buying(), controller.Scoped(),
+            window == GetForegroundWindow(), diagClient.right, diagClient.bottom, controller.Buying(), controller.Scoped(),
             PresentAnchorHeld() ? 1 : 0);
         wc3::Trace("gl stats/sec vp=%ld sc=%ld push=%ld pop=%ld lastVp=%d,%d %dx%d lastSc=%d,%d %dx%d",
             glStatVp, glStatSc, glStatPush, glStatPop,
@@ -574,6 +608,48 @@ static BOOL WINAPI SwapLayerHook(HDC dc, UINT planes) {
     BOOL result = ForwardPresent(dc, planes);
     if (!result) wc3::LogError("SwapLayerBuffers failed win32=%lu", GetLastError());
     return result;
+}
+// Direct3D 9 Present is the frame anchor for Direct3D renders. Simulation pacing and the
+// swap-anchored tick mirror PresentFrame; GL-only work (minimap capture, viewport re-assert)
+// has no D3D equivalent. The native console is hidden through the engine's interface call on
+// every build because no GL submission pass exists where 1.26a drops its batches.
+static void D3DPresentFrame(Canvas& canvas, HWND window, int width, int height) {
+    // F8's validated snapshot drives the client cap; gameplay continues to use elapsed real time.
+    frameRate.Configure(controller.Settings().render.maxFPS);
+    frameRate.Pace();
+    static DWORD previous = 0;
+    static unsigned frames = 0;
+    ++frames;
+    ObserveMap(CurrentUI());
+    // Builds with no verified world-render entry point (1.27a) advance the controller from the
+    // present anchor; WorldHook owns that tick otherwise, so this path stays exclusive.
+    if (!originalWorld) {
+        lastWorld = GetTickCount();
+        if (healthy) {
+            uintptr_t fallbackUI = CurrentUI();
+            if (fallbackUI) SafeTick(fallbackUI);
+        }
+        ApplyCapturedProjection();
+        UpdateLabelView();
+    }
+    cameraFarClip.Update(healthy && controller.Visible());
+    SyncInterface(healthy, true);
+    if (windowInput.Observe(window)) {
+        controller.AttachWindow(window);
+        overlay.RefreshAfterFocus();
+    }
+    overlayPass = true;
+    if (healthy && GetTickCount() - lastWorld < 500)
+        overlay.Draw(canvas, nullptr, window, width, height, controller, minimap, healthBars.Items(), healthBarView, healthNear, healthFar);
+    else ReticleDiagnostics::Skip(healthy ? "world-frame-stale" : "controller-fault", width, height, GetTickCount() - lastWorld);
+    overlayPass = false; nativeUIPhase = false;
+    if (DiagnosticLog::Due(previous)) {
+        wc3::Trace("d3d frames=%u healthy=%d fps=%d worldAgeMs=%lu backend=%s focus=%d window=%ldx%ld buying=%d scope=%d anchor=%d",
+            frames, healthy, controller.Visible(), GetTickCount() - lastWorld, canvas.Name(),
+            window == GetForegroundWindow(), long(width), long(height), controller.Buying(), controller.Scoped(),
+            PresentAnchorHeld() ? 1 : 0);
+        frames = 0;
+    }
 }
 static bool Hook(void* target, void* callback, void** original) {
     MH_STATUS create = MH_CreateHook(target, callback, original);
@@ -597,9 +673,11 @@ static bool PresentAnchorHeld() {
 // The 1.26a path drops native console batches at GL submission, which needs the world-render or
 // UI-draw entry point. A build that has neither cannot mark the UI pass, so the live FPS view
 // asks the engine itself to hide the console - the same call cinematics use - and restores it
-// when the view ends. Only the visibility this runtime set for its own HUD is claimed.
-static void SyncInterface(bool visible) {
-    if (originalWorld || !wc3::ShowInterface) return;
+// when the view ends. Direct3D renders have no GL submission pass at all, so their frames hide
+// the console through this same call on every build (allow=true). Only the visibility this
+// runtime set for its own HUD is claimed.
+static void SyncInterface(bool visible, bool allow) {
+    if ((!allow && originalWorld) || !wc3::ShowInterface) return;
     bool hidden = visible && controller.Visible();
     // A re-assert repeats the hide even though the requested state did not change.
     if (hidden == interfaceHiddenForFps && !(hidden && interfaceReassert)) return;
@@ -751,6 +829,12 @@ static DWORD WINAPI Initialize(void*) {
     } else {
         wc3::LogError("present import wglSwapLayerBuffers not found; frame anchor unavailable");
     }
+    // Route the HUD into Direct3D 9 when the game renders through D3D. The hook stays inert
+    // under the OpenGL renderer; when the game uses D3D, its device Present becomes the frame
+    // anchor above (D3DPresentFrame) and the GL present import simply never fires.
+    D3DHooks::Install([](Canvas& canvas, HWND window, int width, int height) {
+        D3DPresentFrame(canvas, window, width, height);
+    }, CaptureD3DProjection);
     wc3::Log("WarcraftCS initialized. Offline only. Select an owned unit and press F6.");
     return 0;
 }

@@ -52,11 +52,34 @@
 - 同一批提交顺带喂原生小地图：`PresentFrame` 在 `!originalWorld` 时 `minimap.BeginFrame`，
   `FinishFrame` 无条件调用；letterbox 清屏惰性化（`capturedAny_/cleared_`），否则左侧留黑块。
 - **顶部资源栏**（资源数字/菜单/昼夜图标， deepest 底边 top-64px，部分四边形向上越出屏）：
-  正交 && x 在屏内 && `minY >= top-76 && maxY <= top+16` 即判定为顶栏。**必须用零面积 scissor
-  裁剪（照常调用原始链），不能跳过调用**——客户端 `ijl15.dll`（WarcraftHelper 宽屏）改写这些
-  批次，调用消失会使其失步 → 驱动读野指针 FATAL（~0x698x = GL ICD）。底部条带跳过是安全的。
-  实现见 `ClassifyUiBatch()`（0=保留 1=条带 2=顶栏）。
+  正交 && x 在屏内 && `minY >= top-bandDown && maxY <= top+bandUp` 即判定为顶栏。
+  **带高必须按帧高比例**（`bandDown=top*76/593`、`bandUp=top*16/593`），不能写死像素：
+  1064x593 窗宽标定的 76/16 在 1440x900 全屏会漏（比例 900/593，实测最深 73→111px）。
+  **必须用零面积 scissor 裁剪（照常调用原始链），不能跳过调用**——客户端 `ijl15.dll`
+  （WarcraftHelper 宽屏）改写这些批次，调用消失会使其失步 → 驱动读野指针 FATAL（~0x698x = GL ICD）。
+  底部条带跳过是安全的。实现见 `ClassifyUiBatch()`（0=保留 1=条带 2=顶栏）。
 - 1.26a 不受影响（`nativeUIPhase` 路径优先，几何判定只在 `!originalWorld` 生效）。
+
+## 1.27a 原生技能表（施法）
+
+- 1.27a 长期 `Native spell ability lookup verified=0` ⇒ `NativeSpellSlots::Order()` 恒返回 0
+  ⇒ 所有施法都报 "PASSIVE OR UNSUPPORTED SPELL"（**技能完全放不出来**）。已修。
+- 映射（**由结构推导，不是字节匹配**）：
+  - `0x787D0 → 0x46F440`：CUnit 能力查找。锚点是已映射的 `GetUnitAbilityLevel`(RVA `0x1E5EF0`)，
+    它内部 `push 1;push 1;push 1;push 0;push id; mov ecx,CUnit*; call 0x46F440`，`ret 14h`；
+    函数先按 id 分派（引擎常量 `0x414E6275`），再遍历 `[unit+0x1DC]` 链表（`and eax,[ecx]; cmp eax,-1` 哨兵）。
+  - `0x4786B0 → 0x44150`：链表 `{generation,index}` 生成解析器（`ecx=link`，返回节点），同函数内被调用。
+- **对象布局在 1.27a 未变**：id@+0x34、data@+0x54、link@+0x24、订单获取器仍在**虚表 +0x308**
+  （417 个 `mov eax,<852xxx>; ret` 桩，332 个技能虚表，313 个在 +0x308 命中）。
+  既有 `[table+0x308]` 读取无需改动；范围检查 `[base+0x880000, base+0xA80000)` 也恰好覆盖
+  1.27a 技能虚表（RVA `0x99A7F4..0xA49618`）。
+- **只有校验签名要按版本分叉**（1.26a 无帧指针；1.27a `55 8B EC 56 8B 75 08 81 FE 75 62 4E 41`），
+  已在 `NativeSpellSlots::Configure()` 里按 `wc3::ActiveBuild()` 选择。
+- 未映射：`0x32C8E0`（技能定义 UI），仅影响从 SLK 补图标的展现层，失败即 false，无害。
+- 复原工具（`.local/`，未入库）：`pe127.py`（PE/RTTI/虚表/桩扫描）、`find_order_slot.py`（定位订单获取器槽位）、
+  `disasm.py`（从 `game127.disasm.utf8.txt` 取函数体）、`spelltest.ps1`（真机按键施法烟测）。
+- 排查坑：bandtest 的 F6 重试循环会把 FPS 开/关多次，按键必须在最后一次 `FPS enabled` 之后；
+  且它开测前会删日志，别拿旧日志比对。
 
 ## 约定
 

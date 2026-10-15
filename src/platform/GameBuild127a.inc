@@ -6,6 +6,7 @@
 // the owning feature stand down rather than call an unverified address.
 
 // --- Engine internals called directly by the runtime ---
+BUILD_ADDRESS(0x787D0, 0x46F440)  // CUnit ability lookup behind GetUnitAbilityLevel; dispatches id then walks [unit+1DCh]
 BUILD_ADDRESS(0x2F5ED0, 0x34DA20)  // camera getter; byte-identical `mov eax,[ecx+254h]; ret`
 BUILD_ADDRESS(0x300710, 0x34F3A0)  // UI accessor GetUI(index,serial); call sites use (0,0) and (1,0)
 BUILD_ADDRESS(0x390590, 0x36D620)  // world sky setter; touches [this+354h], SetSkyModel passes [ui+3BCh]
@@ -24,6 +25,7 @@ BUILD_ADDRESS(0x3CD930, 0x1DADC0)  // CameraSetupApplyWithZ
 BUILD_ADDRESS(0x3CD960, 0x1DAD60)  // CameraSetupApplyForceDuration
 BUILD_ADDRESS(0x3CD990, 0x1DAD90)  // CameraSetupApplyForceDurationWithZ
 BUILD_ADDRESS(0x430C80, 0x2651D0)  // object to JASS handle; CreateUnit/CreateItem/CreateDestructable/FirstOfGroup
+BUILD_ADDRESS(0x4786B0, 0x44150)  // ability list {generation,index} resolver; called from the ability lookup with ecx=link
 BUILD_ADDRESS(0x4C4630, 0x516F0)  // CString getter; byte-identical `mov eax,[ecx+8]` node walk
 BUILD_ADDRESS(0x62D7F2, 0x5FCF2)  // render-demand clear; and eax,-5 at [this+44h] (1.26a: esi / jz +14h, 1.27a: edi / jz +11h)
 

@@ -1,4 +1,5 @@
 #include "GunMesh.hpp"
+#include "Canvas.hpp"
 #include "../platform/WarcraftApi.hpp"
 #include <algorithm>
 #include <cmath>
@@ -9,8 +10,8 @@ template<class T> static void Read(std::ifstream& file, T& value) {
     file.read(reinterpret_cast<char*>(&value), sizeof(value));
     if (!file) throw std::runtime_error("truncated mesh cache");
 }
-bool GunMesh::Load(const std::string& path) {
-    Reset(true);
+bool GunMesh::Load(const std::string& path, Canvas& canvas) {
+    Reset(true, &canvas);
     // Generated cache counts are bounded before allocation or GPU upload.
     try {
         std::ifstream file(path, std::ios::binary);
@@ -25,22 +26,9 @@ bool GunMesh::Load(const std::string& path) {
             std::vector<unsigned char> pixels(width * height * 4);
             file.read(reinterpret_cast<char*>(pixels.data()), pixels.size());
             if (!file) throw std::runtime_error("truncated skin");
-            GLuint texture; glGenTextures(1, &texture); glBindTexture(GL_TEXTURE_2D, texture);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            // Skins are UV atlases; clamp the edges to avoid sampling the opposite atlas border.
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, 0x812F);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, 0x812F);
-            // Retail RGBA data is tightly packed; Warcraft's pixel upload stride must not leak in.
-            glPushClientAttrib(GL_CLIENT_PIXEL_STORE_BIT);
-            glPixelStorei(GL_UNPACK_ALIGNMENT, 1); glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-            glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0); glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
-            glPopClientAttrib();
-            // Mipmaps reduce shimmering on small slide/hand details without replacing the original skins.
-            using GenerateMipmap = void (APIENTRY*)(GLenum);
-            auto generateMipmap = reinterpret_cast<GenerateMipmap>(wglGetProcAddress("glGenerateMipmap"));
-            if (generateMipmap) { generateMipmap(GL_TEXTURE_2D); glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); }
+            // The canvas owns GPU upload, filtering and the backend-specific handle type.
+            uintptr_t texture = canvas.CreateTexture(pixels.data(), int(width), int(height));
+            if (!texture) throw std::runtime_error("skin upload failed");
             textures_.push_back(texture);
         }
         for (unsigned i = 0; i < meshes; ++i) {
@@ -64,17 +52,18 @@ bool GunMesh::Load(const std::string& path) {
         return true;
     } catch (const std::exception& e) { wc3::Log("viewmodel failed: %s", e.what()); return false; }
 }
-void GunMesh::Reset(bool deleteTextures) {
+void GunMesh::Reset(bool deleteTextures, Canvas* canvas) {
     // Deleted contexts own no valid names; never delete recycled names from a new context.
-    if (deleteTextures && !textures_.empty()) glDeleteTextures(GLsizei(textures_.size()), textures_.data());
+    if (deleteTextures && canvas)
+        for (uintptr_t texture : textures_) if (texture) canvas->DestroyTexture(texture);
     textures_.clear(); meshes_.clear(); sequences_.clear(); boneCount_ = 0;
 }
-bool GunMesh::TexturesValid() const {
-    // A focus change alone does not invalidate textures in a surviving OpenGL context.
+bool GunMesh::TexturesValid(Canvas& canvas) const {
+    // A focus change alone does not invalidate textures in a surviving context/device.
     return !textures_.empty() && std::all_of(textures_.begin(), textures_.end(),
-        [](GLuint texture) { return glIsTexture(texture)==GL_TRUE; });
+        [&](uintptr_t texture) { return canvas.TextureValid(texture); });
 }
-void GunMesh::Draw(const char* animation, float seconds) {
+void GunMesh::Draw(const char* animation, float seconds, Canvas& canvas) {
     if (sequences_.empty()) return;
     const Sequence* sequence = &sequences_.front();
     for (const auto& item : sequences_) if (item.name == animation) { sequence = &item; break; }
@@ -92,22 +81,24 @@ void GunMesh::Draw(const char* animation, float seconds) {
         float a = sequence->bones[f0 * bones.size() + i], b = sequence->bones[f1 * bones.size() + i];
         bones[i] = a + (b - a) * weight;
     }
-    glEnable(GL_TEXTURE_2D); glColor4f(1, 1, 1, 1);
+    std::vector<float> xyzuv;
     for (const auto& mesh : meshes_) {
-        glBindTexture(GL_TEXTURE_2D, textures_[mesh.texture]); glBegin(GL_TRIANGLES);
+        if (mesh.texture >= textures_.size() || !textures_[mesh.texture]) continue;
+        xyzuv.clear(); xyzuv.reserve(mesh.vertices.size() * 5);
         for (const auto& v : mesh.vertices) {
             const float* m = &bones[v.bone * 12];
             float x = m[0] * v.x + m[1] * v.y + m[2] * v.z + m[3];
             float y = m[4] * v.x + m[5] * v.y + m[6] * v.z + m[7];
             float z = m[8] * v.x + m[9] * v.y + m[10] * v.z + m[11];
             // CS viewmodels store the left-hand pose; mirror it for the default right-hand view.
-            glTexCoord2f(v.u, v.v); glVertex3f(y, z, -x);
+            // Vertices stay in the OpenGL camera convention; D3D backends mirror z themselves.
+            xyzuv.push_back(y); xyzuv.push_back(z); xyzuv.push_back(-x); xyzuv.push_back(v.u); xyzuv.push_back(v.v);
         }
-        glEnd();
+        canvas.TexturedTriangles(textures_[mesh.texture], xyzuv.data(), int(xyzuv.size() / 5), 1, 1, 1, 1);
     }
 }
 
-void GunMesh::DrawPreview(float x,float y,float width,float height) {
+void GunMesh::DrawPreview(float x,float y,float width,float height,Canvas& canvas) {
     if (sequences_.empty() || meshes_.empty()) return;
     // Freeze the original unsilenced idle pose, then fit its actual geometry rather than fixed weapon offsets.
     const Sequence* pose=&sequences_.front();
@@ -130,18 +121,17 @@ void GunMesh::DrawPreview(float x,float y,float width,float height) {
         geometry.push_back(std::move(vertices));
     }
     float scale=std::min(width/std::max(1.0f,maximum[0]-minimum[0]),height/std::max(1.0f,maximum[2]-minimum[2]))*.86f;
-    glPushAttrib(GL_ENABLE_BIT|GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT|GL_TEXTURE_BIT|GL_CURRENT_BIT);
-    glEnable(GL_TEXTURE_2D);glEnable(GL_DEPTH_TEST);glDepthFunc(GL_LEQUAL);glDepthMask(GL_TRUE);
-    glDepthRange(0,1);glClearDepth(1);glClear(GL_DEPTH_BUFFER_BIT);glColor4f(1,1,1,1);
+    std::vector<float> xyzuv;
     for (size_t i=0;i<meshes_.size();++i) {
-        glBindTexture(GL_TEXTURE_2D,textures_[meshes_[i].texture]);glBegin(GL_TRIANGLES);
+        if (meshes_[i].texture >= textures_.size() || !textures_[meshes_[i].texture]) continue;
+        xyzuv.clear(); xyzuv.reserve(geometry[i].size() * 5);
         for (const auto& vertex : geometry[i]) {
-            glTexCoord2f(vertex.u,vertex.v);
-            glVertex3f(x+width*.5f+(vertex.x-(maximum[0]+minimum[0])*.5f)*scale,
-                y+height*.5f-(vertex.z-(maximum[2]+minimum[2])*.5f)*scale,
-                (vertex.y-(maximum[1]+minimum[1])*.5f)/std::max(1.0f,maximum[1]-minimum[1]));
+            // Screen-space placement with the [0,1] depth fraction used by the preview's own faces.
+            xyzuv.push_back(x+width*.5f+(vertex.x-(maximum[0]+minimum[0])*.5f)*scale);
+            xyzuv.push_back(y+height*.5f-(vertex.z-(maximum[2]+minimum[2])*.5f)*scale);
+            xyzuv.push_back((vertex.y-(maximum[1]+minimum[1])*.5f)/std::max(1.0f,maximum[1]-minimum[1]));
+            xyzuv.push_back(vertex.u); xyzuv.push_back(vertex.v);
         }
-        glEnd();
+        canvas.PreviewTriangles(textures_[meshes_[i].texture], xyzuv.data(), int(xyzuv.size() / 5), 1, 1, 1, 1);
     }
-    glPopAttrib();
 }

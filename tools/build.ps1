@@ -24,7 +24,7 @@ $hookRoot=Join-Path $MinHookDirectory 'include'
 # Share model decoding while keeping unit and destructable geometry separate from the controller.
 # Actor mesh filtering owns rendering only, independent of the unit's simulation visibility.
 # Relative Windows input is separate from look-angle math, physical movement and native camera ownership.
-$sources = @('platform/GameBuild.cpp', 'platform/WarcraftApi.cpp', 'input/MouseLook.cpp', 'movement/MovementPhysics.cpp', 'platform/WarcraftCollision.cpp', 'presentation/FirstPersonCamera.cpp', 'platform/MapCameraGuard.cpp', 'platform/ActorRenderFilter.cpp', 'audio/GameAudio.cpp', 'presentation/FullscreenView.cpp', 'presentation/HitFeedback.cpp', 'presentation/ScopeView.cpp', 'combat/UnitStatus.cpp', 'geometry/ModelBounds.cpp', 'platform/SpriteTransform.cpp', 'combat/UnitHitboxes.cpp', 'combat/DestructableHitboxes.cpp', 'combat/PlantedBomb.cpp', 'combat/WeaponRecoil.cpp', 'application/ShooterController.cpp', 'presentation/GunMesh.cpp', 'presentation/Overlay.cpp', 'runtime/PluginRuntime.cpp', 'Plugin.cpp', 'input/InputDispatcher.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
+$sources = @('platform/GameBuild.cpp', 'platform/WarcraftApi.cpp', 'input/MouseLook.cpp', 'movement/MovementPhysics.cpp', 'platform/WarcraftCollision.cpp', 'presentation/FirstPersonCamera.cpp', 'platform/MapCameraGuard.cpp', 'platform/ActorRenderFilter.cpp', 'audio/GameAudio.cpp', 'presentation/FullscreenView.cpp', 'presentation/HitFeedback.cpp', 'presentation/ScopeView.cpp', 'combat/UnitStatus.cpp', 'geometry/ModelBounds.cpp', 'platform/SpriteTransform.cpp', 'combat/UnitHitboxes.cpp', 'combat/DestructableHitboxes.cpp', 'combat/PlantedBomb.cpp', 'combat/WeaponRecoil.cpp', 'application/ShooterController.cpp', 'presentation/GunMesh.cpp', 'presentation/Overlay.cpp', 'presentation/GlCanvas.cpp', 'runtime/PluginRuntime.cpp', 'Plugin.cpp', 'input/InputDispatcher.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
 # Native spell fixtures are opt-in and are excluded from the installed normal build.
 # Item pickup and temporary native squad policies remain independent of shooter input/rendering.
 $sources += @('config/GameplaySettings.cpp','inventory/ItemPickup.cpp','squad/SquadController.cpp','platform/FpsCombatGuard.cpp') | ForEach-Object { '"' + (Join-Path $modRoot "src/$_") + '"' }
@@ -40,6 +40,8 @@ $sources += '"' + (Join-Path $modRoot 'src/presentation/ReticleView.cpp') + '"'
 $sources += '"' + (Join-Path $modRoot 'src/presentation/ReticleDiagnostics.cpp') + '"'
 # Thread-safe bounded diagnostics are a native platform adapter, not controller/file ownership.
 $sources += '"' + (Join-Path $modRoot 'src/platform/DiagnosticLog.cpp') + '"'
+# Direct3D 9 present hooks route the same HUD through a D3D canvas when the game renders via D3D.
+$sources += '"' + (Join-Path $modRoot 'src/platform/D3DHooks.cpp') + '"'
 
 # World obstacle adapters supply movement with height-aware volumes from the active map's own models.
 # The native fog adapter owns FPS visibility overrides and restores the map when FPS ends.
@@ -138,7 +140,7 @@ $hookCommands=@('@echo off','chcp 65001 >nul',('call "'+$compilerEnvironment+'" 
 Push-Location $hookBuild
 # The working directory owns this fixed filename, avoiding cmd parsing of user-chosen path characters.
 try { & $env:COMSPEC /d /c compile.cmd; if ($LASTEXITCODE) { throw 'MinHook x86 build failed.' } } finally { Pop-Location }
-$compileCommand = 'cl /nologo /LD /MT /std:c++17 /EHsc /W4 /O2 /DWIN32_LEAN_AND_MEAN /DNOMINMAX /FI"' + $metadata + '"' + $testDefine + ' /I"' + $hookRoot + '" ' + ($sources -join ' ') + ' /link /OUT:"' + (Join-Path $OutputDirectory 'WarcraftCS.mix') + '" "' + $hookLibrary + '" user32.lib gdi32.lib opengl32.lib version.lib winmm.lib ole32.lib windowscodecs.lib'
+$compileCommand = 'cl /nologo /LD /MT /std:c++17 /EHsc /W4 /O2 /DWIN32_LEAN_AND_MEAN /DNOMINMAX /FI"' + $metadata + '"' + $testDefine + ' /I"' + $hookRoot + '" ' + ($sources -join ' ') + ' /link /OUT:"' + (Join-Path $OutputDirectory 'WarcraftCS.mix') + '" "' + $hookLibrary + '" user32.lib gdi32.lib opengl32.lib version.lib winmm.lib ole32.lib d3d9.lib windowscodecs.lib'
 # A saved batch file avoids nested cmd/PowerShell quoting around Visual Studio paths.
 $buildScript = Join-Path $buildDirectory 'compile.cmd'
 $loaderCommand = 'cl /nologo /LD /MT /O2 /W4 /DWIN32_LEAN_AND_MEAN "' + (Join-Path $modRoot 'src/runtime/MilesLoader.cpp') + '" "' + [System.IO.Path]::ChangeExtension($exports, '.cpp') + '" /link /DEF:"' + $exports + '" /OUT:"' + (Join-Path $OutputDirectory 'Mss32.dll') + '"'

@@ -19,9 +19,16 @@ template<class T> bool Read(uintptr_t at,T& result) {
 void NativeSpellSlots::Configure(uintptr_t base) {
     base_=base;
     // Same lookup used by GetUnitAbilityLevel; fail closed on an unsupported native implementation.
-    const unsigned char signature[]={0x8B,0x44,0x24,0x04,0x3D,0x75,0x62,0x4E,0x41};
-    verified_=!memcmp(reinterpret_cast<void*>(base+wc3::Rva(0x787D0)),signature,sizeof(signature));
-    wc3::Log("Native spell ability lookup verified=%d",verified_);
+    // The two builds only differ in the prologue (1.27a keeps a frame pointer), so the check is
+    // chosen by the running build instead of pinning one build's bytes on the other.
+    const unsigned char signature126a[]={0x8B,0x44,0x24,0x04,0x3D,0x75,0x62,0x4E,0x41};
+    const unsigned char signature127a[]={0x55,0x8B,0xEC,0x56,0x8B,0x75,0x08,0x81,0xFE,0x75,0x62,0x4E,0x41};
+    const unsigned char* signature=signature126a;
+    size_t length=sizeof(signature126a);
+    if(wc3::ActiveBuild()==wc3::GameBuildKind::Classic127a) { signature=signature127a;length=sizeof(signature127a); }
+    uintptr_t lookup=wc3::Rva(0x787D0);
+    verified_=lookup && !memcmp(reinterpret_cast<void*>(base+lookup),signature,length);
+    wc3::Log("Native spell ability lookup verified=%d build=%s rva=%08X",verified_,wc3::ActiveBuildName(),lookup);
 }
 std::array<int,4> NativeSpellSlots::Resolve(wc3::Handle unit) {
     if(!loaded_) {
