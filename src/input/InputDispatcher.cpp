@@ -18,6 +18,12 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
 #endif
     const auto& bindings=controller_.Settings().shortcuts;
     auto match=[&](ShortcutAction action) {return bindings.Matches(action,int(key));};
+    // FPS has no use for the system cursor: aiming and firing happen at the center reticle, and
+    // the arrow pinned there only drifts away with every physical motion between the per-frame
+    // recentering, which reads as "the pointer and the click disagree". Hide it while the world
+    // view owns the mouse; the buy menu needs a visible selector again.
+    if(message==WM_SETCURSOR && healthy && controller_.Visible() && !controller_.Buying() &&
+        LOWORD(data)==HTCLIENT) { SetCursor(nullptr); return TRUE; }
     bool down=message==WM_KEYDOWN || message==WM_SYSKEYDOWN;
     bool up=message==WM_KEYUP || message==WM_SYSKEYUP;
     bool tap=down && !(data&(1L<<30));
@@ -77,7 +83,11 @@ std::optional<LRESULT> InputDispatcher::Handle(HWND window,UINT message,WPARAM k
         // Native HUD stays visible for portraits, but unused keyboard input must not issue RTS orders in FPS.
         return 0;
     }
+    // Mouse motion is not swallowed: the game draws its own cursor sprite from the position it
+    // tracks through window messages, so dropping these packets froze the sprite wherever it was
+    // when FPS began, far from the pinned center where aiming and firing actually happen. The
+    // caller rewrites the packet to the client center before this dispatcher sees it.
     if(message==WM_CHAR || message==WM_SYSCHAR || message==WM_LBUTTONDOWN || message==WM_LBUTTONUP ||
-        message==WM_RBUTTONDOWN || message==WM_RBUTTONUP || message==WM_MOUSEMOVE)return 0;
+        message==WM_RBUTTONDOWN || message==WM_RBUTTONUP)return 0;
     return std::nullopt;
 }

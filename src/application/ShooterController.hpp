@@ -40,7 +40,9 @@ public:
     void MouseInput(LPARAM packet,bool accept) { mouseLook_.Input(packet,accept); }
     void ResetMouse() { mouseLook_.Reset(); weaponWheel_.Reset(); }
     void RequestWeaponWheel(int delta) { weaponWheel_.Add(delta); }
-    void RequestToggle() { toggleRequested_ = true; }
+    // A press landing inside the first seconds of a map (menu gates still own the screen) is
+    // kept alive for a short window instead of dropped; every fresh press restarts it.
+    void RequestToggle() { toggleRequested_ = true; toggleQueuedAt_ = 0; toggleRetryAt_ = 0; }
     void RequestMenu() { menuRequested_ = true; }
     void RequestRefill() { refillRequested_ = true; }
     // F9 grants all slots through the same game-thread mailbox as F7.
@@ -177,6 +179,8 @@ private:
     bool ownCameraRequest_ = false;
     int scopeLevel_ = 0;
     bool toggleRequested_ = false, menuRequested_ = false, refillRequested_ = false, allWeaponsRequested_=false;
+    DWORD toggleQueuedAt_ = 0;  // when the queued toggle press arrived, 0 = none queued
+    DWORD toggleRetryAt_ = 0;   // last paced retry of a queued press without an owned unit
     bool itemRequested_=false,settingsRequested_=false,itemNearby_=false;
     bool speedToggleRequested_=false,showSpeed_=false;
     bool minimapToggleRequested_=false,showMinimap_=true;

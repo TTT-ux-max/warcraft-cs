@@ -188,7 +188,7 @@ void ShooterController::ResetMap() {
     buyMenu_.Close();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;
     fixtureGate_ = 0;
     unit_ = 0; active_ = false; suspended_ = false; paused_ = false; ui_ = 0; tick_ = {};
-    scopeLevel_ = 0; cinematicRequested_ = false; toggleRequested_ = false; ownCameraRequest_ = false;
+    scopeLevel_ = 0; cinematicRequested_ = false; toggleRequested_ = false; toggleQueuedAt_ = 0; toggleRetryAt_ = 0; ownCameraRequest_ = false;
     status_ = {}; meleeContact_ = meleeReady_ = 0; recoil_.Reset();
     std::fill(std::begin(keys_), std::end(keys_), false); lastShot_ = 0;
     audio_.Stop(); stepDistance_ = 0; reloadEnd_ = 0;
@@ -607,11 +607,39 @@ void ShooterController::Tick(uintptr_t ui) {
     // Window messages retain short key taps that async polling can miss between frames.
     if (toggleRequested_) {
         // A deliberate F6 can enter custom maps whose scripts keep the standard HUD hidden.
+        // The first seconds of a map still hold the menu gates (loading fade, intro camera)
+        // and custom maps like DotA have not placed the player's hero yet; a press landing
+        // there is queued for a short window instead of dropped, so one press suffices once
+        // the game responds. RequestToggle restarts the window per press.
         if (!active_ && !paused_ && !*reinterpret_cast<int*>(ui + 0x258) && !*reinterpret_cast<int*>(ui + 0x260)) {
-            cinematicRequested_ = false; suspended_ = false; Toggle();
-        } else if (active_) Toggle();
+            cinematicRequested_ = false; suspended_ = false;
+            if (!toggleRetryAt_ || GetTickCount() - toggleRetryAt_ >= 500) {
+                toggleRetryAt_ = GetTickCount();
+                Toggle();
+                // No owned unit yet (the map spawns it later): keep the press alive, paced,
+                // until Toggle succeeds; anything else is a real refusal and must not retry.
+                if (!active_ && unit_ == 0 && wc3::SinglePlayer()) toggleRequested_ = true;
+                else { toggleRequested_ = false; toggleQueuedAt_ = 0; }
+            }
+        } else if (active_) {
+            Toggle();
+            toggleRequested_ = false; toggleQueuedAt_ = 0;
+        } else if (toggleQueuedAt_ && GetTickCount() - toggleQueuedAt_ >= 10000) {
+            // The window exists so a too-early press still fires, but must not leak across
+            // a menu exit into whichever map loads next.
+            wc3::Trace("FPS toggle expired: paused=%d gate258=%d gate260=%d",
+                paused_ ? 1 : 0, *reinterpret_cast<int*>(ui + 0x258), *reinterpret_cast<int*>(ui + 0x260));
+            toggleRequested_ = false; toggleQueuedAt_ = 0;
+        } else {
+            static DWORD lastQueuedTrace = 0;
+            DWORD nowMs = GetTickCount();
+            if (nowMs - lastQueuedTrace >= 1000) {
+                lastQueuedTrace = nowMs;
+                wc3::Trace("FPS toggle queued: paused=%d gate258=%d gate260=%d",
+                    paused_ ? 1 : 0, *reinterpret_cast<int*>(ui + 0x258), *reinterpret_cast<int*>(ui + 0x260));
+            }
+        }
     }
-    toggleRequested_ = false;
     // Menus/cinematics return ownership to the map; live FPS may temporarily fill a missing native sky.
     nativeSky_.Update(ui_,Visible() && settings_.nativeSky && !settings_.csSky,mapTileset_);
     nativeFog_.Update(Visible() && fogOfWarDisabled_);

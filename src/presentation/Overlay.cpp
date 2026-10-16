@@ -28,6 +28,12 @@ void Overlay::ContextDeleted(HGLRC context) {
 void Overlay::Draw(Canvas& canvas, HDC dc, HWND window, int width, int height,
     const ShooterController& controller, NativeMinimap& minimap, const std::vector<UnitHealthBar>& bars,
     const WorldLabelView& barView, float nearPlane, float farPlane) {
+    // Diagnosis escape hatch: WCS_SKIP_STAGES is a bitmask (1 bars, 2 weapon, 4 reticle,
+    // 8 status+hints, 16 spell icons) that silently drops those draws for backend bisection.
+    static unsigned skipStages = [] {
+        char buffer[8] = {};
+        return GetEnvironmentVariableA("WCS_SKIP_STAGES", buffer, sizeof(buffer)) ? unsigned(atoi(buffer)) : 0u;
+    }();
     // Explain early returns as well as submitted geometry when investigating a missing aiming mark.
     if (!controller.Visible()) { ReticleDiagnostics::Skip("fps-inactive"); return; }
     if (canvas_ != &canvas) {
@@ -57,12 +63,13 @@ void Overlay::Draw(Canvas& canvas, HDC dc, HWND window, int width, int height,
         sky_.Draw(canvas, root_, controller.SkyName(), controller.ViewYaw(), controller.ViewPitch(), controller.ViewFov(), float(width) / height);
     // World depth still exists here; the first-person weapon clears it in the next pass.
     unsigned barCount = 0;
-    if (!controller.Status().contained && !controller.Status().hidden && !controller.Buying())
+    if (!(skipStages & 1u) && !controller.Status().contained && !controller.Status().hidden && !controller.Buying())
         barCount = HealthBarRenderer::Draw(canvas, bars, barView, width, height, nearPlane, farPlane);
     int index = controller.WeaponIndex();
     // Slightly tighten USP/AWP framing while preserving the original lower-edge arm origins.
     static constexpr float projectionScales[] = {0.72f, 0.78f, 0.94f, 0.73f, 1.0f, 0.95f, 0.85f};
     canvas.BeginWeapon(width, height, projectionScales[index], 1.0f, 200.0f);
+    if (!(skipStages & 2u)) {
     if (!attempted_[index]) {
         attempted_[index] = true;
         static const char* names[] = {"ak47", "m4a1", "usp", "awp", "knife", "c4", "sword"};
@@ -71,6 +78,7 @@ void Overlay::Draw(Canvas& canvas, HDC dc, HWND window, int width, int height,
     if (loaded_[index] && !controller.Status().contained && !controller.Status().hidden && !controller.Scoped() && (index != WeaponSlots::C4 || controller.Ammo() > 0))
         // Give the weapon its own depth pass: back faces must not paint over the skin.
         guns_[index].Draw(controller.Animation(), controller.AnimationTime(), canvas);
+    }
     canvas.EndWeapon();
     // A swallowed/transported unit has no world viewpoint: hide equipment and retain the health/status HUD.
     bool unavailableView = controller.Status().contained || controller.Status().hidden;
@@ -82,9 +90,10 @@ void Overlay::Draw(Canvas& canvas, HDC dc, HWND window, int width, int height,
             20, 1, .8f, .2f, 1);
     }
     else if (controller.Scoped()) ScopeView::Draw(canvas, float(width), float(height));
-    else ReticleView::DrawHipFire(canvas, float(width), float(height), controller.Recoil());
+    else if (!(skipStages & 4u)) ReticleView::DrawHipFire(canvas, float(width), float(height), controller.Recoil());
     // Scale the bottom HUD from a readable 42-pixel font at 1080p, with safe edge padding.
     int statusSize = std::clamp(int(std::lround(height * (42.0f / 1080.0f))), 26, 84);
+    if (!(skipStages & 8u)) {
     controller.Hits().Draw(canvas, float(width), float(height));
     char status[160]; sprintf_s(status, "HP %.0f   %s   %d / %d   GOLD %d", controller.Health(),
         ShooterController::weapons[index].name, controller.Ammo(), controller.Reserve(), controller.Gold());
@@ -119,7 +128,7 @@ void Overlay::Draw(Canvas& canvas, HDC dc, HWND window, int width, int height,
         for (const auto& row : HudHints::Wrap(group, columns)) { canvas.Text(25, hintY, row.c_str(), 20, 1.0f, 0.85f, 0.3f, 1); hintY += 23; }
     }
     if (controller.RefillNotice()) canvas.Text(statusPad, statusY - statusSize - 16, controller.AmmoMessage(), statusSize, 1.0f, 0.85f, 0.3f, 1);
-    if (controller.Settings().showSpellIcons && !unavailableView && !controller.Buying()) {
+    if (!(skipStages & 16u) && controller.Settings().showSpellIcons && !unavailableView && !controller.Buying()) {
         std::array<std::string, 4> keys;
         for (int i = 0; i < 4; ++i) keys[i] = key(ShortcutAction(int(ShortcutAction::Spell1) + i));
         auto layout = SpellHudLayout::Calculate(width, height, controller.Settings().spellIconSizePercent);
@@ -144,6 +153,7 @@ void Overlay::Draw(Canvas& canvas, HDC dc, HWND window, int width, int height,
             sprintf_s(effect, "%s  %.0f%% SPEED", controller.Status().Label(), controller.Status().speedScale * 100);
         canvas.Text(statusPad, statusY - (statusSize + 16) * (controller.RefillNotice() ? 2 : 1), effect, statusSize, 1.0f, 0.85f, 0.3f, 1);
     }
+    } // end status+hints stage
     BuyMenuView::Draw(canvas, controller, width, height, window,
         [&](float x, float y, const char* text, float r, float g, float b, float a) { canvas.Text(x, y, text, 20, r, g, b, a); },
         [&](float x, float y, const char* text, float r, float g, float b, float a) { canvas.Text(x, y, text, statusSize, r, g, b, a); },

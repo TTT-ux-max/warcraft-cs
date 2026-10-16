@@ -159,7 +159,8 @@ Running differently:
   drawing, so partial overlaps can never clip live geometry. Verified on DotA and on a
   Chinese custom map: the FPS view shows world pixels only in the strip, the top band holds
   nothing but the mod's own HUD text, the F6 round trip restores a fully intact RTS console,
-  and no black rectangle is left behind.
+  and no black rectangle is left behind. This filter lives in the OpenGL submission hook;
+  the Direct3D 9 backend hides the same bands with a scissor instead (see below).
 - The native minimap pixel capture does work on 1.27a: it is fed by the same submissions the
   geometry filter swallows (`minimap.Submit`, exactly as the 1.26a UI hook feeds it), with
   `BeginFrame` started from the frame anchor and `FinishFrame` restoring the captured pixels
@@ -175,6 +176,16 @@ Running differently:
   own matrices) yields the exact `verticalFov/aspect/near/far` via the standard frustum
   identities `n = m[14]/(m[10]-1)`, `f = m[14]/(m[10]+1)`. Bars therefore sit on the models
   with correct depth against the frame the engine rendered.
+- Spell casting works on 1.27a. The ability-lookup chain was re-derived from structure
+  instead of bytes: `GetUnitAbilityLevel` (RVA `0x1E5EF0`, already mapped) calls the unit
+  ability finder at `0x46F440` (`push 1` x3, id, `mov ecx,CUnit*`, `ret 14h`), which
+  dispatches on id and walks the `[unit+0x1DC]` list with an `and eax,[ecx]; cmp eax,-1`
+  sentinel; the `{generation,index}` link resolver it calls sits at `0x44150`. The order
+  getter is still the virtual-table slot `+0x308` stub family, whose layout is unchanged
+  in 1.27a, and the existing skill-vtable range check happens to cover 1.27a as well.
+  Only the signature that verifies the finder differs per build (1.27a starts
+  `55 8B EC 56 8B 75 08 81 FE 75 62 4E 41`), so `NativeSpellSlots::Configure()` selects
+  it by `wc3::ActiveBuild()`.
 
 Disabled on 1.27a, each bailing out through its own guard:
 
@@ -188,8 +199,8 @@ Still unresolved, and why each one is hard:
 - `0x395900` (world render callback), `0x60C580` (UI draw), `0x7B66F0` (projection),
   `0x126F0`/`0x1F5A0`/`0x763F00` (terrain surface helpers), `0x3FA30`/`0x4771A6`
   (camera far-clip channel), `0x7C2C0`/`0x276A00`/`0xC6060`/`0xC5E30`/`0xC6210` (combat
-  guard), `0xC6940`/`0xC6B30`/`0xCF660`/`0x281580`/`0x276330` (weapon attack),
-  `0x201C60` (walking speed), `0x787D0`/`0x32C8E0`/`0x4786B0` (ability tables),
+  guard),   `0xC6940`/`0xC6B30`/`0xCF660`/`0x281580`/`0x276330` (weapon attack),
+  `0x201C60` (walking speed), `0x32C8E0` (ability definition UI),
   `0x4E54B0` (floating text), `0x4D34E0`/`0x4D2E40`/`0x4D2E60`/`0x4D2F10` (sprite submit),
   `0xAB58F0`/`0xAB65F4`/`0xAB7788`/`0x3A8060`/`0x4693D0`
   (data structures and spatial query).
@@ -197,6 +208,78 @@ Still unresolved, and why each one is hard:
   1.27a. Two three-byte world-render candidates (`0x368480`, `0x366E10`) were found by
   following `[esi+0x338]` readers, but neither can be confirmed without the 1.26a binary,
   and hooking the wrong function would crash the game, so both were rejected.
+
+## Direct3D 9 renderer
+
+1.27a imports only `d3d9.dll` (1.26a's OpenGL path aside), so the port gained a Direct3D 9
+backend and dropped the earlier D3D8 experiments - no 1.27a build ever loads a D3D8 device.
+The full FPS overlay works there: first-person weapon, health bars with world depth, hints,
+status line, reticle and spell icons, verified live against DotA with F6 round trips.
+
+Design notes worth keeping:
+
+- Hooks attach by code address with MinHook, never by writing vtable slots: both Warcraft
+  and wrapper DLLs cache resolved interface pointers, so slot patches miss most calls.
+  The vtable indices come straight from the Windows SDK 10.0.26100.0 `d3d9.h` order:
+  device `Reset`=16, `Present`=17, `SetTransform`=44, `SetViewport`=47, swap-chain
+  `Present`=3, factory `CreateDevice`=16. Guessing adjacent slots is fatal - they land on
+  `Clear` (7 arguments) or `MultiplyTransform` (1 argument), and a 3-argument stdcall
+  detour there corrupts the caller's stack on the first call.
+- Anchoring is two-stage because the presenting device is not knowable up front. Many
+  1.27a installs carry an ENB wrapper `d3d9.dll` whose own device does the actual
+  presenting while the first frame still comes through the system runtime. A bootstrap
+  probe (its own temporary `CreateDevice`) waits up to 25 s during the load screen and
+  hooks the system module; the render-thread probe then runs from the first presented
+  frame and picks up the wrapper. Probes never overlap the game's own `CreateDevice` -
+  the wrapper is not thread-safe there and faults reading NULL.
+- The probe must host its temporary device on the **engine's own window**, not on a helper
+  window of its own. A wrapper refuses a window it never saw the game render into:
+  `CreateDevice` on our hidden `STATIC` window returns `D3DERR_INVALIDCALL` (0x8876086C) for
+  all three vertex-processing behaviours, so a probe that only tries the helper can never
+  anchor the wrapper. That is only survivable when the engine builds its device *after* these
+  hooks install - the `CreateDevice` detour then anchors it directly - which is what a
+  `-loadfile` launch does. Starting the client normally and choosing a map from the in-game
+  menu builds the device *before* the hooks exist, and the session used to run blind: one
+  frame, then nothing, with `blind re-probe ... anchored=0` repeating and F6 logging the
+  keypress but never acting on it. The probe now falls back to the engine window (resolved on
+  demand, since no frame has run to fill it in) and anchors there.
+- The overlay canvas mirrors the OpenGL semantics: `XYZRHW|DIFFUSE` 2D primitives in
+  screen pixels, health bars depth-tested against the game's depth buffer, and a weapon
+  pass that clears its own depth and mirrors the GL camera convention by negating z.
+  Every GL quad had to become six vertices: a four-vertex `TRIANGLELIST` either draws
+  only one triangle (`count/3`) or, when the primitive count is forced to 2, makes the
+  driver read two vertices past the array - that second case painted full-screen wedges
+  of stack-garbage colour until `BarQuad`, `FillRect`, `Line` and `TextureQuad` were all
+  expanded.
+- The world projection is captured from `SetTransform(D3DTS_PROJECTION)` on the first
+  full-client viewport of a frame and decoded with the same left-handed frustum
+  identities the GL path uses, so health-bar placement shares one code path.
+- The native console strip and top bar are hidden here too, by scissor rather than by batch
+  classification - but the engine manages the scissor test itself, which shapes the whole
+  mechanism. Per frame it *enables* the scissor (with its own rect covering only the world
+  region above the console strip) around the world pass and *disables* it around its UI
+  passes, so a cached "armed" flag goes stale within one frame. The final design re-asserts
+  the wanted state on every `D3DTS_PROJECTION` transition: the first engine perspective of
+  the frame is the world pass (the overlay's own weapon/preview projections run inside the
+  present callback and never reach the branch) - its scissor is released so the world renders
+  into the would-be-hidden strip and top bar regions, a verbatim repeat of the world
+  projection (the engine sets it twice per pass) stays released, and every later pass - the
+  orthographic chrome and the console backdrop, a perspective pass drawn after the chrome
+  that paints the strip black - is clipped to the world region (top 80/593, bottom
+  (128+50)/593, mirroring the GL filter's measured bands). Each present forces the scissor
+  off so a frame that skips its transforms (RTS frames) always starts clean and the native UI
+  comes back intact after F6 round trips. Two rejected shortcuts are worth remembering:
+  arming from the projection *count* clips the world itself (the overlay's two projections
+  precede the engine frame), and expanding only the engine's `SetViewport` does nothing (the
+  device viewport is already the full client - the engine's scissor, not the viewport, is
+  what confines the world). Hooking the draw slots (81-84) was also measured and rejected:
+  the wrapper's device exposes driver-generated thunks there, and patching them landed EIP
+  in anonymous memory on the first probe.
+- Still different from the GL host: the native minimap capture has no D3D feed yet, so the
+  mod's own minimap stays GL-only.
+- Diagnosis hatches, kept deliberately cheap: `WCS_SKIP_STAGES` is a bitmask that drops
+  overlay stages (1 bars, 2 weapon, 4 reticle, 8 status+hints, 16 spell icons) and
+  `WCS_SKIP_OVERLAY=1` shows the raw game frame; anchor and probe events log once.
 
 ## Finishing the port
 

@@ -112,14 +112,15 @@ public:
 
     void FillRect(float x, float y, float w, float h, float r, float g, float b, float a) override {
         if (!active_) return;
-        V2C vertices[4] = {
-            {x, y, 0, 1, Color(r, g, b, a)},
-            {x + w, y, 0, 1, Color(r, g, b, a)},
-            {x + w, y + h, 0, 1, Color(r, g, b, a)},
-            {x, y + h, 0, 1, Color(r, g, b, a)},
+        // A GL_QUADS quad is two triangles in D3D; every index pair below expands (0,1,2,3)
+        // into the list triangles (0,1,2)+(0,2,3) so the GPU never reads past the vertices.
+        DWORD color = Color(r, g, b, a);
+        V2C vertices[6] = {
+            {x, y, 0, 1, color}, {x + w, y, 0, 1, color}, {x + w, y + h, 0, 1, color},
+            {x, y, 0, 1, color}, {x + w, y + h, 0, 1, color}, {x, y + h, 0, 1, color},
         };
         StageDisabled();
-        Draw2D(D3DPT_TRIANGLELIST, vertices, 4);
+        Draw2D(D3DPT_TRIANGLELIST, vertices, 6);
     }
 
     void OutlineRect(float x, float y, float w, float h, float r, float g, float b, float a) override {
@@ -141,12 +142,12 @@ public:
         if (length < 0.0001f) return;
         float nx = -dy / length * thickness * 0.5f, ny = dx / length * thickness * 0.5f;
         DWORD color = Color(r, g, b, a);
-        V2C vertices[4] = {
-            {x0 + nx, y0 + ny, 0, 1, color}, {x1 + nx, y1 + ny, 0, 1, color},
-            {x1 - nx, y1 - ny, 0, 1, color}, {x0 - nx, y0 - ny, 0, 1, color},
+        V2C vertices[6] = {
+            {x0 + nx, y0 + ny, 0, 1, color}, {x1 + nx, y1 + ny, 0, 1, color}, {x1 - nx, y1 - ny, 0, 1, color},
+            {x0 + nx, y0 + ny, 0, 1, color}, {x1 - nx, y1 - ny, 0, 1, color}, {x0 - nx, y0 - ny, 0, 1, color},
         };
         StageDisabled();
-        Draw2D(D3DPT_TRIANGLELIST, vertices, 4);
+        Draw2D(D3DPT_TRIANGLELIST, vertices, 6);
     }
 
     void TriangleStrip(const float* xy, int count, float r, float g, float b, float a) override {
@@ -232,14 +233,12 @@ public:
         if (!active_ || !texture) return;
         float v0 = flipVertical ? 1.f : 0.f, v1 = flipVertical ? 0.f : 1.f;
         DWORD color = Color(r, g, b, a);
-        V2 vertices[4] = {
-            {x, y, 0, 1, color, 0, v0},
-            {x + w, y, 0, 1, color, 1, v0},
-            {x + w, y + h, 0, 1, color, 1, v1},
-            {x, y + h, 0, 1, color, 0, v1},
+        V2 vertices[6] = {
+            {x, y, 0, 1, color, 0, v0}, {x + w, y, 0, 1, color, 1, v0}, {x + w, y + h, 0, 1, color, 1, v1},
+            {x, y, 0, 1, color, 0, v0}, {x + w, y + h, 0, 1, color, 1, v1}, {x, y + h, 0, 1, color, 0, v1},
         };
         StageTexture(reinterpret_cast<TTexture*>(texture));
-        Draw2D(D3DPT_TRIANGLELIST, vertices, 4);
+        Draw2D(D3DPT_TRIANGLELIST, vertices, 6);
     }
 
     void TexturedTriangles(uintptr_t texture, const float* xyzuv, int vertexCount,
@@ -290,9 +289,11 @@ public:
     void BarQuad(float x, float y, float w, float h, float z, float r, float g, float b, float a) override {
         if (!active_) return;
         DWORD color = Color(r, g, b, a);
-        V2C vertices[4] = {
-            {x, y, z, 1, color}, {x + w, y, z, 1, color},
-            {x + w, y + h, z, 1, color}, {x, y + h, z, 1, color},
+        // Six vertices: a four-vertex triangle list would make the driver read two vertices
+        // past the array, which shows up as full-screen wedge artifacts.
+        V2C vertices[6] = {
+            {x, y, z, 1, color}, {x + w, y, z, 1, color}, {x + w, y + h, z, 1, color},
+            {x, y, z, 1, color}, {x + w, y + h, z, 1, color}, {x, y + h, z, 1, color},
         };
         StageDisabled();
         SetFVF(D3DFVF_XYZRHW | D3DFVF_DIFFUSE);
@@ -559,6 +560,9 @@ protected:
         fvf_ = 0;
         device_->SetRenderState(D3DRS_ZENABLE, D3DZB_FALSE);
         device_->SetRenderState(D3DRS_ZWRITEENABLE, TRUE);
+        // The native-UI scissor from the platform layer must never clip the mod's own HUD,
+        // whose text deliberately sits inside the hidden bands.
+        device_->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
         device_->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
         device_->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
         device_->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);

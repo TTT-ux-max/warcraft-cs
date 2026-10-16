@@ -8,7 +8,10 @@ void MouseLook::Attach(HWND window) {
     wc3::Log("Mouse look raw input registered=%d error=%lu",registered_,registered_ ? 0UL : GetLastError());
     Reset();
 }
-void MouseLook::Reset() { dx_=dy_=0;captured_=false; }
+void MouseLook::Reset() { dx_=dy_=0;captured_=false;snapped_=false;
+    // Leaving capture (FPS off, buy menu, focus loss) must give the visible system cursor back;
+    // the hide loop below owns the ShowCursor counter only while FPS owns the mouse.
+    if (hidden_) { hidden_=false; while(ShowCursor(TRUE)<0) {} } }
 void MouseLook::Input(LPARAM packet,bool accept) {
     RAWINPUT input={};UINT size=sizeof(input);
     if (GetRawInputData(reinterpret_cast<HRAWINPUT>(packet),RID_INPUT,&input,&size,sizeof(RAWINPUTHEADER))==UINT(-1) ||
@@ -30,4 +33,11 @@ void MouseLook::Sample(float& dx,float& dy) {
     }
     // Only activation/focus transitions discard stale cursor position; screen edges never limit raw turns.
     dx_=dy_=0;captured_=true;SetCursorPos(center.x,center.y);
+    // Keep the system arrow hidden between WM_SETCURSOR deliveries: the engine may re-set its own
+    // cursor outside a mouse-move, and a stale arrow over the reticle reads as a misplaced pointer.
+    while(ShowCursor(FALSE)>=0) {} hidden_=true;
+    // The game's cursor sprite follows the position it tracks from window messages, which stays
+    // at the pre-FPS spot until a packet arrives. Announce the pinned center once per capture so
+    // the sprite sits on the reticle immediately, without waiting for a physical mouse move.
+    if (!snapped_) { snapped_=true; PostMessageA(window_,WM_MOUSEMOVE,0,MAKELPARAM(center.x,center.y)); }
 }

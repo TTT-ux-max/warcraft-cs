@@ -241,6 +241,15 @@ static LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM key, LPARAM
     if (message == WM_ACTIVATEAPP || message == WM_SIZE || message == WM_CLOSE || message == WM_DESTROY)
         wc3::Log("window event=%u value=%u size=%ux%u", message, unsigned(key), LOWORD(data), HIWORD(data));
     // Rendering owns focus resource recovery; input owns message translation and key consumption.
+    // The game tracks and draws its own cursor sprite from window messages. FPS pins the system
+    // cursor to the client center once per frame, so between pins the real packet coordinates
+    // roam with the physical mouse; forwarding those would make the sprite wander away from
+    // where aiming and firing actually happen. Rewrite every FPS mouse-move packet to the
+    // pinned center before the dispatcher decides whether to forward it.
+    if (activeWindow && message==WM_MOUSEMOVE && healthy && controller.Visible()) {
+        RECT client={};GetClientRect(window,&client);
+        data=MAKELPARAM((client.right-client.left)/2,(client.bottom-client.top)/2);
+    }
     if (activeWindow && message == WM_ACTIVATEAPP && key) overlay.RefreshAfterFocus();
     auto handled = activeWindow ? input.Handle(window, message, key, data, healthy) : std::optional<LRESULT>{};
     LRESULT result=handled ? *handled : previous ? CallWindowProcA(previous, window, message, key, data) : DefWindowProcA(window,message,key,data);
@@ -639,9 +648,23 @@ static void D3DPresentFrame(Canvas& canvas, HWND window, int width, int height) 
         overlay.RefreshAfterFocus();
     }
     overlayPass = true;
-    if (healthy && GetTickCount() - lastWorld < 500)
+    // Diagnosis escape hatch: WCS_SKIP_OVERLAY=1 shows the raw game frame from the FPS camera,
+    // separating the game's own ground-level rendering from everything the overlay draws.
+    static bool skipOverlayDiag = GetEnvironmentVariableA("WCS_SKIP_OVERLAY", nullptr, 0) != 0;
+    // Direct3D has no GL submission pass to drop native console batches at, so the classic
+    // strip and top bar are clipped from the scissor side while the FPS view is live. The
+    // band fractions mirror the OpenGL filter: top chrome hugs the frame top (80/593) and the
+    // console strip plus its border beam occupies the bottom (128 + 50)/593; when no GL
+    // viewport ever observed the strip, the measured GL value stands in.
+    bool hideBands = healthy && controller.Visible() && GetTickCount() - lastWorld < 500 && !skipOverlayDiag;
+    int strip = FullscreenView::ConsoleStrip();
+    if (strip <= 0) strip = height * 128 / 593;
+    int beam = height * 50 / 593;
+    RECT worldRegion = {0, height * 80 / 593, width, height - strip - beam};
+    D3DHooks::SetUiSuppression(hideBands, worldRegion);
+    if (healthy && GetTickCount() - lastWorld < 500 && !skipOverlayDiag)
         overlay.Draw(canvas, nullptr, window, width, height, controller, minimap, healthBars.Items(), healthBarView, healthNear, healthFar);
-    else ReticleDiagnostics::Skip(healthy ? "world-frame-stale" : "controller-fault", width, height, GetTickCount() - lastWorld);
+    else if (!skipOverlayDiag) ReticleDiagnostics::Skip(healthy ? "world-frame-stale" : "controller-fault", width, height, GetTickCount() - lastWorld);
     overlayPass = false; nativeUIPhase = false;
     if (DiagnosticLog::Due(previous)) {
         wc3::Trace("d3d frames=%u healthy=%d fps=%d worldAgeMs=%lu backend=%s focus=%d window=%ldx%ld buying=%d scope=%d anchor=%d",

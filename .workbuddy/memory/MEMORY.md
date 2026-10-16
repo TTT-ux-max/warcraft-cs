@@ -88,6 +88,23 @@
 - 产物输出目录（`build.ps1 -OutputDirectory`）必须预置 `WarcraftOriginalMss.dll`（原始 Miles）；
   若只有 `Mss32.dll`，那其实是本模组 loader，会被误当原件复制，导致声音代理出错。
   中间产物固定在仓库根 `build/`，与输出目录无关。
+- **真机测试脚本会 Kill 所有 war3**（`dotaf6/d3dtest/stability/showbars/earlyf6/f6gate` 开头都是
+  `Get-Process war3 | Kill`）。**用户在手动玩的时候绝不能跑它们**——会把他的局顶掉，
+  现场看起来就是"游戏突然没了 / 按 F6 没反应"。与真人并行时只用 `.local/launch.ps1`
+  （部署 + 启动，**从不 Kill**）；要自动化测试就先确认没有人在玩。
+- **更隐蔽的一条：工具会话会回收它启动的子进程。** 实验证实：命令 A 里 `Start-Process`
+  启动 war3 后立即返回，命令 B（8 秒后）查该 pid 已消失（19:37 的 A/B 实验）。所以
+  **"启动游戏给用户手动玩"在会话内永远做不到**——就算不被测试脚本 Kill，也会在命令
+  返回时被回收（pid 7460、7564 两次"给用户留的局"都是这么没的）。WMI `Win32_Process.Create`
+  与 explorer 拉起 .cmd 都被安全策略拦截。**唯一可靠方式：让用户双击游戏目录的
+  `Start WarcraftCS (D3D9).cmd`**（窗口模式、无 -opengl，D3D9 后端用不上 OpenGL）；
+  用户测完由我读 `WarcraftCS.log` 判断结果。
+- 排查"按 F6 没反应"的固定口径：先在日志里找 `control key=117`。**没有它 = 按键根本没进
+  游戏**（窗口不在前台，F6 走 `WM_KEYDOWN`）→ 是焦点问题，不是切换链路；有它再看后面
+  是 `FPS enabled` 还是 `toggle queued`（门控）/`needs a living owned unit`（地图还没放单位）。
+- 用户说"这个图"时**先问是哪张**：注册表 `HKCU\...\Warcraft III\Map\skirmish_V1` 只是
+  最后一次用自定义图开局的记录，不等于玩家当前在测的图。地图冷启动（`-loadfile`）到
+  `Map lifecycle: loaded` 约 **27~28 s**（TurtleRock 与 DotA AI 都一样，是固定启动开销）。
 
 ## 1.27a 世界空间叠加（血条/标签）
 
@@ -97,3 +114,61 @@
   glDrawElements 批次**读 `GL_PROJECTION_MATRIX` 解码（n=m[14]/(m[10]-1)、f=m[14]/(m[10]+1)）。
   实测 1.27a FPS：vfov=41.7 aspect=2.278 near=100 far=10000——引擎自算 aspect ≠ 客户区比例，必须实测。
 - 踩过的宏：`small`/`near`/`far` 都是 windows.h 宏，本地变量别用这些名字。
+
+## D3D9 后端（已可用）
+
+- GL_QUADS 移植到 D3D 必须**展开成 6 顶点** `(0,1,2)+(0,2,3)`：4 顶点 TRIANGLELIST 要么只画一半
+  （`count/3`），要么驱动越界读栈上 2 个顶点 → 满屏绿/红楔形伪影。`BarQuad/FillRect/Line/TextureQuad`
+  都已展开（`src/presentation/D3DCanvas.hpp`）。
+- 虚表槽位以 SDK 10.0.26100.0 `d3d9.h` 为准：Reset=16、Present=17、SetTransform=44、
+  SetViewport=47、SwapChain::Present=3、CreateDevice=16。猜错会落到 Clear(7 参)/
+  MultiplyTransform(1 参) → stdcall 栈损坏。挂钩用 MinHook 按代码地址，不写虚表槽。
+- 两段式锚定：引导探测（加载画面，≤25s，探 system 源）+ 渲染线程探测（首帧后探 search/ENB 源）；
+  探测**绝不**与游戏自身 CreateDevice 并发（ENB 包裹层非线程安全，会 NULL 读崩溃）。
+- **锚点失明自愈（`2180967`）**：探针原先每源只试一次，那次失败（实测包裹层初始化中
+  CreateDevice 全失败）会让整局锚在只出加载画面的 system 设备上——帧清零、Tick 不跑、
+  HUD/F6 全死而游戏画面正常。现由 `BlindProbeWatchdog()` 兜底：>2.5s 无帧、且距游戏侧
+  CreateDevice >1.5s 时，按 1.5s→60s 递增间隔重探未挂钩的源，任一拍到达即停手。
+- **F6 请求会排队（`2180967`）**：门控（`ui+0x258/0x260`/paused）或地图尚未放下单位时
+  不再丢弃，保留 10s 等条件满足后自动生效；追踪 `FPS toggle queued/expired`。
+  由此"刚进游戏几秒内按 F6 没反应、等几秒才行"= 按键落在门控/低帧率(首秒 ~1fps)/锚点
+  盲区里，而非切换慢（实测按下→生效 9~11ms）。
+- **探针必须能用引擎自己的窗口**：`ProbeDevice` 原先用一个隐藏的 `STATIC` 辅助窗口
+  （`probeWindow`）创建设备，**ENB 包裹层直接返回 `D3DERR_INVALIDCALL`(8876086C)** →
+  探针必然失败。只有"引擎设备晚于钩子创建"时靠 `CreateDevice9Hook` 才蒙混过关。
+  **从游戏菜单进图时引擎设备早于钩子存在**（尤其模组 DLL 加载晚于引擎初始化），于是
+  整局失明：`d3d frames=1` 后再无帧、看门狗 `blind re-probe ... anchored=0` 刷屏、
+  F6 有 `control key=117` 但永不生效。修复：辅助窗口失败后**回退用引擎窗口**再试，
+  并在 `window` 为空时先 `ResolveWindow()`。实测 `probe device created host=game anchored=1`
+  → 帧恢复 60-110/s。**总结：`-loadfile` 启动 = 设备在钩子后建 = 稳；菜单进图 = 拼运气。**
+  诊断开关 `WCS_D3D_INSTALL_DELAY_MS` 只是给我自己看的，**发布前连同 probe 的 HRESULT
+  日志一起下线**。
+- **D3D9 血条已工作**（截图确认）；`candidates=N submitted=0` 不等于坏——候选全在相机
+  背后/视锥外时就是这样，判别看 `submitted` 是否随视角浮动。
+- 1.27a 客户端目录的 `d3d9.dll` 是 ENB 包裹层，真实运行时在 SysWOW64；实际呈帧多走 ENB 设备，
+  首帧可能走 system 设备——这就是需要两段探测的原因。
+- 诊断开关：`WCS_SKIP_STAGES` 位掩码（1 血条 2 武器 4 准星 8 状态+提示 16 技能图标）、
+  `WCS_SKIP_OVERLAY=1` 原始帧。
+- **原生条带隐藏（已验证，`8168194`）**：引擎**自己管理 scissor**——世界通道被它用
+  自己的 rect（0,19 1064x445）裁住，UI 通道附近又 DISABLE；设备 viewport 本就是全
+  客户区（扩 viewport 无效）。方案：每次 D3DTS_PROJECTION 转换后**重申**目标状态
+  （不缓存不早退）：帧内第一个引擎透视 = 世界（overlay 的武器/预览投影在 present
+  回调里，不算）→ 释放 scissor；与世界矩阵逐字节相同的重复投影（引擎每遍设两次）
+  → 继续释放；其后一切（正交 chrome + 透视底图——底图在 chrome 之后、会把条带涂黑）
+  → 设我方 rect（top 80/593、bottom (128+50)/593）并 ENABLE。present 锚点强制关。
+  教训：按投影计数武装会裁到世界（overlay 的 2 个透视排最前）；只按正交武装漏掉
+  透视底图 → 黑带。
+- D3D9 与 GL 的差异（未做）：原生小地图捕获无 D3D 喂入。
+- **FPS 隐藏系统光标（`7f642ab`）**：FPS 每帧把系统箭头回拉到客户区中心，但两次回拉之间物理
+  移动会让箭头漂移（快甩一帧数百 px），点击/射击却永远从中心准星出 → "光标图案和点击对不上"。
+  修复：FPS 可见且非购买时拦 `WM_SETCURSOR`(HTCLIENT)→`SetCursor(nullptr)`，`Sample` 里
+  `while(ShowCursor(FALSE)>=0){}` 强制隐藏；**`MouseLook::Reset()` 必须配对
+  `while(ShowCursor(TRUE)<0){}` 归一化恢复**（Disable/购买/失焦全走它），否则箭头全局消失。
+  另外 `WM_MOUSEMOVE` 不再吞掉而是改写成客户区中心转发（原吞掉会让引擎光标跟踪冻结）；
+  购买菜单高亮用 GetCursorPos、点击用消息 lParam，均不受影响。
+  验证脚本 `.local/cursor2.ps1`（GetCursorInfo 的 CURSOR_SHOWING 全流程断言）。
+- 测试：`.local/d3dtest.ps1 -Tag X`（WorldLive 判据用 `d3d frames=.*worldAgeMs<900`，
+  D3D 后端是 `d3d frames=` 不是 GL 的 `render frames=`；加载失败会截 `-loadfail.png`）；
+  DotA AI 图加载慢且经常静默失败/崩，验条带用 `(4)TurtleRock~3.w3x`（秒载，PickOwnedUnit
+  有 fallback 不需预选）；裁剪/对比辅助 `croptop.ps1`/`cropcenter.ps1`/`probe-column.ps1`/
+  `diff-region.ps1`。小图看不清的"文字重叠"先用裁剪放大核实，是缩放锯齿。

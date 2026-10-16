@@ -19,4 +19,9 @@ using ProjectionCallback = void(*)(const float* matrix, const int* viewport);
 // inert unless the game actually creates a Direct3D device.
 bool Install(PresentCallback present, ProjectionCallback projection);
 bool Installed();
+// While the FPS view is live, native 2D chrome (classic console strip and top bar) is clipped
+// to the given world region: batches drawn under an orthographic projection are scissored,
+// every perspective (world) draw disables the scissor again. Direct3D has no GL submission
+// pass, so this is the counterpart of the OpenGL geometry filter, not an extra hiding layer.
+void SetUiSuppression(bool enabled, const RECT& worldRegion);
 }

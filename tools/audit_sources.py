@@ -14,7 +14,9 @@ ROOT_FILES = {'README.md','INSTALL.md','TROUBLESHOOTING.md','NOTICE','LICENSE-MI
               # Allow the owned support form explicitly without admitting arbitrary GitHub workflows or files.
               '.github/DISCUSSION_TEMPLATE/q-a.yml'}
 ROOTS = {'src','tests','tools','setup','config','skills','licenses','docs','launcher'}
-EXTENSIONS = {'.cpp','.hpp','.inc','.py','.ps1','.ini','.md','.yaml','.txt','.cs'}
+EXTENSIONS = {'.cpp','.hpp','.inc','.py','.ps1','.ini','.md','.yaml','.txt','.cs',
+              # Native offset tables (tools/game-*.json) hold plain RVAs for the resolver.
+              '.json'}
 RULES = {
     'GitHub credential': re.compile(rb'\bgh[opusr]_[A-Za-z0-9]{30,}\b|\bgithub_pat_[A-Za-z0-9_]{30,}\b'),
     'API credential': re.compile(rb'\bsk-(?:proj-)?[A-Za-z0-9_-]{25,}|\bAKIA[A-Z0-9]{16}\b'),

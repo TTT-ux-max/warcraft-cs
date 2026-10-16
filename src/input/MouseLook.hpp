@@ -11,6 +11,6 @@ public:
     bool Raw() const { return registered_ && !absolute_; }
 private:
     HWND window_=nullptr;
-    bool registered_=false,absolute_=false,captured_=false;
+    bool registered_=false,absolute_=false,captured_=false,snapped_=false,hidden_=false;
     double dx_=0,dy_=0;
 };
