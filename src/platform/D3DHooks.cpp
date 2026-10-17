@@ -134,8 +134,13 @@ struct Source {
 Source sources[kSourceCount];
 
 // A patched factory remembers which source it came from so its CreateDevice call still forwards
-// to the right runtime.
-struct PatchedFactory { IDirect3D9* factory = nullptr; int source = -1; };
+// to the right runtime. It is keyed by the factory's *vtable*, not by the factory object:
+// Direct3DCreate9 hands out a new object on every call while every object of one runtime shares a
+// single vtable, so an object-keyed table ran out after four calls and from then on every
+// CreateDevice - including the engine's own - was refused with D3DERR_INVALIDCALL. Keying by
+// vtable keeps exactly one entry per runtime and covers factory objects created before the hooks,
+// because the slot they call through is that same shared table.
+struct PatchedFactory { void** vtable = nullptr; int source = -1; };
 PatchedFactory patchedFactories[kFactoryCount];
 
 D3DCanvasImpl<IDirect3DDevice9> canvas9;
@@ -191,6 +196,45 @@ HWND ResolveWindow() {
 }
 
 bool ProbeDevice(int source);
+bool AnchorDevice(int source, IDirect3DDevice9* device, const char* origin);
+
+// Builds throwaway devices through one runtime until one of them anchors. Two host windows are
+// tried: the invisible helper first because it cannot disturb the engine, then the engine's own
+// window, since a wrapper layer may refuse to build a device for a window it never saw the game
+// render into. Whichever device comes up is anchored and released immediately.
+void TryWindowedProbe(IDirect3D9* factory, Source& entry, int source, HWND helper, HWND engine, const DWORD* behaviors, bool& anchored) {
+    HWND hosts[2] = {helper, engine};
+    for (int host = 0; host < 2 && !anchored; ++host) {
+        if (!hosts[host]) continue;
+        // The creation itself can take a second inside the wrapper; frames may have started while
+        // the previous attempt was in flight, in which case the session is no longer blind.
+        if (host > 0 && frameAnchorSeen && GetTickCount() - lastPresentTick < kProbeLiveWindowMs) break;
+        D3DPRESENT_PARAMETERS present = {};
+        present.Windowed = TRUE;
+        present.SwapEffect = D3DSWAPEFFECT_DISCARD;
+        present.hDeviceWindow = hosts[host];
+        present.BackBufferFormat = D3DFMT_UNKNOWN;
+        present.BackBufferWidth = kProbeSize;
+        present.BackBufferHeight = kProbeSize;
+        present.BackBufferCount = 1;
+        present.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
+        for (DWORD behavior = 0; behavior < 3; ++behavior) {
+            IDirect3DDevice9* device = nullptr;
+            HRESULT hr = factory->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hosts[host], behaviors[behavior], &present, &device);
+            if (SUCCEEDED(hr) && device) {
+                wc3::Log("D3D9 probe device created source=%s host=%s behavior=%X", entry.label, host ? "game" : "helper", behaviors[behavior]);
+                anchored = AnchorDevice(source, device, "probe");
+                if (probeDevice == device) probeDevice = nullptr;
+                device->Release();
+                wc3::Log("D3D9 probe device released source=%s anchored=%d", entry.label, anchored ? 1 : 0);
+                break;
+            }
+            // A failing probe used to be silent; the HRESULT is what says whether the wrapper
+            // refused the host window, the format or the behaviour.
+            wc3::Log("D3D9 probe create failed source=%s host=%s behavior=%X hr=%08X", entry.label, host ? "game" : "helper", behaviors[behavior], static_cast<unsigned>(hr));
+        }
+    }
+}
 
 void DrawFrame(IDirect3DDevice9* device, const char* label) {
     if (!device) return;
@@ -429,14 +473,32 @@ bool PatchVtableSlot(void* object, int index, T replacement, T* original) {
     return true;
 }
 
-int SourceOf(IDirect3D9* factory) {
+int SourceOfFactoryVtable(void** vtable) {
+    if (!vtable) return -1;
     for (const PatchedFactory& entry : patchedFactories)
-        if (entry.factory == factory) return entry.source;
+        if (entry.vtable && entry.vtable == vtable) return entry.source;
     return -1;
 }
-void RememberFactory(IDirect3D9* factory, int source) {
-    for (PatchedFactory& entry : patchedFactories)
-        if (!entry.factory) { entry.factory = factory; entry.source = source; return; }
+int SourceOf(IDirect3D9* factory) {
+    if (!factory) return -1;
+    return SourceOfFactoryVtable(*reinterpret_cast<void***>(factory));
+}
+// Reserves the vtable entry before its slot is written, so a factory can never reach the detour
+// without a source. A full table is a programming error now that entries are per runtime; it is
+// reported instead of silently dropping the patch.
+bool RememberFactory(void** vtable, int source) {
+    for (PatchedFactory& entry : patchedFactories) {
+        if (entry.vtable != vtable) continue;
+        if (entry.source < 0) entry.source = source;
+        return true;
+    }
+    for (PatchedFactory& entry : patchedFactories) {
+        if (entry.vtable) continue;
+        entry.vtable = vtable;
+        entry.source = source;
+        return true;
+    }
+    return false;
 }
 
 IDirect3D9* WINAPI Create9Detour0(UINT version);
@@ -516,13 +578,17 @@ IDirect3D9* Create9Common(UINT version, int source) {
     Source& entry = sources[source];
     if (!entry.create9) return nullptr;
     IDirect3D9* factory = entry.create9(version);
-    // Several factories can be handed out; each keeps its own CreateDevice trampoline.
-    if (factory) {
-        if (PatchVtableSlot(factory, kFactoryCreateDeviceSlot, CreateDevice9Hook, &entry.createDevice)) {
-            RememberFactory(factory, source);
-        } else {
-            wc3::Log("D3D9 CreateDevice vtable slot patch failed source=%s", entry.label);
-        }
+    if (!factory) return nullptr;
+    // One patch per runtime: every factory object of a runtime shares this vtable, so a second
+    // patch would capture our own detour as the "original" and recurse forever.
+    void** vtable = *reinterpret_cast<void***>(factory);
+    if (SourceOfFactoryVtable(vtable) >= 0) return factory;
+    if (!RememberFactory(vtable, source)) {
+        wc3::Log("D3D9 factory table exhausted; CreateDevice left unpatched source=%s vtable=%p", entry.label, vtable);
+        return factory;
+    }
+    if (!PatchVtableSlot(factory, kFactoryCreateDeviceSlot, CreateDevice9Hook, &entry.createDevice)) {
+        wc3::Log("D3D9 CreateDevice vtable slot patch failed source=%s vtable=%p", entry.label, vtable);
     }
     return factory;
 }
@@ -579,39 +645,14 @@ bool ProbeDevice(int source) {    Source& entry = sources[source];
     // these hooks and no frame ever ran, so nothing has filled it in yet - and without it this
     // fallback would be the null pointer and the session would stay blind.
     HWND engineWindow = window ? window : ResolveWindow();
-    HWND hosts[2] = {probeWindow, engineWindow};
     const DWORD behaviors[] = {D3DCREATE_SOFTWARE_VERTEXPROCESSING, D3DCREATE_HARDWARE_VERTEXPROCESSING, D3DCREATE_MIXED_VERTEXPROCESSING};
     probing = true;
-    for (int host = 0; host < 2 && !anchored; ++host) {
-        if (!hosts[host]) continue;
-        // The creation itself can take a second inside the wrapper; frames may have started while
-        // the previous attempt was in flight, in which case the session is no longer blind.
-        if (host > 0 && frameAnchorSeen && GetTickCount() - lastPresentTick < kProbeLiveWindowMs) break;
-        D3DPRESENT_PARAMETERS present = {};
-        present.Windowed = TRUE;
-        present.SwapEffect = D3DSWAPEFFECT_DISCARD;
-        present.hDeviceWindow = hosts[host];
-        present.BackBufferFormat = D3DFMT_UNKNOWN;
-        present.BackBufferWidth = kProbeSize;
-        present.BackBufferHeight = kProbeSize;
-        present.BackBufferCount = 1;
-        present.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;
-        for (DWORD behavior : behaviors) {
-            IDirect3DDevice9* device = nullptr;
-            HRESULT hr = factory->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hosts[host], behavior, &present, &device);
-            if (SUCCEEDED(hr) && device) {
-                wc3::Log("D3D9 probe device created source=%s host=%s behavior=%X", entry.label, host ? "game" : "helper", behavior);
-                anchored = AnchorDevice(source, device, "probe");
-                if (probeDevice == device) probeDevice = nullptr;
-                device->Release();
-                wc3::Log("D3D9 probe device released source=%s anchored=%d", entry.label, anchored ? 1 : 0);
-                break;
-            }
-            // A failing probe used to be silent; the HRESULT is what says whether the wrapper
-            // refused the host window, the format or the behaviour.
-            wc3::Log("D3D9 probe create failed source=%s host=%s behavior=%X hr=%08X", entry.label, host ? "game" : "helper", behavior, static_cast<unsigned>(hr));
-        }
-    }
+    TryWindowedProbe(factory, entry, source, probeWindow, engineWindow, behaviors, anchored);
+    // Exclusive fullscreen cannot be recovered this way: the engine's device holds the adapter
+    // exclusively, so *no* device can be created in this process - windowed or fullscreen, both
+    // come back D3DERR_DEVICELOST - and relieving the mode by minimizing the window was measured
+    // crashing the engine itself (FATAL ERROR during its restore). A fullscreen session whose
+    // device predates these hooks stays blind by design; the readable verdict below says so.
     probing = false;
     probeDevice = nullptr;
     factory->Release();
@@ -663,7 +704,7 @@ DWORD WINAPI BlindProbeWatchdog(void*) {
         }
         // One human-readable verdict per blind session: everything above is per-attempt noise.
         if (!frameAnchorSeen && blindProbeAttempts == 3)
-            wc3::Log("D3D9 no frames captured yet; F6 presses are queued until the game renders through a hooked device");
+            wc3::Log("D3D9 no frames captured yet; F6 presses are queued until the game renders through a hooked device. A fullscreen session cannot be attached at all - relaunch windowed (Start WarcraftCS (D3D9).cmd)");
     }
 }
 
