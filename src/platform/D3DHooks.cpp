@@ -65,10 +65,31 @@ DWORD lastCreateTick = 0;    // newest game-side device creation, used to avoid 
 DWORD blindProbeAt = 0;      // earliest tick for the next blind re-probe
 DWORD blindProbeInterval = 1500;
 unsigned blindProbeAttempts = 0;
+// A device that predates the hooks never presents through them, so no frame is ever seen and the
+// "no frames lately" test alone can never fire. This flag says Direct3D was already loaded when
+// the hooks went in (an OpenGL session leaves it false and must never probe), and blindProbeStart
+// holds off the first fetch until the engine has finished bringing its renderer up.
+bool rendererPreloaded = false;
+DWORD blindProbeStart = 0;
 // A retry that lands inside the game's own CreateDevice crashes inside the wrapper (it is not
 // thread safe), so a probe is never started within this window of an observed creation.
 constexpr DWORD kProbeQuietMs = 1500;
+// A session that presented a frame this recently is alive: building a throwaway device next to it
+// would make the wrapper juggle two devices and crash the renderer, and the anchor it would learn
+// is already in place.
+constexpr DWORD kProbeLiveWindowMs = 3000;
+// Uncapped before the first frame: the session is blind until a probe lands, so giving up would
+// leave it dead for the whole match. Once frames flow the budget only covers a later stall.
 constexpr unsigned kBlindProbeBudget = 24;
+// Long enough that a normal load (21-28 s to the first frame) never triggers a fallback probe,
+// while a session whose device predates the hooks still recovers within the first minute.
+constexpr DWORD kFirstBlindProbeDelayMs = 40000;
+constexpr DWORD kFirstBlindProbeIntervalMs = 5000;
+// The renderer bring-up window is shorter than this in practice; the bootstrap probe uses the
+// same figure before it touches a runtime. It must outlast the whole map load (the first frame
+// lands around 27 s on this client), because a probe that is still in flight when the first
+// frames arrive creates its device against a live wrapper and takes the process down.
+constexpr DWORD kBootstrapWaitMs = 40000;
 
 // Native UI band suppression, the Direct3D counterpart of the OpenGL geometry filter. The
 // classic console strip and top bar are clipped with the scissor test, driven entirely from the
@@ -123,6 +144,13 @@ bool installed = false;
 HWND window = nullptr;
 HWND probeWindow = nullptr;
 IDirect3DDevice9* activeDevice = nullptr;
+// Set while ProbeDevice builds its throwaway device. The creation still passes through the patched
+// factory, so the detour has to tell a probe device from the engine's: only the engine's may become
+// the frame device. Remembering a probe device here leaves a dangling pointer the moment the probe
+// releases it, and the next swap-chain present then draws through freed memory (this crashed inside
+// the client's d3dx9 wrapper right after a probe that overlapped the first live frames).
+bool probing = false;
+IDirect3DDevice9* probeDevice = nullptr;
 // Most recent viewport the device was given; a projection is only trusted as the world's when
 // this covers the whole client, mirroring how the OpenGL path recognises its world batch.
 D3DVIEWPORT9 lastViewport = {};
@@ -166,6 +194,9 @@ bool ProbeDevice(int source);
 
 void DrawFrame(IDirect3DDevice9* device, const char* label) {
     if (!device) return;
+    // A probe device never presents a frame; presenting through one would draw into the throwaway
+    // swap chain and, if the probe already released it, dereference freed memory.
+    if (device == probeDevice) return;
     frameAnchorSeen = true;
     // A frame from any hooked runtime proves the anchor is live; a blind session re-probes at a
     // widening interval (see StartBlindProbeWatchdog) and this resets that schedule.
@@ -210,18 +241,11 @@ void DrawFrame(IDirect3DDevice9* device, const char* label) {
     // The canvas cleared the scissor for its own pass; the cache must say so or a later
     // ortho pass would believe the rect is still applied.
     scissorActive = false;
-    // Anchor any runtime whose endpoints are still unknown - from the render thread. The game
-    // presents through the client wrapper's own device objects, whose functions only a wrapper
-    // probe exposes, and a probe from a foreign thread crashes inside the wrapper when it overlaps
-    // the game's renderer bring-up and deadlocks MinHook's thread suspension against live frames.
-    // Here the game's own CreateDevice has long finished and this thread is the one that calls the
-    // patched functions, so the patch window is as quiet as it can be.
-    for (int source = 0; source < kSourceCount; ++source) {
-        if (sources[source].module && !sources[source].devicePresent && !probeAttempted[source]) {
-            probeAttempted[source] = true;
-            ProbeDevice(source);
-        }
-    }
+    // A probe used to run from here to learn a runtime that had not been anchored yet. It is gone:
+    // a probe device built next to live frames makes the client wrapper juggle two devices and
+    // crashes the renderer, and every runtime is now anchored by its own CreateDevice instead. A
+    // session that never presents through a hooked runtime is recovered by the blind probe, which
+    // only runs while no frame has arrived at all.
 }
 
 template<int S>
@@ -469,6 +493,16 @@ HRESULT STDMETHODCALLTYPE CreateDevice9Hook(IDirect3D9* factory, UINT adapter, D
     HRESULT result = sources[source].createDevice(factory, adapter, type, focus, behavior, params, device);
     lastCreateTick = GetTickCount();
     if (SUCCEEDED(result) && device && *device) {
+        // The probe's own device is anchored like any other (its vtable is the one the engine's
+        // device will call) but it is not the frame device: it is released right after the probe
+        // and must never be remembered, and its creation must not count as the engine coming up.
+        if (probing) {
+            AnchorDevice(source, *device, "probe");
+            probeDevice = *device;
+            wc3::Log("D3D9 probe device anchored via patched factory source=%s device=%p",
+                sources[source].label, *device);
+            return result;
+        }
         AnchorDevice(source, *device, "create");
         activeDevice = *device;
         // The probe's own window must never become the frame size source.
@@ -521,6 +555,14 @@ bool HookCreate9(int source, HMODULE module, const char* label) {
 // code-hooked. The probe window is never shown and the device is released immediately.
 bool ProbeDevice(int source) {    Source& entry = sources[source];
     if (!entry.module) return false;
+    // Nothing left to learn: this runtime's presents already reach the frame tick.
+    if (entry.frameEndpointsHooked) return true;
+    // A live session must never be probed. Building a second device through the client's wrapper
+    // while the engine is presenting corrupts the wrapper's own device (it is not thread safe) and
+    // the process dies inside d3dx9 on the next effect pass - and the throwaway device would also
+    // replace the frame device with a pointer that is released moments later. Once frames flow the
+    // anchor is already live, so there is nothing a probe could add.
+    if (frameAnchorSeen && GetTickCount() - lastPresentTick < kProbeLiveWindowMs) return false;
     auto create9 = reinterpret_cast<Create9>(GetProcAddress(entry.module, "Direct3DCreate9"));
     if (!create9) { wc3::Log("D3D9 probe source=%s: no Create9 export", entry.label); return false; }
     if (!probeWindow) probeWindow = CreateWindowExA(0, "STATIC", "WarcraftCS D3D probe", WS_POPUP,
@@ -539,8 +581,12 @@ bool ProbeDevice(int source) {    Source& entry = sources[source];
     HWND engineWindow = window ? window : ResolveWindow();
     HWND hosts[2] = {probeWindow, engineWindow};
     const DWORD behaviors[] = {D3DCREATE_SOFTWARE_VERTEXPROCESSING, D3DCREATE_HARDWARE_VERTEXPROCESSING, D3DCREATE_MIXED_VERTEXPROCESSING};
+    probing = true;
     for (int host = 0; host < 2 && !anchored; ++host) {
         if (!hosts[host]) continue;
+        // The creation itself can take a second inside the wrapper; frames may have started while
+        // the previous attempt was in flight, in which case the session is no longer blind.
+        if (host > 0 && frameAnchorSeen && GetTickCount() - lastPresentTick < kProbeLiveWindowMs) break;
         D3DPRESENT_PARAMETERS present = {};
         present.Windowed = TRUE;
         present.SwapEffect = D3DSWAPEFFECT_DISCARD;
@@ -556,6 +602,7 @@ bool ProbeDevice(int source) {    Source& entry = sources[source];
             if (SUCCEEDED(hr) && device) {
                 wc3::Log("D3D9 probe device created source=%s host=%s behavior=%X", entry.label, host ? "game" : "helper", behavior);
                 anchored = AnchorDevice(source, device, "probe");
+                if (probeDevice == device) probeDevice = nullptr;
                 device->Release();
                 wc3::Log("D3D9 probe device released source=%s anchored=%d", entry.label, anchored ? 1 : 0);
                 break;
@@ -565,6 +612,8 @@ bool ProbeDevice(int source) {    Source& entry = sources[source];
             wc3::Log("D3D9 probe create failed source=%s host=%s behavior=%X hr=%08X", entry.label, host ? "game" : "helper", behavior, static_cast<unsigned>(hr));
         }
     }
+    probing = false;
+    probeDevice = nullptr;
     factory->Release();
     wc3::Log("D3D9 probe source=%s module=%p anchored=%d", entry.label, entry.module, anchored ? 1 : 0);
     return anchored;
@@ -587,19 +636,34 @@ HMODULE LoadSystemD3D9() {
 DWORD WINAPI BlindProbeWatchdog(void*) {
     for (;;) {
         Sleep(500);
-        if (!frameAnchorSeen) continue;  // start-up probing still owns the anchor
-        if (GetTickCount() - lastPresentTick < 2500) continue;  // frames are flowing
+        if (!frameAnchorSeen) {
+            // Not one frame has arrived: the engine's device was built before these hooks, and only
+            // a Direct3D session can be recovered. Wait out the renderer bring-up first, because a
+            // probe that lands inside the game's own CreateDevice faults inside the wrapper.
+            if (!rendererPreloaded) continue;
+            if (static_cast<LONG>(GetTickCount() - blindProbeStart) < 0) continue;
+        } else {
+            if (GetTickCount() - lastPresentTick < 2500) continue;  // frames are flowing
+            if (blindProbeAttempts >= kBlindProbeBudget) continue;
+        }
         if (GetTickCount() - lastCreateTick < kProbeQuietMs) continue;
-        if (blindProbeAttempts >= kBlindProbeBudget) continue;
         if (static_cast<LONG>(GetTickCount() - blindProbeAt) < 0) continue;
         blindProbeAt = GetTickCount() + blindProbeInterval;
         blindProbeInterval = blindProbeInterval < 60000 ? blindProbeInterval * 2 : 60000;
         ++blindProbeAttempts;
-        for (int source = 0; source < kSourceCount; ++source) {
+        // System runtime first (see the bootstrap note): the wrapper is probed only when the
+        // system probe has already failed to start the frames, so a widening-interval beat that
+        // recovers the session never reaches the fragile wrapper at all.
+        for (int pass = kSourceCount; pass-- > 0;) {
+            int source = pass;
             if (!sources[source].module || sources[source].frameEndpointsHooked) continue;
-            wc3::Log("D3D9 blind re-probe source=%s attempt=%u", sources[source].label, blindProbeAttempts);
+            wc3::Log("D3D9 blind re-probe source=%s attempt=%u frames=%d", sources[source].label,
+                blindProbeAttempts, frameAnchorSeen ? 1 : 0);
             ProbeDevice(source);
         }
+        // One human-readable verdict per blind session: everything above is per-attempt noise.
+        if (!frameAnchorSeen && blindProbeAttempts == 3)
+            wc3::Log("D3D9 no frames captured yet; F6 presses are queued until the game renders through a hooked device");
     }
 }
 
@@ -628,6 +692,11 @@ bool Install(PresentCallback present, ProjectionCallback projection) {
     // Sampled before the loads below: a live handle means the game already brought up Direct3D,
     // which is also the signal that its device predates these hooks.
     HMODULE active = GetModuleHandleA("d3d9.dll");
+    rendererPreloaded = active != nullptr;
+    // A session that never sees a frame has no "frames stopped" moment to react to, so the first
+    // fallback attempt is scheduled from install time instead.
+    blindProbeStart = GetTickCount() + kFirstBlindProbeDelayMs;
+    blindProbeInterval = kFirstBlindProbeIntervalMs;
     HMODULE search = LoadLibraryA("d3d9.dll");
     HMODULE system = LoadSystemD3D9();
     bool hooked = HookCreate9(0, search, "search");
@@ -644,25 +713,32 @@ bool Install(PresentCallback present, ProjectionCallback projection) {
     // installed, whose presents bypass every anchored function. It waits past the game's renderer
     // bring-up because a probe overlapping the game's CreateDevice crashes inside the wrapper.
     if (active) {
-        // The bootstrap probe covers the runtime the first frame can come through (the delegated
-        // system present); it runs during the load screen, before the game presents. The wrapper
-        // runtime is anchored later, on the render thread inside the first presented frame, where
-        // MinHook's thread suspension can never land on the presenting thread.
-        int bootstrapSource = (system && system != search) ? 1 : 0;
-        struct WaitGuard { static DWORD WINAPI Start(void* parameter) {
+        // The bootstrap probe runs during the load screen, before the game presents. Every loaded
+        // runtime is tried, not just the system one: a wrapper that refuses the system runtime can
+        // still build a device on the engine window, and leaving it untried used to cost the whole
+        // session (the bootstrap's one attempt blocked every later probe of that runtime).
+        struct WaitGuard { static DWORD WINAPI Start(void*) {
             // A device that predates these hooks exists long before this point, so a long wait
             // costs nothing in the case the bootstrap exists for and keeps the probe from ever
             // overlapping the game's own CreateDevice (which crashes inside the wrapper).
-            for (int waited = 0; waited < 250 && !anchoredByCreate && !frameAnchorSeen; ++waited) Sleep(100);
-            int source = static_cast<int>(reinterpret_cast<intptr_t>(parameter));
-            if (frameAnchorSeen || !sources[source].module || probeAttempted[source]) return 0;
-            probeAttempted[source] = true;
-            wc3::Log("D3D9 bootstrap probe start source=%d anchored=%d", source, anchoredByCreate ? 1 : 0);
-            ProbeDevice(source);
+            for (DWORD waited = 0; waited < kBootstrapWaitMs && !anchoredByCreate && !frameAnchorSeen; waited += 100)
+                Sleep(100);
+            if (frameAnchorSeen) return 0;
+            for (int pass = kSourceCount; pass-- > 0;) {
+                // System first, wrapper last: creating a throwaway device through the client's
+                // wrapper is what kills the process (twice observed inside its d3dx9 effect pass),
+                // while the wrapper delegates its own device creation to the system runtime, so an
+                // anchored system usually starts the frames and the wrapper never needs probing.
+                int source = pass;
+                if (!sources[source].module || sources[source].frameEndpointsHooked || probeAttempted[source]) continue;
+                probeAttempted[source] = true;
+                wc3::Log("D3D9 bootstrap probe start source=%s anchored=%d", sources[source].label,
+                    anchoredByCreate ? 1 : 0);
+                ProbeDevice(source);
+            }
             return 0;
         } };
-        HANDLE thread = CreateThread(nullptr, 0, WaitGuard::Start,
-            reinterpret_cast<LPVOID>(static_cast<intptr_t>(bootstrapSource)), 0, nullptr);
+        HANDLE thread = CreateThread(nullptr, 0, WaitGuard::Start, nullptr, 0, nullptr);
         if (thread) CloseHandle(thread);
     }
     // A single failed probe must not leave the whole session blind: the watchdog keeps trying the

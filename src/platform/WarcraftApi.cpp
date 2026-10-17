@@ -36,13 +36,15 @@ void LogError(const char* format, ...) {
 float Real(Bits bits) { float value; memcpy(&value, &bits, 4); return value; }
 // Each supported build carries its own compiled native table. The pointer declarations
 // above come from the 1.26a reference; only the assigned offsets differ per build.
+// A zero offset means this build has no verified entry - the declaration stays null so the
+// owning feature stands down instead of calling into the module header.
 static void BindNatives126a(uintptr_t base) {
-#define NATIVE(result, name, arguments, offset) name = reinterpret_cast<decltype(name)>(base + offset);
+#define NATIVE(result, name, arguments, offset) name = offset ? reinterpret_cast<decltype(name)>(base + offset) : nullptr;
 #include "NativeOffsets.inc"
 #undef NATIVE
 }
 static void BindNatives127a(uintptr_t base) {
-#define NATIVE(result, name, arguments, offset) name = reinterpret_cast<decltype(name)>(base + offset);
+#define NATIVE(result, name, arguments, offset) name = offset ? reinterpret_cast<decltype(name)>(base + offset) : nullptr;
 #include "NativeOffsets127a.inc"
 #undef NATIVE
 }
@@ -266,6 +268,18 @@ Handle Effect(const char* model, float x, float y) {
     uintptr_t node[8] = {}; node[7] = reinterpret_cast<uintptr_t>(model);
     uintptr_t wrapper[3] = {}; wrapper[2] = reinterpret_cast<uintptr_t>(node);
     return AddSpecialEffect(reinterpret_cast<Handle>(wrapper), &x, &y);
+}
+bool SetUnitAnimationName(Handle unit, const char* name) {
+    // Same stack string wrapper Effect() uses: wrapper+8 -> node, node+0x1C -> UTF-8 bytes.
+    // The engine's sequence matcher tokenises the buffer in place, so the text must be writable
+    // and must not be a literal; the wrapper never enters the JASS string table.
+    if (!unit || !name || !SetUnitAnimation) return false;
+    char text[64] = {};
+    strncpy_s(text, name, _TRUNCATE);
+    uintptr_t node[8] = {}; node[7] = reinterpret_cast<uintptr_t>(text);
+    uintptr_t wrapper[3] = {}; wrapper[2] = reinterpret_cast<uintptr_t>(node);
+    SetUnitAnimation(unit, static_cast<Handle>(reinterpret_cast<uintptr_t>(wrapper)));
+    return true;
 }
 bool HasUnitBuff(Handle unit, int type) {
     // Native buff objects can have level -1: GetUnitAbilityLevel returning zero does not mean absent.

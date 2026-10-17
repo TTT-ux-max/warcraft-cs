@@ -205,6 +205,10 @@ def main(argv):
         rows.append("")
         rows.append("// --- JASS native entry points also referenced by legacy RVA ---")
         for name, legacy_rva, offset, signature in sorted(accepted, key=lambda r: int(r[1], 16)):
+            # A zero legacy RVA is a 1.27a-only native: the reference build has no verified
+            # address for it, so there is nothing for the translation table to resolve.
+            if int(legacy_rva, 16) == 0:
+                continue
             rows.append(
                 f"BUILD_ADDRESS({legacy_rva}, 0x{offset:X})  // {name} {signature}"
             )

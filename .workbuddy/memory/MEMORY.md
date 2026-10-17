@@ -172,3 +172,13 @@
   DotA AI 图加载慢且经常静默失败/崩，验条带用 `(4)TurtleRock~3.w3x`（秒载，PickOwnedUnit
   有 fallback 不需预选）；裁剪/对比辅助 `croptop.ps1`/`cropcenter.ps1`/`probe-column.ps1`/
   `diff-region.ps1`。小图看不清的"文字重叠"先用裁剪放大核实，是缩放锯齿。
+
+## D3D9 探测安全（22:51 崩溃后定论）
+
+- **绝不在帧流动时创建 probe 设备**；probe 设备绝不入 `activeDevice`（悬垂 → d3dx9 崩）。
+- **探测顺序 system 优先**：wrapper（ENB）的设备创建委托 system，system 锚定后帧即流动；
+  对 wrapper 本体建设备会破坏其 effect 状态（d3dx9_40 ACCESS_VIOLATION，两次实测），只在
+  system 失败后仍彻底失明时才最后尝试。bootstrap 等待必须 ≥ 整次读图时长（40s）。
+- 1.26a 未验证地址在参考表填 0x0（Bind 对 0 保持 null，调用点自行 stand down）。
+- 原生字符串参数 = CString 包装对象（wrapper+8→node，node+0x1C=text），解析器会改写缓冲，
+  必须传可写副本；见 `WarcraftApi::SetUnitAnimationName` / `Effect`。

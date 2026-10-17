@@ -40,6 +40,13 @@ struct GameplaySettings {
     // M changes this session preference; F8 restores the editable startup choice and size.
     bool showMinimap=true;
     bool showSpellIcons=true,showSpellCooldowns=true;
+    // The CS first-person arms/skin is a body of its own; generic maps want the selected
+    // unit's bare eyes, so the whole view-model pass can be turned off (F8 reloads it).
+    bool viewWeapon=true;
+    // WOW-style wheel: zoom the follow camera between third person and the unit's eyes.
+    // On by default so a plain patch copy zooms without editing the INI; false keeps the
+    // legacy weapon-wheel behavior. Number keys always switch weapons.
+    bool wheelZoom=true;
     float spellIconSizePercent=7;
     float minimapSizePercent=22;
     // Temporary FPS visibility preference; ordinary map fog is restored outside FPS.

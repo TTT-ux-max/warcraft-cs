@@ -33,13 +33,16 @@ class ShooterController {
 public:
     void Tick(uintptr_t ui);
     void ResetMap();
+    void ApplyZoom();
     // A caught extension fault must return camera/HUD ownership so native menus remain usable.
     void RecoverFault() { Disable(true); }
     // Native window input feeds the dedicated relative-look collector on the same game thread.
     void AttachWindow(HWND window) { mouseLook_.Attach(window); }
     void MouseInput(LPARAM packet,bool accept) { mouseLook_.Input(packet,accept); }
-    void ResetMouse() { mouseLook_.Reset(); weaponWheel_.Reset(); }
-    void RequestWeaponWheel(int delta) { weaponWheel_.Add(delta); }
+    void ResetMouse() { mouseLook_.Reset(); weaponWheel_.Reset(); zoomDelta_ = 0; }
+    // With WheelZoom the packets drive the orbit camera instead of the weapon wheel; number
+    // keys still switch weapons, so no loadout capability depends on the wheel.
+    void RequestWeaponWheel(int delta) { if (settings_.wheelZoom) zoomDelta_ += delta; else weaponWheel_.Add(delta); }
     // A press landing inside the first seconds of a map (menu gates still own the screen) is
     // kept alive for a short window instead of dropped; every fresh press restarts it.
     void RequestToggle() { toggleRequested_ = true; toggleQueuedAt_ = 0; toggleRetryAt_ = 0; }
@@ -92,8 +95,12 @@ public:
         return choice.empty() ? settings_.defaultSky : choice;
     }
     bool Visible() const { return active_ && !suspended_; }
-    // Presentation may identify the controlled actor only while the first-person view owns the screen.
-    wc3::Handle ViewActor() const { return Visible() ? unit_ : 0; }
+    // WOW-style follow view: the camera orbits behind the body until the wheel pulls it onto the eyes.
+    bool ThirdPerson() const { return orbit_ > 0 && !Scoped(); }
+    bool FirstPerson() const { return !ThirdPerson(); }
+    // Presentation may identify the controlled actor only while the first-person view owns the screen;
+    // a third-person orbit must keep the body rendered so the player can watch it move and act.
+    wc3::Handle ViewActor() const { return Visible() && FirstPerson() ? unit_ : 0; }
     // Block only map camera writes during live FPS; our camera pass and cinematic/RTS writes remain allowed.
     bool BlocksMapCamera() const { return Visible() && !ownCameraRequest_; }
     void SetPaused(bool value) { paused_ = value; }
@@ -166,6 +173,9 @@ private:
     void Sound(const char* name);
     void SurfaceStep(float volume);
     void UpdateStatus();
+    // The body is relocated by the mod, so the engine never enters its own moving state; the walk
+    // cycle has to be requested from the native animation table while the player is moving.
+    void ApplyBodyAnimation(bool walking);
     const char* Sequence(const char* name) const;
     wc3::Handle unit_ = 0;
     wc3::Handle fixtureTarget_ = 0; // only used after an explicit private verification request
@@ -175,6 +185,9 @@ private:
     uintptr_t gameBase_ = 0;
     UnitStatus status_;
     bool active_ = false, suspended_ = false, paused_ = false;
+    // A deliberate F6 owns the view until the player leaves: maps that drive a permanent
+    // third-person camera through cinematic mode must not auto-yield or refuse the entry.
+    bool forced_ = false;
     bool cinematicRequested_ = false;
     bool ownCameraRequest_ = false;
     int scopeLevel_ = 0;
@@ -209,6 +222,10 @@ private:
     NativeFogOfWar nativeFog_;
     MouseLook mouseLook_;
     WeaponWheel weaponWheel_;
+    // Follow-camera orbit distance in world units (0 = the unit's own eyes); zoomDelta_
+    // accumulates raw wheel packets until the tick converts them into orbit motion.
+    float orbit_ = 0;
+    int zoomDelta_ = 0;
     GameplaySettings settings_;
     BuyInventory inventory_;
     BuyMenu buyMenu_;
@@ -221,6 +238,11 @@ private:
     std::string ammoMessage_;
     GameAudio audio_;
     float stepDistance_ = 0;
+    // 0 = not driven, 1 = walk requested, 2 = stand requested. Only transitions and a slow
+    // re-assert write to the engine, so a map's own attack/cast animation is not overwritten
+    // every frame.
+    int bodyAnim_ = 0;
+    DWORD bodyAnimTick_ = 0;
     unsigned stepIndex_ = 0;
     unsigned knifeSwing_ = 0;
     float animationRate_ = 1;

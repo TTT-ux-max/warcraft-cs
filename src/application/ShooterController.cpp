@@ -137,7 +137,9 @@ void ShooterController::SurfaceStep(float volume) {
 }
 void ShooterController::InterfaceRequest(bool show) {
     cinematicRequested_ = !show;
-    if (active_ && !show) {
+    // With the F6 override latched the map's interface hiding is just more hidden HUD; FPS keeps
+    // rendering and its guarded camera keeps winning over the map's third-person follow writes.
+    if (active_ && !show && !forced_) {
         nativeSky_.Update(ui_,false,mapTileset_);
         // Yield before the map applies its cinematic layout/camera; keep the mission unit visible.
         spells_.Cancel();spellRequested_=-1;spellCancelRequested_=false;
@@ -160,10 +162,13 @@ void ShooterController::Disable(bool restoreCamera) {
         ownCameraRequest_ = false;
     }
     CancelPlant();
-    active_ = false; scopeLevel_ = 0; reloadEnd_ = 0;
+    active_ = false; forced_ = false; scopeLevel_ = 0; reloadEnd_ = 0;
     nativeSky_.Update(ui_,false,mapTileset_);
     meleeContact_ = meleeReady_ = 0; recoil_.Reset();
     audio_.Stop(); stepDistance_ = 0;
+    // Hand the body back to the engine on the cycle RTS expects.
+    if (unit_) wc3::SetUnitAnimationName(unit_, "stand");
+    bodyAnim_ = 0; bodyAnimTick_ = 0;
     hits_.Clear(); refillRequested_ = false; allWeaponsRequested_=false; refillTick_ = 0;
     // Discard pending display taps without losing the session's chosen visibility.
     itemRequested_=settingsRequested_=itemNearby_=speedToggleRequested_=minimapToggleRequested_=false;squadRequested_=0;
@@ -187,7 +192,9 @@ void ShooterController::ResetMap() {
     hitboxes_.Reset(); destructableHitboxes_.Reset(); bombs_.Reset(); plantProgress_ = 0;
     buyMenu_.Close();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;
     fixtureGate_ = 0;
-    unit_ = 0; active_ = false; suspended_ = false; paused_ = false; ui_ = 0; tick_ = {};
+    unit_ = 0; active_ = false; suspended_ = false; paused_ = false; forced_ = false; ui_ = 0; tick_ = {};
+    orbit_ = 0; zoomDelta_ = 0;
+    bodyAnim_ = 0; bodyAnimTick_ = 0;
     scopeLevel_ = 0; cinematicRequested_ = false; toggleRequested_ = false; toggleQueuedAt_ = 0; toggleRetryAt_ = 0; ownCameraRequest_ = false;
     status_ = {}; meleeContact_ = meleeReady_ = 0; recoil_.Reset();
     std::fill(std::begin(keys_), std::end(keys_), false); lastShot_ = 0;
@@ -214,8 +221,11 @@ void ShooterController::Toggle() {
     wc3::IssueImmediateOrderById(unit_, 851972);  // stop autonomous attack/movement orders
     float zero = 0; wc3::SetCameraTargetController(0, &zero, &zero, FALSE);
     // Keep native UI/portrait anchors intact; FPS suppresses HUD graphics at GL submission.
-    active_ = true; suspended_ = false; scopeLevel_ = 0; Play("draw");
-    wc3::Log("FPS enabled: unit=%08X type=%08X", unit_, wc3::GetUnitTypeId(unit_));
+    active_ = true; forced_ = true; suspended_ = false; scopeLevel_ = 0; Play("draw");
+    // WOW-style sessions open on the follow view so the player sees the chosen model; the
+    // legacy wheel configuration keeps the plain first-person entry.
+    orbit_ = settings_.wheelZoom ? 280.0f : 0;
+    wc3::Log("FPS enabled: unit=%08X type=%08X orbit=%.0f", unit_, wc3::GetUnitTypeId(unit_), orbit_);
 }
 void ShooterController::AimAndMove(float dt) {
     // A contained unit belongs to native cargo: changing XY/stance would fake an escape without releasing it.
@@ -280,9 +290,30 @@ void ShooterController::AimAndMove(float dt) {
             }
         } else stepDistance_ = 0;
     }
+    // A relocated unit never reads as "moving" to the engine's animation state machine, so the
+    // body would slide in the follow view. The cycle is requested explicitly instead; input alone
+    // drives it because grounded/speed jitter would flap the transition several times a second.
+    ApplyBodyAnimation(Visible() && !input.immobilized &&
+        (input.forward != 0.0f || input.right != 0.0f));
     if (!status_.incapacitated && !spells_.Active()) {
         float facing = LookAngles::Normalize(yaw_); wc3::SetUnitFacing(unit_, &facing);
     }
+}
+void ShooterController::ApplyBodyAnimation(bool walking) {
+    if (!unit_ || status_.incapacitated) { bodyAnim_ = 0; return; }
+    const int wanted = walking ? 1 : 2;
+    const DWORD now = GetTickCount();
+    const bool changed = bodyAnim_ != wanted;
+    // Hysteresis on the walk-to-stand edge: movement input bounces frame to frame, and each
+    // request restarts the sequence, which would look like stutter instead of a stride.
+    if (changed && !walking && bodyAnim_ == 1 && now - bodyAnimTick_ < 300) return;
+    // Only the transition is written, plus a slow re-assert while walking: the engine replaces the
+    // cycle with its own attack/cast animation, and a loop restart every 800 ms is close to the
+    // natural stride so the body keeps walking instead of freezing mid-slide.
+    if (!changed && !(walking && now - bodyAnimTick_ >= 800)) return;
+    if (!wc3::SetUnitAnimationName(unit_, walking ? "walk" : "stand")) { bodyAnim_ = 0; return; }
+    if (changed) wc3::Log("FPS body animation %s", walking ? "walk" : "stand");
+    bodyAnim_ = wanted; bodyAnimTick_ = now;
 }
 void ShooterController::UpdateStatus() {
     UnitStatus current = UnitStatus::Read(unit_, gameBase_);
@@ -311,11 +342,40 @@ void ShooterController::Camera() {
     // Presentation follows the same physical eye used by weapon rays.
     // Map RTS camera timers must not overwrite this pass; cinematics still receive control when suspended.
     ownCameraRequest_ = true;
+    float yaw = yaw_ + recoil_.Yaw();
+    float pitch = std::clamp(pitch_ + recoil_.Pitch(), -65.0f, 65.0f);
+    float eyeX = wc3::Real(wc3::GetUnitX(unit_)), eyeY = wc3::Real(wc3::GetUnitY(unit_));
+    float eyeZ = movement_.EyeZ() + wc3::Real(wc3::GetUnitFlyHeight(unit_));
+    // WOW-style orbit: pull the eye back along the view axis so the model stays framed in
+    // front of the camera; the first-person pass keeps the eye exactly on the aim origin.
+    if (float orbit = ThirdPerson() ? orbit_ : 0; orbit > 0) {
+        constexpr float radians = 0.01745329252f;
+        float horizontal = std::cos(pitch * radians) * orbit;
+        eyeX -= horizontal * std::cos(yaw * radians);
+        eyeY -= horizontal * std::sin(yaw * radians);
+        eyeZ -= std::sin(pitch * radians) * orbit;
+        // Never let the orbit dig the eye into hillsides or below the map plane.
+        float floorZ = wc3::Ground(eyeX, eyeY) + 50.0f;
+        if (eyeZ < floorZ) eyeZ = floorZ;
+    }
     // Body/attachments are hidden by the world-only render filter; preserve native portrait tint/alpha.
-    camera_.Update(wc3::Real(wc3::GetUnitX(unit_)), wc3::Real(wc3::GetUnitY(unit_)),
-        movement_.EyeZ() + wc3::Real(wc3::GetUnitFlyHeight(unit_)), yaw_ + recoil_.Yaw(), std::clamp(pitch_ + recoil_.Pitch(), -65.0f, 65.0f),
+    camera_.Update(eyeX, eyeY, eyeZ, yaw, pitch,
         scopeLevel_ == 2 ? 10.0f : Scoped() ? 40.0f : 85.0f, settings_.render.drawDistance);
     ownCameraRequest_ = false;
+}
+void ShooterController::ApplyZoom() {
+    if (!zoomDelta_) return;
+    if (orbit_ <= 0 && zoomDelta_ < 0) {
+        // Leaving the eyes jumps straight to the follow framing instead of crawling out of the head.
+        orbit_ = 280.0f;
+    } else {
+        // Scroll up pulls toward the eyes; close enough snaps to true first person.
+        orbit_ -= zoomDelta_ * 0.45f;
+        if (orbit_ < 130.0f) orbit_ = 0;
+        else if (orbit_ > 900.0f) orbit_ = 900.0f;
+    }
+    zoomDelta_ = 0;
+    wc3::Trace("camera orbit=%.0f", orbit_);
 }
 void ShooterController::Reload() {
     const Weapon& w = weapons[weapon_];
@@ -588,10 +648,14 @@ void ShooterController::Tick(uintptr_t ui) {
     // Map-script interface requests are distinct from the FPS mode's own hidden HUD.
     bool cinematic = cinematicRequested_;
     // Native menus have their own pause flags, separate from the JASS PauseGame callback.
-    bool suspended = cinematic || paused_ || *reinterpret_cast<int*>(ui + 0x258) || *reinterpret_cast<int*>(ui + 0x260);
+    // The F6 override keeps the view through map-driven cinematic mode: third-person maps hold
+    // these gates for their whole session, and only a native pause still yields the view.
+    bool suspended = paused_ || (!forced_ && (cinematic || *reinterpret_cast<int*>(ui + 0x258) || *reinterpret_cast<int*>(ui + 0x260)));
     if (active_ && suspended != suspended_) {
         // Yield actor visibility and layout to native menus/cinematics; mission bounds stay untouched.
         audio_.Stop(); stepDistance_ = 0;
+        // The map owns the body while suspended, and the tick re-asserts the cycle on resume.
+        if (suspended) { if (unit_) wc3::SetUnitAnimationName(unit_, "stand"); bodyAnim_ = 0; }
         wc3::Log("FPS %s for campaign/UI", suspended ? "suspended" : "resumed");
     }
     suspended_ = suspended;
@@ -610,8 +674,9 @@ void ShooterController::Tick(uintptr_t ui) {
         // The first seconds of a map still hold the menu gates (loading fade, intro camera)
         // and custom maps like DotA have not placed the player's hero yet; a press landing
         // there is queued for a short window instead of dropped, so one press suffices once
-        // the game responds. RequestToggle restarts the window per press.
-        if (!active_ && !paused_ && !*reinterpret_cast<int*>(ui + 0x258) && !*reinterpret_cast<int*>(ui + 0x260)) {
+        // the game responds. RequestToggle restarts the window per press. Cinematic gates no
+        // longer refuse the press: third-person maps hold them permanently for their camera.
+        if (!active_ && !paused_) {
             cinematicRequested_ = false; suspended_ = false;
             if (!toggleRetryAt_ || GetTickCount() - toggleRetryAt_ >= 500) {
                 toggleRetryAt_ = GetTickCount();
@@ -815,13 +880,17 @@ void ShooterController::Tick(uintptr_t ui) {
         Pressed(VK_LBUTTON);Pressed(VK_RBUTTON);Pressed(ShortcutAction::Reload);
         if (!status_.contained && !status_.hidden) FpsCombatGuard::CancelOrders(unit_);
         squad_.Tick(unit_,settings_,now,!status_.contained && !status_.hidden,yaw_,movement_.VelocityX(),movement_.VelocityY());
-        movement_.Stop();weaponWheel_.Reset();AimAndMove(dt);Camera();audio_.Tick(now);return;
+        movement_.Stop();weaponWheel_.Reset();zoomDelta_=0;AimAndMove(dt);Camera();audio_.Tick(now);return;
     }
     // Wheel packets are consumed once; an explicit number key takes precedence in the same frame.
-    int wheel=weaponWheel_.Take(weapon_);
-    int steps=(wheel-weapon_+WeaponSlots::Count)%WeaponSlots::Count;
-    if (steps>WeaponSlots::Count/2) steps-=WeaponSlots::Count;
-    SwitchWeapon(inventory_.Next(weapon_,steps));
+    if (settings_.wheelZoom) {
+        ApplyZoom();
+    } else {
+        int wheel=weaponWheel_.Take(weapon_);
+        int steps=(wheel-weapon_+WeaponSlots::Count)%WeaponSlots::Count;
+        if (steps>WeaponSlots::Count/2) steps-=WeaponSlots::Count;
+        SwitchWeapon(inventory_.Next(weapon_,steps));
+    }
     for (int i = 0; i < WeaponSlots::Count; ++i) if (Pressed(ShortcutAction(int(ShortcutAction::Weapon1)+i))) SwitchWeapon(i);
     if (Pressed(ShortcutAction::Reload)) Reload();
     // Consume the right-click edge for every weapon so holding it across a switch never scopes or stabs.

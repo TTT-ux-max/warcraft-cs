@@ -68,6 +68,10 @@ void Overlay::Draw(Canvas& canvas, HDC dc, HWND window, int width, int height,
     int index = controller.WeaponIndex();
     // Slightly tighten USP/AWP framing while preserving the original lower-edge arm origins.
     static constexpr float projectionScales[] = {0.72f, 0.78f, 0.94f, 0.73f, 1.0f, 0.95f, 0.85f};
+    // ViewWeapon=false keeps the bare first-person eyes of the selected unit: no CS arms, no
+    // skin pass, and no private depth clear — the world depth stays exactly as the engine left it.
+    // A third-person orbit has no face to put arms on either, so the pass only runs on the eyes.
+    if (controller.Settings().viewWeapon && controller.FirstPerson()) {
     canvas.BeginWeapon(width, height, projectionScales[index], 1.0f, 200.0f);
     if (!(skipStages & 2u)) {
     if (!attempted_[index]) {
@@ -80,6 +84,7 @@ void Overlay::Draw(Canvas& canvas, HDC dc, HWND window, int width, int height,
         guns_[index].Draw(controller.Animation(), controller.AnimationTime(), canvas);
     }
     canvas.EndWeapon();
+    }
     // A swallowed/transported unit has no world viewpoint: hide equipment and retain the health/status HUD.
     bool unavailableView = controller.Status().contained || controller.Status().hidden;
     if (unavailableView) {
@@ -117,7 +122,7 @@ void Overlay::Draw(Canvas& canvas, HDC dc, HWND window, int width, int height,
     bool minimapDrawn = controller.MinimapVisible() && canvas.IsOpenGL();
     if (minimapDrawn) minimap.Draw(mapLayout);
     std::string controls = "Warcraft CS by Yazgul | " + key(ShortcutAction::ToggleFPS) + ": RTS | " + key(ShortcutAction::ReloadSettings) + ": CONFIG | " + key(ShortcutAction::Minimap) + ": MINIMAP | " + key(ShortcutAction::Speed) + ": SPEED | " + key(ShortcutAction::Fog) + ": FOG";
-    std::string equipment = "WHEEL: WEAPONS | " + key(ShortcutAction::Weapon6) + ": C4 | " + key(ShortcutAction::Pickup) + ": ITEM | " + key(ShortcutAction::Buy) + ": BUY | " + key(ShortcutAction::BuyAmmo) + ": AMMO";
+    std::string equipment = std::string(controller.Settings().wheelZoom ? "WHEEL: ZOOM" : "WHEEL: WEAPONS") + " | " + key(ShortcutAction::Weapon6) + ": C4 | " + key(ShortcutAction::Pickup) + ": ITEM | " + key(ShortcutAction::Buy) + ": BUY | " + key(ShortcutAction::BuyAmmo) + ": AMMO";
     std::string abilities = key(ShortcutAction::HealthBars) + ": HEALTH BARS | " + key(ShortcutAction::Spell1) + "/" + key(ShortcutAction::Spell2) + "/" + key(ShortcutAction::Spell3) + "/" + key(ShortcutAction::Spell4) + ": SPELLS | " + key(ShortcutAction::SelfCast) + ": SELF";
     char squad[256]; sprintf_s(squad, "%s: FIGHT | %s: FOLLOW | %s: RELEASE | SQUAD %u %s | %s: FREE AMMO | %s: ALL WEAPONS",
         key(ShortcutAction::SquadFight).c_str(), key(ShortcutAction::SquadFollow).c_str(), key(ShortcutAction::SquadRelease).c_str(), unsigned(controller.SquadCount()), controller.SquadCount() ? (controller.SquadPassive() ? "FOLLOW" : "COMBAT") : "", key(ShortcutAction::Refill).c_str(), key(ShortcutAction::AllWeapons).c_str());

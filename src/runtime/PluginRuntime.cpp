@@ -78,6 +78,54 @@ using DeleteContext = BOOL (WINAPI*)(HGLRC);
 using Interface = void (__cdecl*)(BOOL, float*);
 static DeleteContext originalDeleteContext = nullptr;
 static Interface originalInterface = nullptr;
+// The input window used to attach only from the present anchors, so a session that never
+// reached a first frame (map still loading, boot splash, or a session stuck before the world
+// renders) could not receive F6 at all: the press was neither queued nor logged, and the log
+// could not tell a focus problem from a dead session. The message pump is the earliest point
+// that always runs on the game's UI thread - the thread that owns the window, which is the
+// only thread allowed to install a window procedure. Once attached, the steady state is one
+// pointer compare per pump call.
+using GetMessageW_t = BOOL (WINAPI*)(LPMSG, HWND, UINT, UINT);
+using PeekMessageW_t = BOOL (WINAPI*)(LPMSG, HWND, UINT, UINT, UINT);
+static GetMessageW_t originalGetMessageW = nullptr, originalGetMessageA = nullptr;
+static PeekMessageW_t originalPeekMessageW = nullptr, originalPeekMessageA = nullptr;
+static DWORD pumpSearchTick = 0;
+struct PumpWindowSearch { HWND best; LONG area; };
+static BOOL CALLBACK PumpWindowEnum(HWND candidate, LPARAM context) {
+    auto search = reinterpret_cast<PumpWindowSearch*>(context);
+    RECT rect = {};
+    if (!IsWindowVisible(candidate) || IsIconic(candidate) || !GetWindowRect(candidate, &rect)) return TRUE;
+    LONG area = (rect.right - rect.left) * (rect.bottom - rect.top);
+    if (area > search->area) { search->area = area; search->best = candidate; }
+    return TRUE;
+}
+static void ObservePumpWindow() {
+    if (windowInput.Window()) return;
+    DWORD now = GetTickCount();
+    if (now - pumpSearchTick < 500) return;
+    pumpSearchTick = now;
+    PumpWindowSearch search = {};
+    EnumThreadWindows(GetCurrentThreadId(), PumpWindowEnum, reinterpret_cast<LPARAM>(&search));
+    // Observe re-checks ownership and thread affinity itself, so a mismatched thread simply
+    // declines and the search retries on a later beat.
+    if (search.best && windowInput.Observe(search.best)) controller.AttachWindow(search.best);
+}
+static BOOL WINAPI GetMessageWHook(LPMSG message, HWND window, UINT lowest, UINT highest) {
+    ObservePumpWindow();
+    return originalGetMessageW(message, window, lowest, highest);
+}
+static BOOL WINAPI GetMessageAHook(LPMSG message, HWND window, UINT lowest, UINT highest) {
+    ObservePumpWindow();
+    return originalGetMessageA(message, window, lowest, highest);
+}
+static BOOL WINAPI PeekMessageWHook(LPMSG message, HWND window, UINT lowest, UINT highest, UINT remove) {
+    ObservePumpWindow();
+    return originalPeekMessageW(message, window, lowest, highest, remove);
+}
+static BOOL WINAPI PeekMessageAHook(LPMSG message, HWND window, UINT lowest, UINT highest, UINT remove) {
+    ObservePumpWindow();
+    return originalPeekMessageA(message, window, lowest, highest, remove);
+}
 // Builds with no world/UI anchor have nothing that marks the native UI pass, so the console
 // cannot be dropped at GL submission the way the 1.26a path drops it. The engine's own
 // interface call - the one cinematics use - hides it instead, and the FPS HUD draws its own
@@ -836,6 +884,17 @@ static DWORD WINAPI Initialize(void*) {
     Hook(reinterpret_cast<void*>(GetProcAddress(gl, "wglDeleteContext")), reinterpret_cast<void*>(DeleteContextHook), reinterpret_cast<void**>(&originalDeleteContext));
     Hook(reinterpret_cast<void*>(GetProcAddress(gl, "glDrawElements")), reinterpret_cast<void*>(DrawElementsHook), reinterpret_cast<void**>(&originalDrawElements));
     Hook(swapExport, reinterpret_cast<void*>(SwapLayerHook), reinterpret_cast<void**>(&originalSwap));
+    // Input attach must not depend on the first frame. These pump hooks run on the window's own
+    // thread from the very first message, whether the window predates this module or not.
+    HMODULE user32 = GetModuleHandleA("user32.dll");
+    Hook(reinterpret_cast<void*>(GetProcAddress(user32, "GetMessageW")),
+        reinterpret_cast<void*>(GetMessageWHook), reinterpret_cast<void**>(&originalGetMessageW));
+    Hook(reinterpret_cast<void*>(GetProcAddress(user32, "GetMessageA")),
+        reinterpret_cast<void*>(GetMessageAHook), reinterpret_cast<void**>(&originalGetMessageA));
+    Hook(reinterpret_cast<void*>(GetProcAddress(user32, "PeekMessageW")),
+        reinterpret_cast<void*>(PeekMessageWHook), reinterpret_cast<void**>(&originalPeekMessageW));
+    Hook(reinterpret_cast<void*>(GetProcAddress(user32, "PeekMessageA")),
+        reinterpret_cast<void*>(PeekMessageAHook), reinterpret_cast<void**>(&originalPeekMessageA));
     // The engine presents through its own import entry, so claim that entry as the authoritative
     // anchor instead of relying on the export prologue surviving every other in-process hook.
     bool anchor = ClaimPresentImport(game, "wglSwapLayerBuffers", reinterpret_cast<void*>(SwapLayerHook));

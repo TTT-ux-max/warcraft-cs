@@ -47,6 +47,11 @@ NATIVE(void, SetUnitPosition, (Handle, float*, float*), 0x3C5A50)
 NATIVE(void, SetUnitX, (Handle, float*), 0x3C5970)
 NATIVE(void, SetUnitY, (Handle, float*), 0x3C59E0)
 NATIVE(void, SetUnitFacing, (Handle, float*), 0x3C5AF0)
+// Walk/idle cycles for the FPS body, which the mod relocates every frame and the engine therefore
+// never animates on its own. The 1.27a entry is resolved by name and by the JASS signature the
+// engine stores ("(Hunit;S)V"); no 1.26a address has been confirmed yet, so that build keeps a
+// zero offset and the call site stands down rather than call an unverified address.
+NATIVE(void, SetUnitAnimation, (Handle, Handle), 0x0)
 NATIVE(void, SetUnitVertexColor, (Handle, int, int, int, int), 0x3C6340)
 NATIVE(BOOL, IssueImmediateOrderById, (Handle, int), 0x3C8900)
 // Rune pickup and order cancellation retain the engine's item effects and native ownership.

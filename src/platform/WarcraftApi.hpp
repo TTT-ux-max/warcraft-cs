@@ -115,6 +115,10 @@ extern void (__cdecl* SetUnitY)(Handle, float*);
 extern void (__cdecl* SetUnitScale)(Handle, float*, float*, float*);
 extern void (__cdecl* SetUnitFacing)(Handle, float*);
 extern void (__cdecl* SetUnitVertexColor)(Handle, int, int, int, int);
+// JASS SetUnitAnimation; the second argument is the engine's string wrapper, so callers use the
+// name helper below instead of passing a C string.
+extern void (__cdecl* SetUnitAnimation)(Handle, Handle);
+bool SetUnitAnimationName(Handle unit, const char* name);
 extern BOOL (__cdecl* IssueImmediateOrderById)(Handle, int);
 extern BOOL (__cdecl* UnitDamageTarget)(Handle, Handle, float*, BOOL, BOOL, int, int, int);
 extern void (__cdecl* SetCameraField)(int, float*, float*);

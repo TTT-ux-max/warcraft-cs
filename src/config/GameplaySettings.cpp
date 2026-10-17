@@ -128,6 +128,14 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         return true;
     };
     result.showSpellIcons=enabledHud("ShowSpellIcons");result.showSpellCooldowns=enabledHud("ShowSpellCooldowns");
+    // The view-model defaults to on for the CS experience; explicit false strips the arms.
+    result.viewWeapon=enabledHud("ViewWeapon");
+    // WOW-style wheel zoom is the shipped default; legacy configs without the key inherit it,
+    // and an explicit false restores the weapon wheel.
+    auto wheelZoom=text("Interface","WheelZoom","true");
+    result.wheelZoom=!_stricmp(wheelZoom.c_str(),"true") || wheelZoom=="1";
+    if (!wheelZoom.empty() && _stricmp(wheelZoom.c_str(),"true") && _stricmp(wheelZoom.c_str(),"false") &&
+        wheelZoom!="0" && wheelZoom!="1") wc3::Log("Invalid Interface.WheelZoom; using true");
     result.spellIconSizePercent=std::max(4.f,number("Interface","SpellIconSizePercent",7,14));
     // Keep the optional counter hidden for old/invalid configs; accept explicit boolean preferences.
     auto showSpeed=text("Interface","ShowSpeed","false");
