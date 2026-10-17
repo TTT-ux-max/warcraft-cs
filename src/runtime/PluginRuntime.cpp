@@ -832,7 +832,10 @@ static DWORD WINAPI Initialize(void*) {
     uintptr_t base = gameBase = reinterpret_cast<uintptr_t>(game);
     controller.Configure(root, base); overlay.Configure(root);
     frameRate.Install(base);
-    if (MH_Initialize() != MH_OK) { wc3::Log("MinHook initialization failed"); return 0; }
+    // The early install thread initializes MinHook first so it can claim Create9 during startup;
+    // that is not an error here.
+    MH_STATUS hookStatus = MH_Initialize();
+    if (hookStatus != MH_OK && hookStatus != MH_ERROR_ALREADY_INITIALIZED) { wc3::Log("MinHook initialization failed"); return 0; }
     // The world render callback is the frame anchor on 1.26a. Where this build has no
     // verified address for it the native prologue check cannot pass, so the swap hook
     // takes over the per-frame tick and every game hook that depends on the world pass
@@ -928,6 +931,10 @@ BOOL PluginRuntime::Attach(HINSTANCE module) {
             reinterpret_cast<LPCSTR>(PluginRuntime::Attach), &pinned);
         char* slash = strrchr(root, '\\'); if (slash) *slash = 0;
         strcat_s(root, "\\WarcraftCS");
+        // Claim the Direct3DCreate9 exports from here, not from Initialize: the engine builds its
+        // device inside its first second, while Initialize is still binding and hooking the engine,
+        // and an exclusive-fullscreen device can never be re-created for a probe afterwards.
+        D3DHooks::StartEarlyInstall();
         // Defer engine work until after the loader lock has been released.
         HANDLE thread = CreateThread(nullptr, 0, Initialize, nullptr, 0, nullptr);
         if (thread) CloseHandle(thread);

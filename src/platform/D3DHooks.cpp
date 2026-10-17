@@ -13,8 +13,14 @@
 // (Reading Direct3D 9 with the Direct3D 8 device indices silently patched GetSwapChain and
 // GetNumberOfSwapChains and never anchored a frame.)
 constexpr int kFactoryCreateDeviceSlot = 16;
+// IDirect3D9Ex adds GetAdapterModeCountEx, EnumAdapterModesEx and GetAdapterDisplayModeEx over
+// IDirect3D9, which puts CreateDeviceEx at 20.
+constexpr int kFactoryCreateDeviceExSlot = 20;
 constexpr int kDeviceResetSlot = 16;
 constexpr int kDevicePresentSlot = 17;
+// IDirect3DDevice9Ex adds SetConvolutionMonoKernel and ComposeRects over IDirect3DDevice9, which
+// puts PresentEx at 121. A renderer that presents through it bypasses the plain Present hook.
+constexpr int kDevicePresentExSlot = 121;
 // After EndScene(42) and Clear(43): SetTransform is 44 and SetViewport 47. The two in between
 // (GetTransform 45, MultiplyTransform 46) and the slot below each of them must never be hooked:
 // a detour with the wrong parameter count pops the wrong number of stack bytes on x86 stdcall.
@@ -32,14 +38,21 @@ constexpr int kProbeSize = 8;
 // The client directory usually holds a wrapper (an ENB-style d3d9.dll) that keeps its own device
 // objects, while the runtime it delegates to owns a second, distinct copy. Both are tracked.
 constexpr int kSourceCount = 2;
+// Source slots, shared by the early install thread and Install: the client-directory copy is what
+// Warcraft resolves first, the system copy is the runtime it delegates to.
+constexpr int kSearchSource = 0;
+constexpr int kSystemSource = 1;
 constexpr int kFactoryCount = 4;
 
 namespace D3DHooks {
 namespace {
 
 using Create9 = IDirect3D9* (WINAPI*)(UINT);
+using Create9Ex = HRESULT (WINAPI*)(UINT, IDirect3D9Ex**);
 using CreateDevice9 = HRESULT (STDMETHODCALLTYPE*)(IDirect3D9*, UINT, D3DDEVTYPE, HWND, DWORD, D3DPRESENT_PARAMETERS*, IDirect3DDevice9**);
+using CreateDeviceEx9 = HRESULT (STDMETHODCALLTYPE*)(IDirect3D9*, UINT, D3DDEVTYPE, HWND, DWORD, D3DPRESENT_PARAMETERS*, D3DDISPLAYMODEEX*, IDirect3DDevice9**);
 using Present9 = HRESULT (STDMETHODCALLTYPE*)(IDirect3DDevice9*, const RECT*, const RECT*, HWND, const RGNDATA*);
+using PresentEx9 = HRESULT (STDMETHODCALLTYPE*)(IDirect3DDevice9*, const RECT*, const RECT*, HWND, const RGNDATA*, DWORD);
 using Reset9 = HRESULT (STDMETHODCALLTYPE*)(IDirect3DDevice9*, D3DPRESENT_PARAMETERS*);
 using SwapPresent9 = HRESULT (STDMETHODCALLTYPE*)(IDirect3DSwapChain9*, const RECT*, const RECT*, HWND, const RGNDATA*);
 using SetTransform9 = HRESULT (STDMETHODCALLTYPE*)(IDirect3DDevice9*, D3DTRANSFORMSTATETYPE, const D3DMATRIX*);
@@ -70,6 +83,10 @@ unsigned blindProbeAttempts = 0;
 // the hooks went in (an OpenGL session leaves it false and must never probe), and blindProbeStart
 // holds off the first fetch until the engine has finished bringing its renderer up.
 bool rendererPreloaded = false;
+// Sampled by the early thread before it loads anything itself: -1 unknown, 0 not loaded, 1 loaded.
+// Install must not confuse our own early load with the engine having brought Direct3D up, because
+// that flag is what allows probing at all (an OpenGL session must never probe).
+int rendererObservation = -1;
 DWORD blindProbeStart = 0;
 // A retry that lands inside the game's own CreateDevice crashes inside the wrapper (it is not
 // thread safe), so a probe is never started within this window of an observed creation.
@@ -117,9 +134,13 @@ struct Source {
     HMODULE module = nullptr;
     const char* label = "";
     Create9 create9 = nullptr;
+    Create9Ex create9Ex = nullptr;
     CreateDevice9 createDevice = nullptr;
+    CreateDeviceEx9 createDeviceEx = nullptr;
     Present9 devicePresent = nullptr;
     Present9 originalDevicePresent = nullptr;
+    PresentEx9 devicePresentEx = nullptr;
+    PresentEx9 originalDevicePresentEx = nullptr;
     Reset9 deviceReset = nullptr;
     Reset9 originalDeviceReset = nullptr;
     SwapPresent9 swapPresent = nullptr;
@@ -197,6 +218,7 @@ HWND ResolveWindow() {
 
 bool ProbeDevice(int source);
 bool AnchorDevice(int source, IDirect3DDevice9* device, const char* origin);
+DWORD ProcessUptimeMs();
 
 // Builds throwaway devices through one runtime until one of them anchors. Two host windows are
 // tried: the invisible helper first because it cannot disturb the engine, then the engine's own
@@ -242,6 +264,19 @@ void DrawFrame(IDirect3DDevice9* device, const char* label) {
     // swap chain and, if the probe already released it, dereference freed memory.
     if (device == probeDevice) return;
     frameAnchorSeen = true;
+    // First present from a device this session has not drawn through yet: rendering that moved to
+    // a device whose creation was never observed used to look like a silent stall.
+    static IDirect3DDevice9* knownDevices[8] = {};
+    bool knownDevice = false;
+    for (IDirect3DDevice9* seen : knownDevices) {
+        if (seen == device) { knownDevice = true; break; }
+    }
+    if (!knownDevice) {
+        for (IDirect3DDevice9*& slot : knownDevices) {
+            if (!slot) { slot = device; break; }
+        }
+        wc3::Log("D3D9 first present device=%p uptime=%lu", device, ProcessUptimeMs());
+    }
     // A frame from any hooked runtime proves the anchor is live; a blind session re-probes at a
     // widening interval (see StartBlindProbeWatchdog) and this resets that schedule.
     lastPresentTick = GetTickCount();
@@ -303,6 +338,17 @@ HRESULT STDMETHODCALLTYPE PresentDetour(IDirect3DDevice9* device, const RECT* so
     if (!forward) return D3DERR_INVALIDCALL;
     DrawFrame(device, entry.label);
     return forward(device, source, dest, overrideWindow, dirty);
+}
+template<int S>
+HRESULT STDMETHODCALLTYPE PresentExDetour(IDirect3DDevice9* device, const RECT* source, const RECT* dest, HWND overrideWindow, const RGNDATA* dirty, DWORD flags) {
+    Source& entry = sources[S];
+    PresentEx9 forward = entry.originalDevicePresentEx;
+    if (!forward)
+        for (const Source& other : sources)
+            if (other.devicePresentEx == entry.devicePresentEx && other.originalDevicePresentEx) forward = other.originalDevicePresentEx;
+    if (!forward) return D3DERR_INVALIDCALL;
+    DrawFrame(device, entry.label);
+    return forward(device, source, dest, overrideWindow, dirty, flags);
 }
 template<int S>
 HRESULT STDMETHODCALLTYPE ResetDetour(IDirect3DDevice9* device, D3DPRESENT_PARAMETERS* params) {
@@ -441,6 +487,7 @@ HRESULT STDMETHODCALLTYPE SetViewportDetour(IDirect3DDevice9* device, const D3DV
     return forward(device, viewport);
 }
 Present9 const kPresentDetours[kSourceCount] = {&PresentDetour<0>, &PresentDetour<1>};
+PresentEx9 const kPresentExDetours[kSourceCount] = {&PresentExDetour<0>, &PresentExDetour<1>};
 Reset9 const kResetDetours[kSourceCount] = {&ResetDetour<0>, &ResetDetour<1>};
 SwapPresent9 const kSwapPresentDetours[kSourceCount] = {&SwapPresentDetour<0>, &SwapPresentDetour<1>};
 SetTransform9 const kSetTransformDetours[kSourceCount] = {&SetTransformDetour<0>, &SetTransformDetour<1>};
@@ -518,6 +565,17 @@ bool AnchorDevice(int source, IDirect3DDevice9* device, const char* origin) {
     entry.deviceReset = reinterpret_cast<Reset9>(vtable[kDeviceResetSlot]);
     bool present = HookEndpoint(reinterpret_cast<void*>(entry.devicePresent), reinterpret_cast<void*>(kPresentDetours[source]), reinterpret_cast<void**>(&entry.originalDevicePresent));
     bool reset = HookEndpoint(reinterpret_cast<void*>(entry.deviceReset), reinterpret_cast<void*>(kResetDetours[source]), reinterpret_cast<void**>(&entry.originalDeviceReset));
+    // An Ex device can present through PresentEx, which lives far outside the plain interface and
+    // bypasses the Present hook entirely; it is hooked whenever the device exposes it.
+    IDirect3DDevice9Ex* deviceEx = nullptr;
+    if (SUCCEEDED(device->QueryInterface(__uuidof(IDirect3DDevice9Ex), reinterpret_cast<void**>(&deviceEx))) && deviceEx) {
+        void** exVtable = *reinterpret_cast<void***>(deviceEx);
+        if (exVtable && exVtable[kDevicePresentExSlot]) {
+            entry.devicePresentEx = reinterpret_cast<PresentEx9>(exVtable[kDevicePresentExSlot]);
+            HookEndpoint(exVtable[kDevicePresentExSlot], reinterpret_cast<void*>(kPresentExDetours[source]), reinterpret_cast<void**>(&entry.originalDevicePresentEx));
+        }
+        deviceEx->Release();
+    }
     // The swap chain exposes a second present path; a device without one is still usable.
     IDirect3DSwapChain9* swapChain = nullptr;
     if (SUCCEEDED(device->GetSwapChain(0, &swapChain)) && swapChain) {
@@ -538,6 +596,23 @@ bool AnchorDevice(int source, IDirect3DDevice9* device, const char* origin) {
     return present;
 }
 
+// Shared tail of both creation hooks: a probe's device is anchored but never remembered, the
+// engine's own device becomes the frame device.
+void AdoptCreatedDevice(int source, IDirect3DDevice9* device, UINT adapter, HWND focus, D3DPRESENT_PARAMETERS* params, const char* kind) {
+    if (probing) {
+        AnchorDevice(source, device, "probe");
+        probeDevice = device;
+        wc3::Log("D3D9 probe device anchored via patched factory source=%s device=%p", sources[source].label, device);
+        return;
+    }
+    AnchorDevice(source, device, "create");
+    activeDevice = device;
+    // The probe's own window must never become the frame size source.
+    if (focus && focus != probeWindow) window = focus;
+    wc3::Log("D3D9 device%s created source=%s window=%p adapter=%u windowed=%d uptime=%lu",
+        kind, sources[source].label, window, adapter, (params && params->Windowed) ? 1 : 0, ProcessUptimeMs());
+}
+
 HRESULT STDMETHODCALLTYPE CreateDevice9Hook(IDirect3D9* factory, UINT adapter, D3DDEVTYPE type, HWND focus, DWORD behavior, D3DPRESENT_PARAMETERS* params, IDirect3DDevice9** device) {
     int source = SourceOf(factory);
     if (source < 0 || !sources[source].createDevice) {
@@ -554,24 +629,67 @@ HRESULT STDMETHODCALLTYPE CreateDevice9Hook(IDirect3D9* factory, UINT adapter, D
     }
     HRESULT result = sources[source].createDevice(factory, adapter, type, focus, behavior, params, device);
     lastCreateTick = GetTickCount();
+    if (FAILED(result) && !probing) {
+        // The engine's failed creations are part of the startup story (a wrapper that refuses a
+        // mode, a second adapter); without them a lost device is invisible in the log.
+        wc3::Log("D3D9 CreateDevice failed source=%s hr=%08X windowed=%d uptime=%lu",
+            sources[source].label, static_cast<unsigned>(result), (params && params->Windowed) ? 1 : 0, ProcessUptimeMs());
+    }
     if (SUCCEEDED(result) && device && *device) {
         // The probe's own device is anchored like any other (its vtable is the one the engine's
         // device will call) but it is not the frame device: it is released right after the probe
         // and must never be remembered, and its creation must not count as the engine coming up.
-        if (probing) {
-            AnchorDevice(source, *device, "probe");
-            probeDevice = *device;
-            wc3::Log("D3D9 probe device anchored via patched factory source=%s device=%p",
-                sources[source].label, *device);
-            return result;
-        }
-        AnchorDevice(source, *device, "create");
-        activeDevice = *device;
-        // The probe's own window must never become the frame size source.
-        if (focus && focus != probeWindow) window = focus;
-        wc3::Log("D3D9 device created source=%s window=%p adapter=%u", sources[source].label, window, adapter);
+        AdoptCreatedDevice(source, *device, adapter, focus, params, "");
     }
     return result;
+}
+
+HRESULT STDMETHODCALLTYPE CreateDeviceEx9Hook(IDirect3D9* factory, UINT adapter, D3DDEVTYPE type, HWND focus, DWORD behavior, D3DPRESENT_PARAMETERS* params, D3DDISPLAYMODEEX* mode, IDirect3DDevice9** device) {
+    int source = SourceOf(factory);
+    if (source < 0 || !sources[source].createDeviceEx) {
+        static DWORD lastUnknownFactoryTrace = 0;
+        DWORD now = GetTickCount();
+        if (now - lastUnknownFactoryTrace >= 1000) {
+            lastUnknownFactoryTrace = now;
+            wc3::Log("D3D9 CreateDeviceEx on an unrecognized factory; refused");
+        }
+        return D3DERR_INVALIDCALL;
+    }
+    HRESULT result = sources[source].createDeviceEx(factory, adapter, type, focus, behavior, params, mode, device);
+    lastCreateTick = GetTickCount();
+    if (FAILED(result) && !probing) {
+        wc3::Log("D3D9 CreateDeviceEx failed source=%s hr=%08X windowed=%d uptime=%lu",
+            sources[source].label, static_cast<unsigned>(result), (params && params->Windowed) ? 1 : 0, ProcessUptimeMs());
+    }
+    if (SUCCEEDED(result) && device && *device) {
+        AdoptCreatedDevice(source, *device, adapter, focus, params, "(ex)");
+    }
+    return result;
+}
+
+// One patch per runtime: every factory object of a runtime shares this vtable, so a second patch
+// would capture our own detour as the "original" and recurse forever.
+void PatchFactory(IDirect3D9* factory, int source) {
+    Source& entry = sources[source];
+    void** vtable = *reinterpret_cast<void***>(factory);
+    if (!vtable || SourceOfFactoryVtable(vtable) >= 0) return;
+    wc3::Log("D3D9 factory created source=%s vtable=%p uptime=%lu", entry.label, vtable, ProcessUptimeMs());
+    if (!RememberFactory(vtable, source)) {
+        wc3::Log("D3D9 factory table exhausted; CreateDevice left unpatched source=%s vtable=%p", entry.label, vtable);
+        return;
+    }
+    if (!PatchVtableSlot(factory, kFactoryCreateDeviceSlot, CreateDevice9Hook, &entry.createDevice)) {
+        wc3::Log("D3D9 CreateDevice vtable slot patch failed source=%s vtable=%p", entry.label, vtable);
+    }
+    // An Ex factory is often used through CreateDeviceEx, whose slot sits past the plain interface
+    // and would silently bypass the patch above.
+    IDirect3D9Ex* ex = nullptr;
+    if (SUCCEEDED(factory->QueryInterface(__uuidof(IDirect3D9Ex), reinterpret_cast<void**>(&ex))) && ex) {
+        ex->Release();
+        if (!PatchVtableSlot(factory, kFactoryCreateDeviceExSlot, CreateDeviceEx9Hook, &entry.createDeviceEx)) {
+            wc3::Log("D3D9 CreateDeviceEx vtable slot patch failed source=%s vtable=%p", entry.label, vtable);
+        }
+    }
 }
 
 IDirect3D9* Create9Common(UINT version, int source) {
@@ -579,26 +697,31 @@ IDirect3D9* Create9Common(UINT version, int source) {
     if (!entry.create9) return nullptr;
     IDirect3D9* factory = entry.create9(version);
     if (!factory) return nullptr;
-    // One patch per runtime: every factory object of a runtime shares this vtable, so a second
-    // patch would capture our own detour as the "original" and recurse forever.
-    void** vtable = *reinterpret_cast<void***>(factory);
-    if (SourceOfFactoryVtable(vtable) >= 0) return factory;
-    if (!RememberFactory(vtable, source)) {
-        wc3::Log("D3D9 factory table exhausted; CreateDevice left unpatched source=%s vtable=%p", entry.label, vtable);
-        return factory;
-    }
-    if (!PatchVtableSlot(factory, kFactoryCreateDeviceSlot, CreateDevice9Hook, &entry.createDevice)) {
-        wc3::Log("D3D9 CreateDevice vtable slot patch failed source=%s vtable=%p", entry.label, vtable);
-    }
+    PatchFactory(factory, source);
     return factory;
 }
 IDirect3D9* WINAPI Create9Detour0(UINT version) { return Create9Common(version, 0); }
 IDirect3D9* WINAPI Create9Detour1(UINT version) { return Create9Common(version, 1); }
 Create9 const kCreateDetours[kSourceCount] = {Create9Detour0, Create9Detour1};
 
+HRESULT WINAPI Create9ExCommon(UINT version, IDirect3D9** factory, int source) {
+    Source& entry = sources[source];
+    if (!entry.create9Ex) return D3DERR_INVALIDCALL;
+    HRESULT result = entry.create9Ex(version, reinterpret_cast<IDirect3D9Ex**>(factory));
+    if (SUCCEEDED(result) && factory && *factory) PatchFactory(*factory, source);
+    return result;
+}
+HRESULT WINAPI Create9ExDetour0(UINT version, IDirect3D9** factory) { return Create9ExCommon(version, factory, 0); }
+HRESULT WINAPI Create9ExDetour1(UINT version, IDirect3D9** factory) { return Create9ExCommon(version, factory, 1); }
+using Create9ExDetour = HRESULT (WINAPI*)(UINT, IDirect3D9**);
+Create9ExDetour const kCreateExDetours[kSourceCount] = {Create9ExDetour0, Create9ExDetour1};
+
 bool HookCreate9(int source, HMODULE module, const char* label) {
     if (!module) return false;
     Source& entry = sources[source];
+    // The early install thread may already have claimed this export; re-hooking the same address
+    // would fail and report the whole session as unhooked.
+    if (entry.module == module && entry.create9) return true;
     entry.module = module;
     entry.label = label;
     void* create9 = reinterpret_cast<void*>(GetProcAddress(module, "Direct3DCreate9"));
@@ -606,10 +729,20 @@ bool HookCreate9(int source, HMODULE module, const char* label) {
         wc3::Log("D3D9 Create9 export missing source=%s module=%p", label, module);
         return false;
     }
-    if (MH_CreateHook(create9, reinterpret_cast<void*>(kCreateDetours[source]), reinterpret_cast<void**>(&entry.create9)) != MH_OK ||
-        MH_EnableHook(create9) != MH_OK) {
+    MH_STATUS created = MH_CreateHook(create9, reinterpret_cast<void*>(kCreateDetours[source]), reinterpret_cast<void**>(&entry.create9));
+    // A second source can be the very same module (a launcher preloading the wrapper); the hook
+    // already installed there is the one that forwards, so it counts as a success.
+    if (created == MH_ERROR_ALREADY_CREATED) return entry.create9 != nullptr;
+    if (created != MH_OK || MH_EnableHook(create9) != MH_OK) {
         wc3::Log("D3D9 Create9 hook failed source=%s module=%p", label, module);
         return false;
+    }
+    // The Ex export is a separate entry point that renderers and wrappers can prefer; its
+    // factories need the same vtable patch, so it is claimed whenever it exists.
+    void* create9Ex = reinterpret_cast<void*>(GetProcAddress(module, "Direct3DCreate9Ex"));
+    if (create9Ex && entry.create9Ex == nullptr) {
+        if (MH_CreateHook(create9Ex, reinterpret_cast<void*>(kCreateExDetours[source]), reinterpret_cast<void**>(&entry.create9Ex)) == MH_OK)
+            MH_EnableHook(create9Ex);
     }
     return true;
 }
@@ -670,6 +803,66 @@ HMODULE LoadSystemD3D9() {
     return LoadLibraryA(path);
 }
 
+// The engine resolves the client-directory runtime, while this module loads the system copy itself
+// (early, to claim Create9), so a loaded handle that is not that copy means Direct3D renders this
+// session. Handles compared, not names: both copies are called d3d9.dll.
+bool EngineLoadedDirect3D() {
+    HMODULE loaded = GetModuleHandleA("d3d9.dll");
+    return loaded && loaded != sources[kSystemSource].module;
+}
+
+// Milliseconds since this process started. Log timestamps are wall clock, while every question in
+// this file is "before or after the engine created its device", which is relative to process start.
+DWORD ProcessUptimeMs() {
+    FILETIME created = {}, exited = {}, kernel = {}, user = {};
+    if (!GetProcessTimes(GetCurrentProcess(), &created, &exited, &kernel, &user)) return 0;
+    FILETIME now = {};
+    GetSystemTimeAsFileTime(&now);
+    ULARGE_INTEGER begin = {};
+    begin.LowPart = created.dwLowDateTime;
+    begin.HighPart = created.dwHighDateTime;
+    ULARGE_INTEGER end = {};
+    end.LowPart = now.dwLowDateTime;
+    end.HighPart = now.dwHighDateTime;
+    return static_cast<DWORD>((end.QuadPart - begin.QuadPart) / 10000);
+}
+
+// Claims the Create9 exports during process startup, long before the module's engine work (native
+// bind, engine hooks, Install) is done. Warcraft loads d3d9 and builds its device inside the first
+// few hundred ms of its life, so waiting for the load and hooking afterwards is measurably too
+// late: the device exists, presents bypass every hook, and in exclusive fullscreen no second
+// device can be created for a probe (D3DERR_DEVICELOST) - the session stayed blind for the whole
+// match. Both runtimes are therefore loaded and hooked here, before the engine asks for d3d9 at
+// all; the engine's own CreateDevice call then anchors the very device it presents with.
+DWORD WINAPI EarlyInstallThread(void*) {
+    // Sampled before anything is loaded here: only the engine's own load means it renders through
+    // Direct3D, and that verdict decides whether a session may ever be probed.
+    rendererObservation = GetModuleHandleA("d3d9.dll") ? 1 : 0;
+    MH_STATUS status = MH_Initialize();
+    if (status != MH_OK && status != MH_ERROR_ALREADY_INITIALIZED) {
+        return 0;
+    }
+    // The client-directory copy first: pre-loading it means the engine's own d3d9 request resolves
+    // to this module, and its export is already claimed when the renderer initializes.
+    char directory[MAX_PATH] = {};
+    bool hooked = false;
+    if (GetModuleFileNameA(nullptr, directory, MAX_PATH)) {
+        if (char* slash = strrchr(directory, '\\')) {
+            strcpy_s(slash + 1, MAX_PATH - (slash + 1 - directory), "d3d9.dll");
+            if (GetFileAttributesA(directory) != INVALID_FILE_ATTRIBUTES) {
+                hooked = HookCreate9(kSearchSource, LoadLibraryA(directory), "search");
+            }
+        }
+    }
+    // The system runtime is hooked as well: the wrapper delegates its device creation to it, so
+    // both copies see the engine's factories no matter which one the engine resolves.
+    HMODULE system = LoadSystemD3D9();
+    if (system) hooked = HookCreate9(kSystemSource, system, "system") || hooked;
+    wc3::Log("D3D9 early hooks installed=%d searchPreloaded=%d system=%p uptime=%lu",
+        hooked ? 1 : 0, sources[kSearchSource].module ? 1 : 0, system, ProcessUptimeMs());
+    return 0;
+}
+
 // Watches for a session whose anchor receives no frames at all - the game renders through a device
 // this process never saw created - and re-probes the runtimes that are still unpatched until one
 // streams frames. Attempts widen from 1.5 s to a minute apart and never overlap the game's own
@@ -677,6 +870,12 @@ HMODULE LoadSystemD3D9() {
 DWORD WINAPI BlindProbeWatchdog(void*) {
     for (;;) {
         Sleep(500);
+        // The engine can load its runtime after Install ran, so the Direct3D verdict is refreshed
+        // here; an OpenGL session never matches and is never probed.
+        if (!rendererPreloaded && EngineLoadedDirect3D()) {
+            rendererPreloaded = true;
+            blindProbeStart = GetTickCount() + kFirstBlindProbeDelayMs;
+        }
         if (!frameAnchorSeen) {
             // Not one frame has arrived: the engine's device was built before these hooks, and only
             // a Direct3D session can be recovered. Wait out the renderer bring-up first, because a
@@ -715,6 +914,14 @@ void StartBlindProbeWatchdog() {
 
 } // namespace
 
+void StartEarlyInstall() {
+    static bool started = false;
+    if (started) return;
+    started = true;
+    HANDLE thread = CreateThread(nullptr, 0, EarlyInstallThread, nullptr, 0, nullptr);
+    if (thread) CloseHandle(thread);
+}
+
 bool Install(PresentCallback present, ProjectionCallback projection) {
     if (installed) return true;
     callback = std::move(present);
@@ -730,22 +937,25 @@ bool Install(PresentCallback present, ProjectionCallback projection) {
             Sleep(static_cast<DWORD>(delay));
         }
     }
-    // Sampled before the loads below: a live handle means the game already brought up Direct3D,
-    // which is also the signal that its device predates these hooks.
+    // Only the engine's own load of the client-directory runtime marks a Direct3D session. This
+    // module loads the system runtime itself (early, to claim Create9), so a plain handle check
+    // would report Direct3D for an OpenGL session as well.
+    if (rendererObservation < 0) rendererObservation = GetModuleHandleA("d3d9.dll") ? 1 : 0;
     HMODULE active = GetModuleHandleA("d3d9.dll");
-    rendererPreloaded = active != nullptr;
+    rendererPreloaded = rendererObservation == 1 || EngineLoadedDirect3D();
     // A session that never sees a frame has no "frames stopped" moment to react to, so the first
     // fallback attempt is scheduled from install time instead.
     blindProbeStart = GetTickCount() + kFirstBlindProbeDelayMs;
     blindProbeInterval = kFirstBlindProbeIntervalMs;
     HMODULE search = LoadLibraryA("d3d9.dll");
     HMODULE system = LoadSystemD3D9();
-    bool hooked = HookCreate9(0, search, "search");
+    // Both may already be claimed by the early thread; HookCreate9 reports those as success.
+    bool hooked = HookCreate9(kSearchSource, search, "search");
     if (system && system != search) {
-        if (HookCreate9(1, system, "system")) hooked = true;
+        if (HookCreate9(kSystemSource, system, "system")) hooked = true;
     }
     installed = hooked;
-    wc3::Log("D3D9 hooks installed=%d renderer=%d search=%p system=%p", installed, active ? 1 : 0, search, system);
+    wc3::Log("D3D9 hooks installed=%d renderer=%d preloaded=%d search=%p system=%p uptime=%lu", installed, active ? 1 : 0, rendererPreloaded ? 1 : 0, search, system, ProcessUptimeMs());
     if (!hooked) return installed;
     // Only a renderer that already loaded Direct3D needs the probe; an OpenGL frame never reaches
     // these functions and creating a device there would be a needless side effect. The ordinary
@@ -753,7 +963,7 @@ bool Install(PresentCallback present, ProjectionCallback projection) {
     // fallback covers the one case that never gets there: a device created before these hooks
     // installed, whose presents bypass every anchored function. It waits past the game's renderer
     // bring-up because a probe overlapping the game's CreateDevice crashes inside the wrapper.
-    if (active) {
+    if (rendererPreloaded) {
         // The bootstrap probe runs during the load screen, before the game presents. Every loaded
         // runtime is tried, not just the system one: a wrapper that refuses the system runtime can
         // still build a device on the engine window, and leaving it untried used to cost the whole
@@ -764,7 +974,10 @@ bool Install(PresentCallback present, ProjectionCallback projection) {
             // overlapping the game's own CreateDevice (which crashes inside the wrapper).
             for (DWORD waited = 0; waited < kBootstrapWaitMs && !anchoredByCreate && !frameAnchorSeen; waited += 100)
                 Sleep(100);
-            if (frameAnchorSeen) return 0;
+            // The engine device that was created under the early hooks is the one presenting;
+            // building throwaway devices next to it while the renderer is still coming up is the
+            // known wrapper corruption case, and a probe could not teach this session anything.
+            if (anchoredByCreate || frameAnchorSeen) return 0;
             for (int pass = kSourceCount; pass-- > 0;) {
                 // System first, wrapper last: creating a throwaway device through the client's
                 // wrapper is what kills the process (twice observed inside its d3dx9 effect pass),

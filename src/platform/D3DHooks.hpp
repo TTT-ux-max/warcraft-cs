@@ -15,6 +15,12 @@ using PresentCallback = std::function<void(Canvas&, HWND, int, int)>;
 // Called for every projection transform the game sets, with the matrix (16 floats, row major)
 // and the viewport that is active at that moment, so the caller can keep only the world pass.
 using ProjectionCallback = void(*)(const float* matrix, const int* viewport);
+// Claims the Direct3DCreate9 exports from a thread started in DllMain, i.e. long before Install's
+// engine work runs. Warcraft builds its device during startup and an exclusive-fullscreen device
+// can never be re-created next to it (every probe comes back D3DERR_DEVICELOST), so the engine's
+// own CreateDevice call is the only chance to anchor a fullscreen session. Idempotent: Install
+// re-uses whatever this already hooked.
+void StartEarlyInstall();
 // Loads d3d9 and hooks device creation. Safe on renders that never use D3D: the hook stays
 // inert unless the game actually creates a Direct3D device.
 bool Install(PresentCallback present, ProjectionCallback projection);
