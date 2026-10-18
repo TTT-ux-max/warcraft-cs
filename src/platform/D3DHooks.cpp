@@ -258,11 +258,50 @@ void TryWindowedProbe(IDirect3D9* factory, Source& entry, int source, HWND helpe
     }
 }
 
+// A client-directory wrapper (ENBSeries) presents each frame twice: once from its own proxy device
+// and once from the runtime it delegates to, both on the render thread and neither nested in the
+// other. Drawing on both was not just a doubled overlay: the canvas changed device on every
+// present, which released and re-uploaded every overlay resource (the "Overlay resources
+// forgotten" churn), halving the frame rate and making the HUD flicker. The overlay therefore
+// stays on one device - the system runtime once it presents, because that is the last draw before
+// the flip - and only hands over when the chosen one has stopped presenting.
+struct OverlayDeviceChoice { IDirect3DDevice9* device = nullptr; bool system = false; DWORD tick = 0; };
+OverlayDeviceChoice overlayChoice;
+constexpr DWORD kOverlayHandoverMs = 1000;
+
+// True when this present is the one the overlay should draw into.
+bool SelectOverlayDevice(IDirect3DDevice9* device, const char* label) {
+    DWORD now = GetTickCount();
+    bool system = label && strcmp(label, "system") == 0;
+    if (!overlayChoice.device) {
+        overlayChoice.device = device;
+        overlayChoice.system = system;
+        overlayChoice.tick = now;
+        return true;
+    }
+    if (device == overlayChoice.device) {
+        overlayChoice.tick = now;
+        return true;
+    }
+    // A system-runtime device supersedes the wrapper's proxy: its present is the one that reaches
+    // the screen, so the HUD is drawn after the wrapper's post-processing instead of inside it.
+    bool stale = now - overlayChoice.tick > kOverlayHandoverMs;
+    if (!system || overlayChoice.system) {
+        if (!stale) return false;
+    }
+    wc3::Log("D3D9 overlay device %p -> %p (%s)", overlayChoice.device, device, stale ? "silent" : "system");
+    overlayChoice.device = device;
+    overlayChoice.system = system;
+    overlayChoice.tick = now;
+    return true;
+}
+
 void DrawFrame(IDirect3DDevice9* device, const char* label) {
     if (!device) return;
     // A probe device never presents a frame; presenting through one would draw into the throwaway
     // swap chain and, if the probe already released it, dereference freed memory.
     if (device == probeDevice) return;
+    if (!SelectOverlayDevice(device, label)) return;
     frameAnchorSeen = true;
     // First present from a device this session has not drawn through yet: rendering that moved to
     // a device whose creation was never observed used to look like a silent stall.
@@ -292,9 +331,18 @@ void DrawFrame(IDirect3DDevice9* device, const char* label) {
     engineSawPerspective = false;
     worldProjectionValid = false;
     worldViewportExpanded = false;
-    static const char* reported = nullptr;
-    if (reported != label) {
-        reported = label;
+    // Two runtimes can present alternately (a wrapper delegating to the system copy), so the
+    // report is remembered per label: one shared slot used to flip between "search" and "system"
+    // and wrote two trace lines per frame.
+    static const char* reportedLabels[4] = {};
+    bool reportedLabel = false;
+    for (const char* seen : reportedLabels) {
+        if (seen == label) { reportedLabel = true; break; }
+    }
+    if (!reportedLabel) {
+        for (const char*& slot : reportedLabels) {
+            if (!slot) { slot = label; break; }
+        }
         wc3::Log("D3D9 frame anchor active source=%s device=%p", label, device);
     }
     // The overlay ortho is built from the window client rect; a back buffer of a different size
