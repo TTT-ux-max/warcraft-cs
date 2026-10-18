@@ -169,6 +169,7 @@ private:
     // unit or uses the native shop/quest interaction of an NPC through one smart order.
     bool PickTarget(wc3::Handle& picked);
     void SelectTarget();
+    void TakeOver(wc3::Handle next);
     void NativeUse();
     bool NativeOrderActive();
     void Strike();

@@ -56,6 +56,9 @@ extern int (__cdecl* UnitInventorySize)(Handle);
 extern Handle (__cdecl* UnitItemInSlot)(Handle,int);
 extern BOOL (__cdecl* IssuePointOrderById)(Handle,int,float*,float*);
 extern BOOL (__cdecl* IssueTargetOrderById)(Handle,int,Handle);
+// The engine's own selection: null binding (unverified 1.26a) makes callers stand down.
+extern void (__cdecl* SelectUnit)(Handle, BOOL);
+extern void (__cdecl* ClearSelection)();
 uintptr_t UnitObject(Handle unit);
 std::string DestructableModelPath(int type);
 float DestructableFacing(Handle object);

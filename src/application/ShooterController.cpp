@@ -540,12 +540,46 @@ void ShooterController::SelectTarget() {
         wc3::Log("FPS target cleared: no unit under reticle");
         return;
     }
-    target_ = picked;
     auto player = wc3::GetLocalPlayer();
+    if (picked != unit_) {
+        // WoW-style left click hands control to an OWNED unit only. Neutral hero candidates,
+        // quest NPCs and enemies are natively selected instead so map triggers keep seeing the
+        // click: scripted maps do hero picking and NPC dialog off the selection event, and a
+        // takeover there would steal the body the story expects the player to talk to.
+        if (wc3::GetOwningPlayer(picked) == player) { TakeOver(picked); return; }
+        if (wc3::ClearSelection && wc3::SelectUnit) { wc3::ClearSelection(); wc3::SelectUnit(picked, TRUE); }
+    }
+    target_ = picked;
     wc3::Log("FPS target selected unit=%08X type=%08X hp=%.0f/%.0f ally=%d enemy=%d",
         picked, wc3::GetUnitTypeId(picked), wc3::Real(wc3::GetUnitState(picked, 0)),
         wc3::Real(wc3::GetUnitState(picked, 1)), wc3::IsUnitAlly(picked, player) != FALSE,
         wc3::IsUnitEnemy(picked, player) != FALSE);
+}
+void ShooterController::TakeOver(wc3::Handle next) {
+    wc3::Handle previous = unit_;
+    // The same liveness gates the F6 entry path applies: corpses, transported and
+    // map-hidden units cannot be played from the world view.
+    if (!next || wc3::Real(wc3::GetUnitState(next, 0)) <= 0.405f || wc3::IsUnitType(next, 2) != FALSE ||
+        wc3::IsUnitLoaded(next) || wc3::IsUnitHidden(next)) {
+        wc3::Log("FPS takeover refused unit=%08X type=%08X", next, wc3::GetUnitTypeId(next));
+        return;
+    }
+    unit_ = next;
+    yaw_ = wc3::Real(wc3::GetUnitFacing(next)); pitch_ = 0;
+    mouseLook_.Reset();
+    movement_.Reset(wc3::Ground(wc3::Real(wc3::GetUnitX(next)), wc3::Real(wc3::GetUnitY(next))));
+    wc3::IssueImmediateOrderById(next, 851972);  // stop its autonomous attack/movement orders
+    float zero = 0; wc3::SetCameraTargetController(0, &zero, &zero, FALSE);
+    target_ = 0; targetValid_ = false; nativeTarget_ = 0; nativeOrder_ = 0;
+    FpsCombatGuard::ReleasePlayerOrder();
+    // A new body starts from its own stance; the pending CS-layer actions stay with the old one.
+    bodyAnim_ = 0; bodyAnimTick_ = 0;
+    scopeLevel_ = 0; reloadEnd_ = 0; CancelPlant(); meleeContact_ = 0;
+    if (spells_.Active()) { spells_.Cancel(); spellRequested_ = -1; spellCancelRequested_ = false; }
+    // Real native selection keeps the ring, portrait and readout describing the new body.
+    if (wc3::ClearSelection && wc3::SelectUnit) { wc3::ClearSelection(); wc3::SelectUnit(next, TRUE); }
+    else wc3::Log("FPS native selection unavailable on this build; control moved without the ring");
+    wc3::Log("FPS control transferred from=%08X to=%08X type=%08X", previous, next, wc3::GetUnitTypeId(next));
 }
 void ShooterController::NativeUse() {
     wc3::Handle picked = 0;

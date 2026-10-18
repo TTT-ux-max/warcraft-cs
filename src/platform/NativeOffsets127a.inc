@@ -76,6 +76,11 @@ NATIVE(int, UnitInventorySize, (Handle), 0x1FAEE0)  // was 0x3C8F00, (Hunit;)I
 NATIVE(Handle, UnitItemInSlot, (Handle,int), 0x1FAF50)  // was 0x3C7730, (Hunit;I)Hitem;
 NATIVE(BOOL, IssuePointOrderById, (Handle,int,float*,float*), 0x1E9470)  // was 0x3C8940, (Hunit;IRR)B
 NATIVE(BOOL, IssueTargetOrderById, (Handle,int,Handle), 0x1E96C0)  // was 0x3C89D0, (Hunit;IHwidget;)B
+// Left-click control transfer reuses the engine's real selection. The 1.27a addresses
+// were confirmed in its owned registration (push sig; mov edx,name; mov ecx,handler);
+// the 1.26a reference keeps 0x0 until the same registration is verified there.
+NATIVE(void, SelectUnit, (Handle, BOOL), 0x1F3D10)  // was 0x0, (Hunit;B)V
+NATIVE(void, ClearSelection, (), 0x1DB310)  // was 0x0, ()V
 NATIVE(BOOL, UnitDamageTarget, (Handle, Handle, float*, BOOL, BOOL, int, int, int), 0x1FAB70)  // was 0x3C8850, (Hunit;Hwidget;RBBHattacktype;Hdamagetype;Hweapontype;)B
 NATIVE(void, SetCameraField, (int, float*, float*), 0x1F4170)  // was 0x3B48B0, (Hcamerafield;RR)V
 NATIVE(Bits, GetCameraField, (int), 0x1E19F0)  // was 0x3B4CD0, (Hcamerafield;)R

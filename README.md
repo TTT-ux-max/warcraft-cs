@@ -350,10 +350,13 @@ Edit it and press F8 in FPS.
   bars; RTS keeps its native health display.
 - `[Interface] CsGameplay=false` is the master CS switch. `false` (default) plays the map as a native
   first-person view: no guns, ammunition, gold, buying, C4 or CS samples, and Warcraft's own attack and
-  spell animations play on the visible body. Aim at a unit and press the left button to select it
-  (name/health readout at the reticle); press the right button to attack a hostile unit or to use an
-  NPC's native shop/quest interaction. `true` restores the complete CS gameplay of earlier releases.
-  F8 applies it live; updates preserve a custom value.
+  spell animations play on the visible body. The left button takes control of an OWNED unit under
+  the reticle (the engine's real selection ring follows; the reticle shows the name/health readout);
+  anything not yours — neutral hero candidates, quest NPCs, enemies — is natively selected instead,
+  so scripted maps keep reacting to the click (hero picking, NPC dialog). Press the right button to
+  attack a hostile unit or to use an NPC's native shop/quest interaction.
+  One unit is controlled at a time, and F6 entry prefers the unit selected in the RTS view. `true`
+  restores the complete CS gameplay of earlier releases. F8 applies it live; updates preserve a custom value.
 - `[Interface] FloatingTextDistance=1200` limits native world labels to the FPS camera view and distance
   in Warcraft units. Set `0` to hide world labels and press F8; RTS, harvesting and screen-space map text keep native behavior.
 
