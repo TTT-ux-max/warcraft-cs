@@ -2,7 +2,9 @@
 
 // Retain existing team keys so config migration preserves older preferences.
 struct HealthBarSettings {
-    bool allies=false, enemies=false;
+    // First-person play reads the world like an RPG: both teams show health unless the player
+    // changes the saved preference or presses K.
+    bool allies=true, enemies=true;
     float distance=2000;
 
     void ToggleAll() {

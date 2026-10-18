@@ -5,6 +5,9 @@
 namespace {
 uintptr_t gameBase=0;
 bool targetVerified=false;
+// Player intent window: only our reticle-issued order is allowed through, never map scripts.
+DWORD playerOrderUntil=0;
+bool PlayerOrderActive() { return playerOrderUntil!=0 && GetTickCount()<playerOrderUntil; }
 wc3::Handle (*viewActor)()=nullptr;
 bool (*passiveUnit)(uintptr_t)=nullptr,(*passiveAttack)(uintptr_t)=nullptr;
 uintptr_t ActorObject() {
@@ -37,6 +40,9 @@ void LogBlocked(const char* phase,uintptr_t attack) {
     if(now-last>=1000) {last=now;wc3::Trace("FPS blocked native attack phase=%s component=%08X",phase,attack);}
 }
 bool BlockScriptOrder(wc3::Handle unit,int order,wc3::Handle target=0) {
+    // A reticle-issued order is player intent and must reach the engine even though it shares the
+    // script entry points; the window is short and only opened by the controller.
+    if(PlayerOrderActive())return false;
     uintptr_t object=wc3::UnitObject(unit),actor=ActorObject();
     bool controlled=actor && object && (object==actor || (passiveUnit && passiveUnit(object)));
     // Reject attack/attack-ground and smart-unit pursuit before a map's order enters the simulation.
@@ -63,21 +69,21 @@ BOOL __cdecl PointStringHook(wc3::Handle unit,int order,float* x,float* y) {
 }
 int __fastcall CheckOrderHook(uintptr_t attack,uintptr_t,uintptr_t a,uintptr_t b,uintptr_t c,uintptr_t d) {
     // Use the native disabled-attack rejection before attack/chase behavior is queued, without changing saved counters.
-    if(ControlledAttack(attack)) {LogBlocked("check",attack);return 0xDD;}
+    if(ControlledAttack(attack) && !PlayerOrderActive()) {LogBlocked("check",attack);return 0xDD;}
     return checkOrder(attack,a,b,c,d);
 }
 void __fastcall StartOrderHook(uintptr_t attack,uintptr_t,uintptr_t a,uintptr_t b,uintptr_t c,uintptr_t d,uintptr_t e,
     uintptr_t f,uintptr_t g,uintptr_t h,uintptr_t i,uintptr_t j) {
     // Retaliation can enter directly after validation; refuse only the controlled unit's basic attack component.
-    if(ControlledAttack(attack)) {LogBlocked("start",attack);return;}
+    if(ControlledAttack(attack) && !PlayerOrderActive()) {LogBlocked("start",attack);return;}
     startOrder(attack,a,b,c,d,e,f,g,h,i,j);
 }
 float* __fastcall UnitRangeHook(uintptr_t unit,uintptr_t,float* result) {
     uintptr_t actor=ActorObject();
-    if (actor && (unit==actor || (passiveUnit && passiveUnit(unit)))) { *result=0;return result; }return unitRange(unit,result);
+    if (actor && (unit==actor || (passiveUnit && passiveUnit(unit))) && !PlayerOrderActive()) { *result=0;return result; }return unitRange(unit,result);
 }
 float* __fastcall AttackRangeHook(uintptr_t attack,uintptr_t,float* result) {
-    if (ControlledAttack(attack)) { *result=0;return result; }return attackRange(attack,result);
+    if (ControlledAttack(attack) && !PlayerOrderActive()) { *result=0;return result; }return attackRange(attack,result);
 }
 }
 void FpsCombatGuard::Install(uintptr_t base,wc3::Handle (*actor)(),bool (*unitPredicate)(uintptr_t),bool (*attackPredicate)(uintptr_t),HookInstaller hook) {
@@ -142,3 +148,9 @@ void FpsCombatGuard::CancelOrders(wc3::Handle unit) {
         if (now-lastLog>=1000) { lastLog=now;wc3::Log("FPS canceled native order=%d target=%d unit=%08X",order,target,unit); }
     }
 }
+void FpsCombatGuard::HoldPlayerOrder(unsigned milliseconds) {
+    // Only extend: the controller refreshes this while its native order is still the current one.
+    DWORD until=GetTickCount()+milliseconds;
+    if (!playerOrderUntil || until>playerOrderUntil) playerOrderUntil=until;
+}
+void FpsCombatGuard::ReleasePlayerOrder() { playerOrderUntil=0; }

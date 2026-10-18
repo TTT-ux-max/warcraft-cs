@@ -64,9 +64,10 @@ foreach ($preference in @('true','false')) {
     $barBefore=(Get-FileHash -LiteralPath $barConfig).Hash;Update-GameplayConfig $template $barConfig
     if ((Get-FileHash -LiteralPath $barConfig).Hash -ne $barBefore) {throw 'Health bar migration is not idempotent.'}
 }
-foreach ($default in @('ShowAllyHealthBars=false','ShowEnemyHealthBars=false','HealthBarDistance=2000')) {
+foreach ($default in @('ShowAllyHealthBars=true','ShowEnemyHealthBars=true','HealthBarDistance=2000')) {
     if (!$text.Contains($default)) {throw ('Legacy config lacks '+$default)}
 }
+if (!$text.Contains('CsGameplay=false')) { throw 'Legacy config lacks the native first-person default.' }
 # Optional speed/fog preferences migrate into the existing Interface section without resetting it.
 foreach ($preference in @('true','false')) {
     $speedConfig=Join-Path $folder ('custom-speed-'+$preference+'.ini')
@@ -83,6 +84,18 @@ foreach ($preference in @('true','false')) {
     if ((Get-FileHash -LiteralPath $speedConfig).Hash -ne $speedBefore) { throw 'Speed migration is not idempotent.' }
 }
 if (!$text.Contains('ShowSpeed=false')) { throw 'Legacy config lacks the default speed counter key.' }
+if (!$text.Contains('ShowHudHints=false')) { throw 'Legacy config lacks the default hidden corner hints key.' }
+# An explicit corner-hint preference survives migration and stays single-valued and idempotent.
+$hintConfig=Join-Path $folder 'custom-hints.ini'
+@('[Interface]','ShowHudHints=true','ShowSpeed=false') | Set-Content -LiteralPath $hintConfig -Encoding ascii
+Update-GameplayConfig $template $hintConfig
+$hintText=Get-Content -LiteralPath $hintConfig -Raw
+if (!$hintText.Contains('ShowHudHints=true') -or !$hintText.Contains('ShowSpeed=false') -or
+    [regex]::Matches($hintText,'(?m)^ShowHudHints=').Count -ne 1 -or
+    [regex]::Matches($hintText,'(?m)^\[Interface\]').Count -ne 1) { throw 'Corner hint migration replaced or duplicated the preference.' }
+$hintBefore=(Get-FileHash -LiteralPath $hintConfig).Hash
+Update-GameplayConfig $template $hintConfig
+if ((Get-FileHash -LiteralPath $hintConfig).Hash -ne $hintBefore) { throw 'Corner hint migration is not idempotent.' }
 if (!$text.Contains('ShowMinimap=true') -or !$text.Contains('MinimapSizePercent=22')) {throw 'Legacy config lacks minimap defaults.'}
 # Preserve explicit map visibility/size through migration and an idempotent second update.
 $mapConfig=Join-Path $folder 'custom-minimap.ini'

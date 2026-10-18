@@ -344,7 +344,9 @@ static void SafeTick(uintptr_t ui) {
     // Disable the extension on a native fault, leaving the game callback intact.
     __try {
         controller.Tick(ui);
-        healthBars.Update(controller.ViewActor(),controller.Settings().healthBars);
+        // The bars anchor on the controlled unit, not the rendered actor: a third-person follow
+        // view renders the body but must keep enumerating the world's health bars around it.
+        healthBars.Update(controller.HealthBarsActor(),controller.Settings().healthBars);
     }
     __except (EXCEPTION_EXECUTE_HANDLER) {
         healthy = false; wc3::LogError("Controller fault %08X; disabled", GetExceptionCode());

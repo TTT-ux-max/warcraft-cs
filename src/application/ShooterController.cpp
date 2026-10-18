@@ -74,6 +74,12 @@ void ShooterController::Buy(int slot,bool ammunition) {
         result==BuyInventory::Result::AlreadyOwned ? "ALREADY OWNED" : "NO AMMUNITION FOR THIS WEAPON");
 }
 void ShooterController::UpdateBuyMenu() {
+    // Buying is CS content; without it B/./row keys do nothing and no catalog is drawn.
+    if (!settings_.csGameplay) {
+        buyMenu_.Close(); buyToggleRequested_=buyAmmoRequested_=false; buyKeyRequested_=-1;
+        gold_ = unit_ ? wc3::GetPlayerState(wc3::GetOwningPlayer(unit_),1) : 0;
+        return;
+    }
     bool wasBuying=Buying();
     gold_=wc3::GetPlayerState(wc3::GetOwningPlayer(unit_),1);
     if (status_.contained || status_.hidden) { buyMenu_.Close();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;return; }
@@ -131,6 +137,8 @@ void ShooterController::Sound(const char* name) {
     audio_.Play(name);
 }
 void ShooterController::SurfaceStep(float volume) {
+    // CS samples belong to the CS layer; native play keeps Warcraft's own soundscape.
+    if (!settings_.csGameplay) return;
     // Use CS's default concrete samples for steps, jump push-off and normal ground contact.
     static const char* steps[] = {"pl_step1.wav", "pl_step3.wav", "pl_step2.wav", "pl_step4.wav"};
     audio_.Play(steps[stepIndex_++ % 4], volume);
@@ -163,6 +171,9 @@ void ShooterController::Disable(bool restoreCamera) {
     }
     CancelPlant();
     active_ = false; forced_ = false; scopeLevel_ = 0; reloadEnd_ = 0;
+    // Leaving FPS must not leave a selected target or an admitted player order behind.
+    target_ = 0; targetValid_ = false; nativeTarget_ = 0; nativeOrder_ = 0;
+    FpsCombatGuard::ReleasePlayerOrder();
     nativeSky_.Update(ui_,false,mapTileset_);
     meleeContact_ = meleeReady_ = 0; recoil_.Reset();
     audio_.Stop(); stepDistance_ = 0;
@@ -194,6 +205,9 @@ void ShooterController::ResetMap() {
     fixtureGate_ = 0;
     unit_ = 0; active_ = false; suspended_ = false; paused_ = false; forced_ = false; ui_ = 0; tick_ = {};
     orbit_ = 0; zoomDelta_ = 0;
+    // Handles and orders never survive a map unload; the guard window ends with them.
+    target_ = 0; targetValid_ = false; nativeTarget_ = 0; nativeOrder_ = 0;
+    FpsCombatGuard::ReleasePlayerOrder();
     bodyAnim_ = 0; bodyAnimTick_ = 0;
     scopeLevel_ = 0; cinematicRequested_ = false; toggleRequested_ = false; toggleQueuedAt_ = 0; toggleRetryAt_ = 0; ownCameraRequest_ = false;
     status_ = {}; meleeContact_ = meleeReady_ = 0; recoil_.Reset();
@@ -221,7 +235,10 @@ void ShooterController::Toggle() {
     wc3::IssueImmediateOrderById(unit_, 851972);  // stop autonomous attack/movement orders
     float zero = 0; wc3::SetCameraTargetController(0, &zero, &zero, FALSE);
     // Keep native UI/portrait anchors intact; FPS suppresses HUD graphics at GL submission.
-    active_ = true; forced_ = true; suspended_ = false; scopeLevel_ = 0; Play("draw");
+    active_ = true; forced_ = true; suspended_ = false; scopeLevel_ = 0; if (settings_.csGameplay) Play("draw");
+    // A fresh session starts without a reticle target or a lingering native order.
+    target_ = 0; targetValid_ = false; nativeTarget_ = 0; nativeOrder_ = 0;
+    FpsCombatGuard::ReleasePlayerOrder();
     // WOW-style sessions open on the follow view so the player sees the chosen model; the
     // legacy wheel configuration keeps the plain first-person entry.
     orbit_ = settings_.wheelZoom ? 280.0f : 0;
@@ -295,24 +312,28 @@ void ShooterController::AimAndMove(float dt) {
     // drives it because grounded/speed jitter would flap the transition several times a second.
     ApplyBodyAnimation(Visible() && !input.immobilized &&
         (input.forward != 0.0f || input.right != 0.0f));
-    if (!status_.incapacitated && !spells_.Active()) {
+    if (!status_.incapacitated && !spells_.Active() && !NativeOrderActive()) {
         float facing = LookAngles::Normalize(yaw_); wc3::SetUnitFacing(unit_, &facing);
     }
 }
 void ShooterController::ApplyBodyAnimation(bool walking) {
     if (!unit_ || status_.incapacitated) { bodyAnim_ = 0; return; }
-    const int wanted = walking ? 1 : 2;
     const DWORD now = GetTickCount();
-    const bool changed = bodyAnim_ != wanted;
-    // Hysteresis on the walk-to-stand edge: movement input bounces frame to frame, and each
+    // The engine owns the cycle while it executes an order or a spell: attack, cast and channel
+    // sequences must play instead of being replaced by walk/stand mid-swing.
+    const int order = wc3::GetUnitCurrentOrder(unit_);
+    const bool engineOwns = spells_.Active() || (order != 0 && order != 851972) || NativeOrderActive();
+    if (engineOwns) { bodyAnim_ = 0; bodyAnimTick_ = now; return; }
+    const int wanted = walking ? 1 : 2;
+    // Only transitions are written. Re-asserting the walk cycle periodically restarted the stride,
+    // which read as a hitch every step; once the engine hands the body back, bodyAnim_ is 0 and
+    // the next call restores the correct cycle.
+    if (bodyAnim_ == wanted) return;
+    // Hysteresis on the walk-to-stand edge: movement input bounces frame to frame, and every
     // request restarts the sequence, which would look like stutter instead of a stride.
-    if (changed && !walking && bodyAnim_ == 1 && now - bodyAnimTick_ < 300) return;
-    // Only the transition is written, plus a slow re-assert while walking: the engine replaces the
-    // cycle with its own attack/cast animation, and a loop restart every 800 ms is close to the
-    // natural stride so the body keeps walking instead of freezing mid-slide.
-    if (!changed && !(walking && now - bodyAnimTick_ >= 800)) return;
+    if (!walking && bodyAnim_ == 1 && now - bodyAnimTick_ < 300) return;
     if (!wc3::SetUnitAnimationName(unit_, walking ? "walk" : "stand")) { bodyAnim_ = 0; return; }
-    if (changed) wc3::Log("FPS body animation %s", walking ? "walk" : "stand");
+    wc3::Log("FPS body animation %s", walking ? "walk" : "stand");
     bodyAnim_ = wanted; bodyAnimTick_ = now;
 }
 void ShooterController::UpdateStatus() {
@@ -491,7 +512,60 @@ void ShooterController::PickupItem() {
     ammoMessage_=message;refillTick_=GetTickCount();itemNearby_=false;
     wc3::Log("rune ammo reward added=%d",added);
 }
+bool ShooterController::NativeOrderActive() {
+    // Only an order this controller issued keeps the guard's player window open; auto-acquisition
+    // and map scripts never set nativeTarget_.
+    if (!nativeTarget_ || !unit_ || !wc3::GetUnitTypeId(nativeTarget_)) return false;
+    const int order = wc3::GetUnitCurrentOrder(unit_);
+    return order == 851971 || order == 851983 || order == 851984;
+}
+bool ShooterController::PickTarget(wc3::Handle& picked) {
+    picked = 0;
+    if (!unit_ || status_.contained || status_.hidden) return false;
+    // Ray from the same eye and view angles the reticle uses, independent of the follow distance.
+    float x = wc3::Real(wc3::GetUnitX(unit_)), y = wc3::Real(wc3::GetUnitY(unit_));
+    float z = movement_.EyeZ() + wc3::Real(wc3::GetUnitFlyHeight(unit_));
+    float yaw = ViewYaw() * radians, pitch = std::clamp(ViewPitch(), -65.0f, 65.0f) * radians;
+    float origin[] = {x, y, z};
+    float direction[] = {std::cos(pitch) * std::cos(yaw), std::cos(pitch) * std::sin(yaw), std::sin(pitch)};
+    // Units only: a destructable handle must never reach unit APIs (shop/attack/state reads).
+    auto aim = SpellAim::Pick(unit_, origin, direction, settings_.spells.aimDistance, hitboxes_, destructableHitboxes_, false);
+    if (!aim.target || !wc3::GetUnitTypeId(aim.target)) return false;
+    picked = aim.target; return true;
+}
+void ShooterController::SelectTarget() {
+    wc3::Handle picked = 0;
+    if (!PickTarget(picked)) {
+        target_ = 0; targetValid_ = false;
+        wc3::Log("FPS target cleared: no unit under reticle");
+        return;
+    }
+    target_ = picked;
+    auto player = wc3::GetLocalPlayer();
+    wc3::Log("FPS target selected unit=%08X type=%08X hp=%.0f/%.0f ally=%d enemy=%d",
+        picked, wc3::GetUnitTypeId(picked), wc3::Real(wc3::GetUnitState(picked, 0)),
+        wc3::Real(wc3::GetUnitState(picked, 1)), wc3::IsUnitAlly(picked, player) != FALSE,
+        wc3::IsUnitEnemy(picked, player) != FALSE);
+}
+void ShooterController::NativeUse() {
+    wc3::Handle picked = 0;
+    if (!PickTarget(picked)) { wc3::Log("FPS native use: no unit under reticle"); return; }
+    target_ = picked;
+    auto player = wc3::GetLocalPlayer();
+    bool enemy = wc3::IsUnitEnemy(picked, player) != FALSE;
+    // One native smart order covers both halves of WoW interaction: it becomes an attack on a
+    // hostile unit and the native shop/quest interaction on an NPC. The guard admits exactly this
+    // player-issued order for a short window; script and retaliation orders stay rejected.
+    FpsCombatGuard::HoldPlayerOrder(1500);
+    BOOL accepted = wc3::IssueTargetOrderById(unit_, 851971, picked);
+    if (accepted) { nativeTarget_ = picked; nativeOrder_ = 851971; nativeOrderTick_ = GetTickCount(); }
+    else { nativeTarget_ = 0; nativeOrder_ = 0; FpsCombatGuard::ReleasePlayerOrder(); }
+    wc3::Log("FPS native use target=%08X type=%08X enemy=%d accepted=%d order=%d current=%d",
+        picked, wc3::GetUnitTypeId(picked), enemy, accepted, nativeOrder_, wc3::GetUnitCurrentOrder(unit_));
+}
 void ShooterController::Fire(bool secondary) {
+    // Native first-person play has no firearms; the reticle issues Warcraft orders instead.
+    if (!settings_.csGameplay) return;
     const Weapon& w = weapons[weapon_]; DWORD now = GetTickCount();
     // Keep CS's fractional firing interval: truncating 87.5ms would permit an early M4 shot.
     // IAS changes firearm cadence only; planting and authored melee recovery keep their existing timing.
@@ -853,7 +927,7 @@ void ShooterController::Tick(uintptr_t ui) {
         squad_.Release();squadRequested_=0;ammoMessage_="SQUAD RELEASED";refillTick_=now;
         wc3::Log("squad released by shortcut: count=%u",unsigned(squad_.Count()));
     }
-    recoil_.Step(dt, Down(VK_LBUTTON) && !status_.incapacitated && !status_.disarmed, weapon_);
+    if (settings_.csGameplay) recoil_.Step(dt, Down(VK_LBUTTON) && !status_.incapacitated && !status_.disarmed, weapon_);
     if (status_.incapacitated) {
         spells_.Cancel();spellRequested_=-1;spellCancelRequested_=false;
         buyMenu_.Close();buyToggleRequested_=buyAmmoRequested_=false;buyKeyRequested_=-1;suppressFire_=true;
@@ -869,9 +943,18 @@ void ShooterController::Tick(uintptr_t ui) {
         AimAndMove(dt); Camera(); audio_.Tick(GetTickCount());
         return;
     }
-    if (allWeaponsRequested_) { allWeaponsRequested_=false;refillRequested_=false;RefillAmmo(true); }
-    if (refillRequested_) { refillRequested_ = false; RefillAmmo(); }
+    // Refills and loadouts belong to the CS layer; native play never mints weapons.
+    if (settings_.csGameplay && allWeaponsRequested_) { allWeaponsRequested_=false;refillRequested_=false;RefillAmmo(true); }
+    if (settings_.csGameplay && refillRequested_) { refillRequested_ = false; RefillAmmo(); }
     UpdateBuyMenu();
+    // Native first-person interaction: left selects the unit under the reticle, right issues
+    // Warcraft's own smart order (attack a hostile unit, talk to/open an NPC). The CS weapon
+    // path below is inert because Fire/Reload/Plant all return early without CsGameplay.
+    if (!settings_.csGameplay) {
+        bool selectPressed = Pressed(VK_LBUTTON), usePressed = Pressed(VK_RBUTTON);
+        if (!suppressFire_ && selectPressed) SelectTarget();
+        if (!suppressFire_ && usePressed) NativeUse();
+    }
     if (!Down(VK_LBUTTON) && !Down(VK_RBUTTON)) suppressFire_=false;
     if (Buying()) {
         spells_.Cancel();spellRequested_=-1;spellCancelRequested_=false;
@@ -885,22 +968,25 @@ void ShooterController::Tick(uintptr_t ui) {
     // Wheel packets are consumed once; an explicit number key takes precedence in the same frame.
     if (settings_.wheelZoom) {
         ApplyZoom();
-    } else {
+    } else if (settings_.csGameplay) {
         int wheel=weaponWheel_.Take(weapon_);
         int steps=(wheel-weapon_+WeaponSlots::Count)%WeaponSlots::Count;
         if (steps>WeaponSlots::Count/2) steps-=WeaponSlots::Count;
         SwitchWeapon(inventory_.Next(weapon_,steps));
     }
+    // Weapon slots, reloading and AWP zoom are CS behaviour; native play keeps the reticle free.
+    if (settings_.csGameplay) {
     for (int i = 0; i < WeaponSlots::Count; ++i) if (Pressed(ShortcutAction(int(ShortcutAction::Weapon1)+i))) SwitchWeapon(i);
     if (Pressed(ShortcutAction::Reload)) Reload();
+    }
     // Consume the right-click edge for every weapon so holding it across a switch never scopes or stabs.
     bool secondaryPressed = Pressed(VK_RBUTTON);
-    if (!suppressFire_ && weapon_ == 3 && secondaryPressed) {
+    if (settings_.csGameplay && !suppressFire_ && weapon_ == 3 && secondaryPressed) {
         // CS-style right-click cycle: normal view, first zoom, second zoom, normal view.
         scopeLevel_ = (scopeLevel_ + 1) % 3;
         wc3::Log("AWP scope level=%d fov=%.0f", scopeLevel_, scopeLevel_ == 2 ? 10.0f : Scoped() ? 40.0f : 85.0f);
     }
-    if (reloadEnd_ && now >= reloadEnd_) {
+    if (settings_.csGameplay && reloadEnd_ && now >= reloadEnd_) {
         int amount = std::min(weapons[weapon_].magazine - ammo_[weapon_], reserve_[weapon_]);
         ammo_[weapon_] += amount; reserve_[weapon_] -= amount; reloadEnd_ = 0; Play("idle");
         wc3::Log("reload complete: weapon=%s ammo=%d reserve=%d", weapons[weapon_].name, ammo_[weapon_], reserve_[weapon_]);
@@ -919,7 +1005,23 @@ void ShooterController::Tick(uintptr_t ui) {
             if(spells_.Active()) {movement_.Stop();CancelPlant();meleeContact_=0;reloadEnd_=0;suppressFire_=true;}
         }
     }
-    if (!spells_.Active() && !status_.incapacitated && !status_.contained && !status_.hidden) FpsCombatGuard::CancelOrders(unit_);
+    // Keep the player's native order admitted while the engine still runs it; release the window
+    // once it ends so auto-acquisition and map scripts are rejected again. The overlay reads only
+    // this snapshot, never native state, because it draws on another thread.
+    if (!settings_.csGameplay) {
+        if (NativeOrderActive()) FpsCombatGuard::HoldPlayerOrder(1200);
+        else if (nativeTarget_) {
+            wc3::Log("FPS native order finished unit=%08X current=%d", nativeTarget_, wc3::GetUnitCurrentOrder(unit_));
+            nativeTarget_ = 0; nativeOrder_ = 0; FpsCombatGuard::ReleasePlayerOrder();
+        }
+        targetValid_ = target_ && wc3::GetUnitTypeId(target_) && wc3::Real(wc3::GetUnitState(target_, 0)) > 0.405f;
+        if (targetValid_) {
+            targetHealth_ = wc3::Real(wc3::GetUnitState(target_, 0));
+            targetMax_ = wc3::Real(wc3::GetUnitState(target_, 1));
+            targetAlly_ = wc3::IsUnitAlly(target_, wc3::GetLocalPlayer()) != FALSE;
+        }
+    }
+    if (!spells_.Active() && !NativeOrderActive() && !status_.incapacitated && !status_.contained && !status_.hidden) FpsCombatGuard::CancelOrders(unit_);
     if (itemRequested_) { itemRequested_=false;PickupItem(); }
     if (squadRequested_) {
         // Both keys recruit nearby owned units and change the existing squad's strategy as one operation.
@@ -937,12 +1039,13 @@ void ShooterController::Tick(uintptr_t ui) {
     }
     // Pending melee contact is cancelled if the unit loses attack control before the blade lands.
     if (meleeContact_ && (status_.disarmed || status_.incapacitated)) meleeContact_ = 0;
-    if (meleeContact_ && now >= meleeContact_) { meleeContact_ = 0; Strike(); }
+    if (settings_.csGameplay && meleeContact_ && now >= meleeContact_) { meleeContact_ = 0; Strike(); }
     bool firePressed = Pressed(VK_LBUTTON);
     // CS chooses recoil after the current movement command, so the first moving/ducked shot uses that stance.
     AimAndMove(dt);
     // Planting requires a held button; other weapons preserve their existing click/automatic behavior.
-    if (!spells_.Active() && !suppressFire_ && weapon_ == WeaponSlots::C4) PlantC4(dt);
+    if (!settings_.csGameplay) { /* native mode: the reticle already issued its order above */ }
+    else if (!spells_.Active() && !suppressFire_ && weapon_ == WeaponSlots::C4) PlantC4(dt);
     else if (!spells_.Active() && !suppressFire_ && !status_.disarmed && WeaponSlots::Melee(weapon_) && secondaryPressed) Fire(true);
     else if (!spells_.Active() && !suppressFire_ && !status_.disarmed && ((weapons[weapon_].automatic && Down(VK_LBUTTON)) || firePressed)) Fire();
     // Sample after any newly started animation: an older tick would wrap unsigned elapsed time.

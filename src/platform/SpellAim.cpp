@@ -3,7 +3,7 @@
 #include <algorithm>
 
 SpellAim SpellAim::Pick(wc3::Handle actor,const float* origin,const float* direction,float distance,
-    UnitHitboxes& units,DestructableHitboxes& destructables) {
+    UnitHitboxes& units,DestructableHitboxes& destructables,bool includeDestructables) {
     SpellAim aim;float limit=distance;
     // The first terrain crossing limits target picking; point casts require a real surface under the reticle.
     for(float t=0;t<=distance;t+=24) {
@@ -25,6 +25,7 @@ SpellAim SpellAim::Pick(wc3::Handle actor,const float* origin,const float* direc
         float entry=0;if(units.Intersect(candidate,origin,direction,limit,entry)) {limit=entry;aim.target=candidate;}
     }
     wc3::DestroyGroup(group);
+    if(!includeDestructables) return aim;
     for(wc3::Handle object:wc3::NearbyDestructables(x,y,radius)) {
         if(wc3::Real(wc3::GetDestructableLife(object))<=.405f)continue;
         float entry=0;if(destructables.Intersect(object,origin,direction,limit,entry)) {limit=entry;aim.target=object;}

@@ -317,6 +317,10 @@ Edit it and press F8 in FPS.
   the session, including across F6 switches; startup/F8 restores the INI value (`true`/`false`, also `1`/`0`).
   The counter uses CS/GoldSrc units/s, matching `MaxBunnySpeed`; vertical jump/fall velocity is excluded.
   Updates add missing keys and preserve custom values. The HUD omits basic WASD/reload/jump/crouch hints.
+- `[Interface] ShowHudHints=false` hides the top-left key hint block by default; `true` shows the full
+  control list again (`false`/`true`, also `0`/`1`). Only those text rows disappear: the status line,
+  pickup/spell notices, native minimap and spell icons stay visible. F8 applies it live in FPS and
+  updates preserve a custom value.
 - `[Interface] ShowMinimap=true` shows Warcraft's native minimap in the FPS top-right corner.
 - `[Interface] ShowSpellIcons=true` shows four spell icons at the bottom right; `ShowSpellCooldowns=true`
   adds the live remaining cooldown. `SpellIconSizePercent=7` controls icon size (4..14% of window height).
@@ -332,17 +336,24 @@ Edit it and press F8 in FPS.
   `MinimapSizePercent=22` sets the square's side to 22% of window height (10..40, fractional values allowed).
   F8 applies size changes live; missing/invalid values use the defaults and updates preserve custom values.
   The FPS minimap is a display; use RTS for map clicks/orders. Native RTS layout and campaign bounds stay intact.
-  Top hints use three compact groups and wrap before the minimap; gold appears beside health/ammunition.
+  Top hints use three compact groups and wrap before the minimap when `ShowHudHints=true`; gold appears beside health/ammunition.
 - `[Interface] DisableFogOfWar=false` keeps map visibility by default (`true`/`false`, also `1`/`0`).
   Set `true` or press N in offline FPS to remove both explored fog and the unexplored black mask.
   N changes only the session; startup/F8 loads the saved preference. F6, menus and cinematics restore
   the map's captured fog/mask settings; returning to FPS reapplies the session choice. Updates preserve
   custom values. Sword and secondary-melee shortcuts are omitted from the HUD; their controls remain.
-- Health bars use `[Interface] ShowAllyHealthBars=false`, `ShowEnemyHealthBars=false` and
-  `HealthBarDistance=2000` (Warcraft units, 0..15000; zero hides bars). K toggles and saves both teams;
+- Health bars use `[Interface] ShowAllyHealthBars=true`, `ShowEnemyHealthBars=true` and
+  `HealthBarDistance=2000` (Warcraft units, 0..15000; zero hides bars). Both teams are on by default
+  in first-person play; K toggles and saves them together, and
   a mixed saved state first enables both. F8 reloads file edits. Bars exclude your controlled actor,
   dead/hidden/transported units, fog-hidden targets and passive neutrals. Opaque world depth occludes
   bars; RTS keeps its native health display.
+- `[Interface] CsGameplay=false` is the master CS switch. `false` (default) plays the map as a native
+  first-person view: no guns, ammunition, gold, buying, C4 or CS samples, and Warcraft's own attack and
+  spell animations play on the visible body. Aim at a unit and press the left button to select it
+  (name/health readout at the reticle); press the right button to attack a hostile unit or to use an
+  NPC's native shop/quest interaction. `true` restores the complete CS gameplay of earlier releases.
+  F8 applies it live; updates preserve a custom value.
 - `[Interface] FloatingTextDistance=1200` limits native world labels to the FPS camera view and distance
   in Warcraft units. Set `0` to hide world labels and press F8; RTS, harvesting and screen-space map text keep native behavior.
 

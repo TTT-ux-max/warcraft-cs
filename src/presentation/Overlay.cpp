@@ -58,6 +58,8 @@ void Overlay::Draw(Canvas& canvas, HDC dc, HWND window, int width, int height,
     refreshPending_ = false;
     // Imports can keep the same path across maps; reload those textures in the active context.
     if (spellIconsRefresh_) { spellHud_.Reset(true, &canvas); spellIconsRefresh_ = false; }
+    // CsGameplay=false is native first-person play: the map's own numbers replace the whole CS HUD.
+    const bool cs = controller.Settings().csGameplay;
     // Sky touches only far-depth pixels before the weapon's private depth clear, preserving native scenery.
     if (controller.Settings().csSky && !controller.Status().contained && !controller.Status().hidden)
         sky_.Draw(canvas, root_, controller.SkyName(), controller.ViewYaw(), controller.ViewPitch(), controller.ViewFov(), float(width) / height);
@@ -71,7 +73,8 @@ void Overlay::Draw(Canvas& canvas, HDC dc, HWND window, int width, int height,
     // ViewWeapon=false keeps the bare first-person eyes of the selected unit: no CS arms, no
     // skin pass, and no private depth clear — the world depth stays exactly as the engine left it.
     // A third-person orbit has no face to put arms on either, so the pass only runs on the eyes.
-    if (controller.Settings().viewWeapon && controller.FirstPerson()) {
+    // Without CsGameplay there is no view-model at all: the body stays visible in third person.
+    if (controller.Settings().csGameplay && controller.Settings().viewWeapon && controller.FirstPerson()) {
     canvas.BeginWeapon(width, height, projectionScales[index], 1.0f, 200.0f);
     if (!(skipStages & 2u)) {
     if (!attempted_[index]) {
@@ -98,13 +101,19 @@ void Overlay::Draw(Canvas& canvas, HDC dc, HWND window, int width, int height,
     else if (!(skipStages & 4u)) ReticleView::DrawHipFire(canvas, float(width), float(height), controller.Recoil());
     // Scale the bottom HUD from a readable 42-pixel font at 1080p, with safe edge padding.
     int statusSize = std::clamp(int(std::lround(height * (42.0f / 1080.0f))), 26, 84);
+    float statusPad = statusSize * 0.75f, statusY = height - statusPad;
     if (!(skipStages & 8u)) {
     controller.Hits().Draw(canvas, float(width), float(height));
+    auto key = [&](ShortcutAction action) { return controller.Shortcut(action); };
+    auto mapLayout = MinimapLayout::Calculate(width, height, controller.Settings().minimapSizePercent);
+    // The GL minimap capturer is a GL-submission adapter; D3D backends have no capture path yet.
+    bool minimapDrawn = controller.MinimapVisible() && canvas.IsOpenGL();
+    if (minimapDrawn) minimap.Draw(mapLayout);
+    if (cs) {
     char status[160]; sprintf_s(status, "HP %.0f   %s   %d / %d   GOLD %d", controller.Health(),
         ShooterController::weapons[index].name, controller.Ammo(), controller.Reserve(), controller.Gold());
     // Melee equipment has no magazine; show only its name instead of a misleading empty-ammo counter.
     if (WeaponSlots::Melee(index)) sprintf_s(status, "HP %.0f   %s   GOLD %d", controller.Health(), ShooterController::weapons[index].name, controller.Gold());
-    float statusPad = statusSize * 0.75f, statusY = height - statusPad;
     canvas.Text(statusPad, statusY, status, statusSize, 1.0f, 0.85f, 0.3f, 1);
     // Installation progress and fuse are independent of which weapon is currently equipped.
     if (controller.PlantProgress() > 0) {
@@ -115,24 +124,42 @@ void Overlay::Draw(Canvas& canvas, HDC dc, HWND window, int width, int height,
         char message[80]; sprintf_s(message, "C4 x%u  %.0fs", unsigned(controller.BombCount()), double(std::ceil(controller.BombRemaining())));
         canvas.Text(float(width - statusSize * 9), statusY, message, statusSize, 1.0f, 0.85f, 0.3f, 1);
     }
-    // Compact hints reflect the configured keys and wrap before the native minimap.
-    auto key = [&](ShortcutAction action) { return controller.Shortcut(action); };
-    auto mapLayout = MinimapLayout::Calculate(width, height, controller.Settings().minimapSizePercent);
-    // The GL minimap capturer is a GL-submission adapter; D3D backends have no capture path yet.
-    bool minimapDrawn = controller.MinimapVisible() && canvas.IsOpenGL();
-    if (minimapDrawn) minimap.Draw(mapLayout);
-    std::string controls = "Warcraft CS by Yazgul | " + key(ShortcutAction::ToggleFPS) + ": RTS | " + key(ShortcutAction::ReloadSettings) + ": CONFIG | " + key(ShortcutAction::Minimap) + ": MINIMAP | " + key(ShortcutAction::Speed) + ": SPEED | " + key(ShortcutAction::Fog) + ": FOG";
-    std::string equipment = std::string(controller.Settings().wheelZoom ? "WHEEL: ZOOM" : "WHEEL: WEAPONS") + " | " + key(ShortcutAction::Weapon6) + ": C4 | " + key(ShortcutAction::Pickup) + ": ITEM | " + key(ShortcutAction::Buy) + ": BUY | " + key(ShortcutAction::BuyAmmo) + ": AMMO";
-    std::string abilities = key(ShortcutAction::HealthBars) + ": HEALTH BARS | " + key(ShortcutAction::Spell1) + "/" + key(ShortcutAction::Spell2) + "/" + key(ShortcutAction::Spell3) + "/" + key(ShortcutAction::Spell4) + ": SPELLS | " + key(ShortcutAction::SelfCast) + ": SELF";
-    char squad[256]; sprintf_s(squad, "%s: FIGHT | %s: FOLLOW | %s: RELEASE | SQUAD %u %s | %s: FREE AMMO | %s: ALL WEAPONS",
-        key(ShortcutAction::SquadFight).c_str(), key(ShortcutAction::SquadFollow).c_str(), key(ShortcutAction::SquadRelease).c_str(), unsigned(controller.SquadCount()), controller.SquadCount() ? (controller.SquadPassive() ? "FOLLOW" : "COMBAT") : "", key(ShortcutAction::Refill).c_str(), key(ShortcutAction::AllWeapons).c_str());
-    int hintRight = minimapDrawn ? mapLayout.x - mapLayout.padding : width - 25;
-    int columns = std::max(1, (hintRight - 25) / canvas.GlyphWidth(20));
-    float hintY = 27;
-    for (const auto& group : {controls, equipment, abilities, std::string(squad)}) {
-        for (const auto& row : HudHints::Wrap(group, columns)) { canvas.Text(25, hintY, row.c_str(), 20, 1.0f, 0.85f, 0.3f, 1); hintY += 23; }
+    // The top-left shortcut block is the only optional part here: the minimap above and the
+    // status line/notices below must survive Interface.ShowHudHints=false unchanged.
+    if (controller.Settings().showHudHints) {
+        std::string controls = "Warcraft CS by Yazgul | " + key(ShortcutAction::ToggleFPS) + ": RTS | " + key(ShortcutAction::ReloadSettings) + ": CONFIG | " + key(ShortcutAction::Minimap) + ": MINIMAP | " + key(ShortcutAction::Speed) + ": SPEED | " + key(ShortcutAction::Fog) + ": FOG";
+        std::string equipment = std::string(controller.Settings().wheelZoom ? "WHEEL: ZOOM" : "WHEEL: WEAPONS") + " | " + key(ShortcutAction::Weapon6) + ": C4 | " + key(ShortcutAction::Pickup) + ": ITEM | " + key(ShortcutAction::Buy) + ": BUY | " + key(ShortcutAction::BuyAmmo) + ": AMMO";
+        std::string abilities = key(ShortcutAction::HealthBars) + ": HEALTH BARS | " + key(ShortcutAction::Spell1) + "/" + key(ShortcutAction::Spell2) + "/" + key(ShortcutAction::Spell3) + "/" + key(ShortcutAction::Spell4) + ": SPELLS | " + key(ShortcutAction::SelfCast) + ": SELF";
+        char squad[256]; sprintf_s(squad, "%s: FIGHT | %s: FOLLOW | %s: RELEASE | SQUAD %u %s | %s: FREE AMMO | %s: ALL WEAPONS",
+            key(ShortcutAction::SquadFight).c_str(), key(ShortcutAction::SquadFollow).c_str(), key(ShortcutAction::SquadRelease).c_str(), unsigned(controller.SquadCount()), controller.SquadCount() ? (controller.SquadPassive() ? "FOLLOW" : "COMBAT") : "", key(ShortcutAction::Refill).c_str(), key(ShortcutAction::AllWeapons).c_str());
+        int hintRight = minimapDrawn ? mapLayout.x - mapLayout.padding : width - 25;
+        int columns = std::max(1, (hintRight - 25) / canvas.GlyphWidth(20));
+        float hintY = 27;
+        for (const auto& group : {controls, equipment, abilities, std::string(squad)}) {
+            for (const auto& row : HudHints::Wrap(group, columns)) { canvas.Text(25, hintY, row.c_str(), 20, 1.0f, 0.85f, 0.3f, 1); hintY += 23; }
+        }
+    }
+    if (controller.SpeedVisible()) {
+        char speed[64]; sprintf_s(speed, "SPEED %.0f u/s (CS)", controller.DisplaySpeed());
+        int rows = 1 + (controller.RefillNotice() ? 1 : 0) + (*controller.Status().Label() ? 1 : 0);
+        canvas.Text(statusPad, statusY - (statusSize + 16) * rows, speed, statusSize, 1.0f, 0.85f, 0.3f, 1);
+    }
+    } else {
+    // Native play has no ammunition or gold to report: the reticle reads the selected unit and
+    // the corner keeps the spell/pickup notices, so the screen stays a view of the map.
+    if (controller.TargetValid()) {
+        char plate[96]; sprintf_s(plate, "TARGET %s  %.0f / %.0f",
+            controller.TargetHostile() ? "ENEMY" : "FRIENDLY", controller.TargetHealth(), controller.TargetMaxHealth());
+        canvas.Text(width * .5f - 110, height * .5f + 46, plate, 20, 1.0f, 0.9f, 0.5f, 1);
     }
     if (controller.RefillNotice()) canvas.Text(statusPad, statusY - statusSize - 16, controller.AmmoMessage(), statusSize, 1.0f, 0.85f, 0.3f, 1);
+    }
+    // Ground items advertise interaction without issuing a walk-to-item RTS order.
+    if (controller.ItemNearby()) {
+        // Independent of the corner hints: the pickup prompt follows the item, not ShowHudHints.
+        std::string prompt = key(ShortcutAction::Pickup) + ": PICK UP ITEM";
+        canvas.Text(width * .5f - 120, height * .72f, prompt.c_str(), statusSize, 1.0f, 0.85f, 0.3f, 1);
+    }
     if (!(skipStages & 16u) && controller.Settings().showSpellIcons && !unavailableView && !controller.Buying()) {
         std::array<std::string, 4> keys;
         for (int i = 0; i < 4; ++i) keys[i] = key(ShortcutAction(int(ShortcutAction::Spell1) + i));
@@ -142,15 +169,6 @@ void Overlay::Draw(Canvas& canvas, HDC dc, HWND window, int width, int height,
         spellHud_.Draw(canvas, controller.SpellHud(), keys, layout, controller.Settings().showSpellCooldowns,
             [&](float x, float y, const char* label) { canvas.Text(x, y, label, size, 1, .88f, .35f, 1); });
     }
-    // Horizontal CS units match MaxBunnySpeed, excluding vertical falling/jumping velocity.
-    // Stack above notices/status so the optional counter never covers health or ammunition.
-    if (controller.SpeedVisible()) {
-        char speed[64]; sprintf_s(speed, "SPEED %.0f u/s (CS)", controller.DisplaySpeed());
-        int rows = 1 + (controller.RefillNotice() ? 1 : 0) + (*controller.Status().Label() ? 1 : 0);
-        canvas.Text(statusPad, statusY - (statusSize + 16) * rows, speed, statusSize, 1.0f, 0.85f, 0.3f, 1);
-    }
-    // Ground items advertise interaction without issuing a walk-to-item RTS order.
-    if (controller.ItemNearby()) { controls = key(ShortcutAction::Pickup) + ": PICK UP ITEM"; canvas.Text(width * .5f - 120, height * .72f, controls.c_str(), statusSize, 1.0f, 0.85f, 0.3f, 1); }
     // Explain blocked controls next to the status HUD while the corresponding Warcraft effect lasts.
     if (*controller.Status().Label()) {
         char effect[96]; sprintf_s(effect, "%s", controller.Status().Label());
@@ -159,7 +177,8 @@ void Overlay::Draw(Canvas& canvas, HDC dc, HWND window, int width, int height,
         canvas.Text(statusPad, statusY - (statusSize + 16) * (controller.RefillNotice() ? 2 : 1), effect, statusSize, 1.0f, 0.85f, 0.3f, 1);
     }
     } // end status+hints stage
-    BuyMenuView::Draw(canvas, controller, width, height, window,
+    // The catalog belongs to the CS layer; native play never opens it, so nothing is drawn.
+    if (cs) BuyMenuView::Draw(canvas, controller, width, height, window,
         [&](float x, float y, const char* text, float r, float g, float b, float a) { canvas.Text(x, y, text, 20, r, g, b, a); },
         [&](float x, float y, const char* text, float r, float g, float b, float a) { canvas.Text(x, y, text, statusSize, r, g, b, a); },
         [&](int slot, float x, float y, float w, float h) {

@@ -20,7 +20,7 @@ int main() {
     assert(settings.floatingTextDistance==1200);
     assert(!settings.showSpeed);
     assert(!settings.disableFogOfWar);
-    assert(!settings.healthBars.allies && !settings.healthBars.enemies && settings.healthBars.distance==2000);
+    assert(settings.healthBars.allies && settings.healthBars.enemies && settings.healthBars.distance==2000);
     assert(settings.csVolumePercent==100);
     assert(settings.render.maxFPS==144 && settings.render.drawDistance==15000);
     assert(!settings.startAllWeapons && settings.startBombs==0 && settings.maxBombs==100 && settings.unlimitedBombPurchases);
@@ -269,6 +269,28 @@ int main() {
     DeleteFileA(path.c_str());
     auto defaultHud=GameplaySettings::Load(path);
     assert(defaultHud.showSpellIcons && defaultHud.showSpellCooldowns && defaultHud.spellIconSizePercent==7);
+    // Corner hints ship hidden; only an explicit true (or 1) restores the key list.
+    assert(!defaultHud.showHudHints);
+    // The CS layer ships off: native first-person play is the default experience.
+    assert(!defaultHud.csGameplay);
+    for(const char* value:{"true","1","TRUE"}) {
+        WritePrivateProfileStringA("Interface","CsGameplay",value,path.c_str());
+        assert(GameplaySettings::Load(path).csGameplay);
+    }
+    for(const char* value:{"false","0","FALSE","broken","nan"}) {
+        WritePrivateProfileStringA("Interface","CsGameplay",value,path.c_str());
+        assert(!GameplaySettings::Load(path).csGameplay);
+    }
+    DeleteFileA(path.c_str());
+    for(const char* value:{"false","0","FALSE","broken","nan"}) {
+        WritePrivateProfileStringA("Interface","ShowHudHints",value,path.c_str());
+        assert(!GameplaySettings::Load(path).showHudHints);
+    }
+    for(const char* value:{"true","1","TRUE"}) {
+        WritePrivateProfileStringA("Interface","ShowHudHints",value,path.c_str());
+        assert(GameplaySettings::Load(path).showHudHints);
+    }
+    DeleteFileA(path.c_str());
     const PercentCase distances[]={{"0",0},{"900",900},{"-10",0},{"99999",5000},{"nan",1200},{"broken",1200}};
     for (const auto& test : distances) {
         const auto sample=path+std::to_string(++index);

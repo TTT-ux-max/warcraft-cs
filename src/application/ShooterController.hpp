@@ -72,6 +72,13 @@ public:
     void RequestSpellCancel() { spellCancelRequested_=true; }
     std::string Shortcut(ShortcutAction action) const {return ShortcutBindings::Label(settings_.shortcuts.Key(action));}
     bool SpeedVisible() const { return showSpeed_; }
+    // CS layer master switch: native first-person play issues Warcraft orders instead of shots.
+    bool CsGameplay() const { return settings_.csGameplay; }
+    // Targeting snapshot for the overlay; filled on the game thread so rendering never calls natives.
+    bool TargetValid() const { return targetValid_; }
+    bool TargetHostile() const { return targetValid_ && !targetAlly_; }
+    float TargetHealth() const { return targetHealth_; }
+    float TargetMaxHealth() const { return targetMax_; }
     // Input queues the toggle; only the simulation tick changes the HUD preference.
     void RequestMinimapToggle() { minimapToggleRequested_=true; }
     bool MinimapVisible() const { return showMinimap_; }
@@ -101,6 +108,9 @@ public:
     // Presentation may identify the controlled actor only while the first-person view owns the screen;
     // a third-person orbit must keep the body rendered so the player can watch it move and act.
     wc3::Handle ViewActor() const { return Visible() && FirstPerson() ? unit_ : 0; }
+    // Health bars need the controlled unit's position and self-exclusion regardless of camera
+    // distance: a third-person follow view must still show the world's health bars.
+    wc3::Handle HealthBarsActor() const { return Visible() ? unit_ : 0; }
     // Block only map camera writes during live FPS; our camera pass and cinematic/RTS writes remain allowed.
     bool BlocksMapCamera() const { return Visible() && !ownCameraRequest_; }
     void SetPaused(bool value) { paused_ = value; }
@@ -155,6 +165,12 @@ private:
     void Disable(bool restoreCamera);
     void AimAndMove(float dt);
     void Fire(bool secondary = false);
+    // WoW-style reticle interaction: left selects (name/health readout), right attacks a hostile
+    // unit or uses the native shop/quest interaction of an NPC through one smart order.
+    bool PickTarget(wc3::Handle& picked);
+    void SelectTarget();
+    void NativeUse();
+    bool NativeOrderActive();
     void Strike();
     void Reload();
     void SwitchWeapon(int slot);
@@ -243,6 +259,13 @@ private:
     // every frame.
     int bodyAnim_ = 0;
     DWORD bodyAnimTick_ = 0;
+    // Reticle target (selected or last used) and the native order it owns.
+    wc3::Handle target_ = 0;
+    bool targetValid_ = false, targetAlly_ = false;
+    float targetHealth_ = 0, targetMax_ = 0;
+    wc3::Handle nativeTarget_ = 0;
+    int nativeOrder_ = 0;
+    DWORD nativeOrderTick_ = 0;
     unsigned stepIndex_ = 0;
     unsigned knifeSwing_ = 0;
     float animationRate_ = 1;

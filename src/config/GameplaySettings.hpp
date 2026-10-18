@@ -40,6 +40,12 @@ struct GameplaySettings {
     // M changes this session preference; F8 restores the editable startup choice and size.
     bool showMinimap=true;
     bool showSpellIcons=true,showSpellCooldowns=true;
+    // Top-left key hint block only; status line, minimap, spell icons and notices stay independent.
+    bool showHudHints=true;
+    // Master switch for the CS layer (guns, buying, ammunition, gold, C4, CS samples). Off by
+    // default so the mod plays as a first-person view of the map with native Warcraft combat;
+    // true restores the complete original CS gameplay without removing any code.
+    bool csGameplay=false;
     // The CS first-person arms/skin is a body of its own; generic maps want the selected
     // unit's bare eyes, so the whole view-model pass can be turned off (F8 reloads it).
     bool viewWeapon=true;

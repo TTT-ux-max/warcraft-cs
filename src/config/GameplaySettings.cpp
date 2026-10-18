@@ -128,6 +128,18 @@ GameplaySettings GameplaySettings::Load(const std::string& filename) {
         return true;
     };
     result.showSpellIcons=enabledHud("ShowSpellIcons");result.showSpellCooldowns=enabledHud("ShowSpellCooldowns");
+    // The top-left shortcut block ships hidden; only an explicit true brings the key list back.
+    // Missing/malformed values keep it hidden so a partial edit cannot re-clutter the corner.
+    auto showHudHints=text("Interface","ShowHudHints","false");
+    result.showHudHints=!_stricmp(showHudHints.c_str(),"true") || showHudHints=="1";
+    if (!showHudHints.empty() && _stricmp(showHudHints.c_str(),"true") && _stricmp(showHudHints.c_str(),"false") &&
+        showHudHints!="0" && showHudHints!="1") wc3::Log("Invalid Interface.ShowHudHints; using false");
+    // The first-person view ships without the CS layer: native combat, no guns, no buying.
+    // An explicit true restores the full CS gameplay; malformed values keep native play.
+    auto csGameplay=text("Interface","CsGameplay","false");
+    result.csGameplay=!_stricmp(csGameplay.c_str(),"true") || csGameplay=="1";
+    if (!csGameplay.empty() && _stricmp(csGameplay.c_str(),"true") && _stricmp(csGameplay.c_str(),"false") &&
+        csGameplay!="0" && csGameplay!="1") wc3::Log("Invalid Interface.CsGameplay; using false");
     // The view-model defaults to on for the CS experience; explicit false strips the arms.
     result.viewWeapon=enabledHud("ViewWeapon");
     // WOW-style wheel zoom is the shipped default; legacy configs without the key inherit it,
