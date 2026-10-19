@@ -1,4 +1,4 @@
-# Warcraft CS 0.8.0
+# Warcraft 3 第一人称 mod（将所有地图转为wow视角）
 
 Counter-Strike 1.6 inside Warcraft III: control your own hero or unit in first person,
 shoot, and play regular maps, campaigns and compatible custom maps.
